@@ -1,37 +1,48 @@
 package iz.mkao.mirasalon
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.ImageLoader
+import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import io.ktor.client.HttpClient
+import iz.mkao.mirasalon.core.designsystem.theme.MiraSalonTheme
+import iz.mkao.mirasalon.feature.profile.domain.model.AppSettings
+import iz.mkao.mirasalon.feature.profile.domain.model.AppTheme
+import iz.mkao.mirasalon.feature.profile.domain.repository.AppSettingsRepository
+import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
 
-import mirasalon_kmp.composeapp.generated.resources.Res
-import mirasalon_kmp.composeapp.generated.resources.compose_multiplatform
-
+@OptIn(ExperimentalCoilApi::class)
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+    val imageHttpClient: HttpClient = koinInject(named("imageLoader"))
+    
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components {
+                add(KtorNetworkFetcherFactory(imageHttpClient))
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
-            }
-        }
+            .build()
+    }
+
+    val appSettingsRepository: AppSettingsRepository = koinInject()
+    val settings by appSettingsRepository.observeSettings()
+        .collectAsStateWithLifecycle(initialValue = AppSettings())
+
+    val isDark = when (settings.theme) {
+        AppTheme.LIGHT -> false
+        AppTheme.DARK -> true
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }
+
+    StatusBarEffect(isDarkTheme = isDark)
+    MiraSalonTheme(darkTheme = isDark) {
+        MainScreen()
     }
 }
