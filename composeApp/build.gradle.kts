@@ -1,120 +1,116 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget
+import org.gradle.api.plugins.ExtensionAware
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    id("mirasalon.kmp.library")
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.skie)
 }
 
+compose.resources {
+    packageOfResClass = "iz.mkao.mirasalon.shared"
+    generateResClass = always
+}
+
+val skipAndroid = providers.systemProperty("skipAndroid").getOrElse("false") == "true"
+
 kotlin {
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+    if (!skipAndroid) {
+        (this as ExtensionAware).extensions.configure<KotlinMultiplatformAndroidLibraryTarget>("android") {
+            namespace = "iz.mkao.mirasalon.shared"
         }
     }
-    
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            
+            export(projects.core.common)
+            export(projects.core.database)
+            export(projects.core.network)
+            export(projects.core.realtime)
+            export(projects.core.designsystem)
+            export(projects.core.navigation)
+            export(projects.core.domain)
+            export(projects.feature.featureSalon)
+            export(projects.feature.featureProducts)
+            export(projects.feature.featureSpecialists)
+            export(projects.feature.featureFavourites)
+            export(projects.feature.featureCart)
+            export(projects.feature.featureChat)
+            export(projects.feature.featureBooking)
+            export(projects.feature.featureAppointments)
+            export(projects.feature.featureAuth)
+            export(projects.feature.featureProfile)
+            export(projects.feature.featureNotifications)
+            
+            export(libs.circuit.runtime)
+            export(libs.circuit.foundation)
         }
-    }
-    
-    jvm("desktop")
-    
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        moduleName = "composeApp"
-        browser {
-            val rootDirPath = project.rootDir.path
-            val projectDirPath = project.projectDir.path
-            commonWebpackConfig {
-                outputFileName = "composeApp.js"
-                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(rootDirPath)
-                        add(projectDirPath)
-                    }
-                }
-            }
-        }
-        binaries.executable()
     }
     
     sourceSets {
-        val desktopMain by getting
-        
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-        }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-        }
-        desktopMain.dependencies {
+        jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
         }
-    }
-}
+        
+        commonMain.dependencies {
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.material)
+            implementation(libs.material3)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.components.resources)
+            implementation(libs.compose.components.uiToolingPreview)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.jetbrains.navigation3.ui)
+            
+            api(projects.core.common)
+            api(projects.core.database)
+            api(projects.core.network)
+            api(projects.core.realtime)
+            api(projects.core.designsystem)
+            api(projects.core.navigation)
+            api(projects.core.domain)
+            api(projects.feature.featureSalon)
+            api(projects.feature.featureProducts)
+            api(projects.feature.featureSpecialists)
+            api(projects.feature.featureFavourites)
+            api(projects.feature.featureCart)
+            api(projects.feature.featureChat)
+            api(projects.feature.featureBooking)
+            api(projects.feature.featureAppointments)
+            api(projects.feature.featureAuth)
+            api(projects.feature.featureProfile)
+            api(projects.feature.featureNotifications)
+            
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
+            implementation(libs.cmptoast)
+            implementation(libs.napier)
 
-android {
-    namespace = "iz.mkao.mirasalon"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "iz.mkao.mirasalon"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            api(libs.circuit.foundation)
+            api(libs.circuit.runtime)
+            implementation(libs.circuit.runtime.presenter)
+            implementation(libs.circuit.runtime.ui)
+            implementation(libs.circuitx.gesture.navigation)
+            implementation(libs.molecule.runtime)
         }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
-dependencies {
-    debugImplementation(compose.uiTooling)
-}
-
-compose.desktop {
-    application {
-        mainClass = "iz.mkao.mirasalon.MainKt"
-
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "iz.mkao.mirasalon"
-            packageVersion = "1.0.0"
+        sourceSets.findByName("androidMain")?.dependencies {
+            implementation(libs.compose.ui.tooling.preview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.koin.android)
+            implementation(libs.multiplatform.settings)
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }
