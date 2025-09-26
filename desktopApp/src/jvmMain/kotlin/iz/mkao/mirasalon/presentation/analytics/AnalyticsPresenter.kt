@@ -36,7 +36,7 @@ class AnalyticsPresenter(
         var selectedDays by remember { mutableStateOf(DesktopDashboardUiState().selectedDays) }
         var isLoading by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
-        var loadJob by remember { mutableStateOf<Job?> (null) }
+        var loadJob by remember { mutableStateOf<Job?>(null) }
 
         fun loadData() {
             loadJob?.cancel()
