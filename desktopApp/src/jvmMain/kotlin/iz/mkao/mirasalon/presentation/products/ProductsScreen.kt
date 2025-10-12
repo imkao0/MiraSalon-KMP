@@ -1,0 +1,448 @@
+package iz.mkao.mirasalon.presentation.products
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.slack.circuit.runtime.CircuitContext
+import com.slack.circuit.runtime.screen.Screen
+import com.slack.circuit.runtime.ui.Ui
+import com.slack.circuit.runtime.ui.ui
+import io.github.aakira.napier.Napier
+import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
+import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.designsystem.theme.MiraFaintGray
+import iz.mkao.mirasalon.core.designsystem.theme.MiraGreen
+import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
+import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.domain.model.Product
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
+import iz.mkao.mirasalon.presentation.DesktopScreen
+import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
+import iz.mkao.mirasalon.presentation.LocalProfileClick
+import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
+import iz.mkao.mirasalon.presentation.LocalToggleSidebar
+import iz.mkao.mirasalon.presentation.components.CategoryDialog
+import iz.mkao.mirasalon.presentation.components.DesktopLoadingState
+import iz.mkao.mirasalon.presentation.dashboard.components.DashboardHeader
+import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
+
+@Composable
+fun ProductsScreenUi(
+    state: ProductsUiState,
+    modifier: Modifier = Modifier,
+    onNavigate: (String) -> Unit,
+    isSidebarExpanded: Boolean,
+    onToggleSidebar: () -> Unit,
+    onProfileClick: () -> Unit
+) {
+    val products = state.products
+    val isLoading = state.isLoadingProducts
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var showProductDialog by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
+
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
+            Sidebar(
+                isExpanded = isSidebarExpanded,
+                onToggle = onToggleSidebar,
+                selectedRoute = "Products",
+                onNavigate = onNavigate,
+                modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 260.dp else 80.dp)
+            )
+
+            Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
+                DashboardHeader(
+                    title = "Products Management",
+                    onProfileClick = onProfileClick
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    item {
+                        FilterChip(
+                            selected = state.selectedCategory == null,
+                            onClick = { state.eventSink(ProductsEvent.CategorySelected(null)) },
+                            label = { Text("All Products") },
+                            shape = RoundedCornerShape(RadiusMedium),
+                            border = null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MiraFaintGray,
+                                labelColor = MiraTextSecondary,
+                                selectedContainerColor = MiraCoral,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                    items(state.categories) { category ->
+                        FilterChip(
+                            selected = state.selectedCategory == category,
+                            onClick = { state.eventSink(ProductsEvent.CategorySelected(category)) },
+                            label = { Text(category) },
+                            shape = RoundedCornerShape(RadiusMedium),
+                            border = null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MiraFaintGray,
+                                labelColor = MiraTextSecondary,
+                                selectedContainerColor = MiraCoral,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                    item {
+                        IconButton(
+                            onClick = { showCategoryDialog = true },
+                            modifier = Modifier.size(32.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MiraCoral.copy(alpha = 0.1f),
+                                contentColor = MiraCoral
+                            )
+                        ) {
+                            Icon(Icons.Outlined.Add, null, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Products List (${products.size})",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.width(32.dp))
+
+
+                        Surface(
+                            modifier = Modifier.width(300.dp).height(40.dp),
+                            color = Color.White,
+                            shape = RoundedCornerShape(2.dp),
+                            border = BorderStroke(1.dp, MiraFaintGray)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp), tint = MiraTextSecondary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                BasicTextField(
+                                    value = state.searchQuery,
+                                    onValueChange = { state.eventSink(ProductsEvent.Search(it)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = TextStyle(fontSize = 14.sp, color = MiraTextPrimary),
+                                    singleLine = true,
+                                    decorationBox = { innerTextField ->
+                                        if (state.searchQuery.isEmpty()) {
+                                            Text("Search products...", fontSize = 14.sp, color = MiraTextSecondary)
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            selectedProduct = null
+                            showProductDialog = true
+                        },
+                        shape = RoundedCornerShape(2.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MiraCoral)
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add Product")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (isLoading && products.isEmpty()) {
+                    DesktopLoadingState()
+                } else if (products.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No products found", style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            modifier = Modifier.weight(1f).background(MiraBorder.copy(alpha = 0.5f)),
+                            horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            items(products, key = { it.id }) { product ->
+                                AdminProductCard(
+                                    product = product,
+                                    onEdit = {
+                                        selectedProduct = product
+                                        showProductDialog = true
+                                    },
+                                    onDelete = {
+                                        state.eventSink(ProductsEvent.DeleteProduct(product.id))
+                                    }
+                                )
+                            }
+                        }
+
+
+                        if (state.totalPages > 1) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { state.eventSink(ProductsEvent.PageChanged(state.currentPage - 1)) },
+                                    enabled = state.currentPage > 1
+                                ) {
+                                    Icon(Icons.Outlined.ChevronLeft, contentDescription = "Previous")
+                                }
+
+                                Text(
+                                    "Page ${state.currentPage} of ${state.totalPages}",
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                                IconButton(
+                                    onClick = { state.eventSink(ProductsEvent.PageChanged(state.currentPage + 1)) },
+                                    enabled = state.currentPage < state.totalPages
+                                ) {
+                                    Icon(Icons.Outlined.ChevronRight, contentDescription = "Next")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showProductDialog) {
+                ProductDialog(
+                    product = selectedProduct,
+                    state = state,
+                    onDismiss = { showProductDialog = false }
+                )
+            }
+
+            if (showCategoryDialog) {
+                CategoryDialog(
+                    title = "Add Product Category",
+                    extraLabel = "Description (optional)",
+                    onDismiss = { showCategoryDialog = false },
+                    onConfirm = { name, desc ->
+                        state.eventSink(ProductsEvent.CreateCategory(name, null, desc))
+                    }
+                )
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 80.dp, end = 24.dp)
+                .width(350.dp)
+        )
+    }
+}
+
+@Composable
+fun AdminProductCard(
+    product: Product,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(400.dp)
+            .background(Color.White)
+            .padding(24.dp)
+            .clickable { onEdit() }
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "ID: ${product.id.takeLast(6).uppercase()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MiraTextSecondary.copy(alpha = 0.5f),
+                letterSpacing = 1.sp
+            )
+            
+            Row {
+                IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Outlined.Edit, null, tint = MiraTextSecondary.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Outlined.Delete, null, tint = MiraCoral.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            val imageUrl = product.imageUrl
+            if (imageUrl.isNotBlank()) {
+                val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
+                AsyncImage(
+                    model = fullUrl,
+                    contentDescription = product.name,
+                    modifier = Modifier.size(140.dp),
+                    contentScale = ContentScale.Fit,
+                    onError = {
+                        Napier.e(it.result.throwable) { "Coil failed to load product image: $fullUrl" }
+                    }
+                )
+            } else {
+                Icon(
+                    Icons.Outlined.Image,
+                    null,
+                    modifier = Modifier.size(80.dp),
+                    tint = MiraTextSecondary.copy(alpha = 0.1f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+
+        Text(
+            text = product.name,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = product.category.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MiraTextSecondary,
+            letterSpacing = 1.sp
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (product.stockQuantity > 0) "${product.stockQuantity} IN STOCK" else "OUT OF STOCK",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (product.stockQuantity > 0) MiraGreen else MiraCoral,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "$${product.discountedPrice}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+/** Circuit [Ui.Factory] binding [DesktopScreen.Products] to [ProductsScreenUi]. */
+class ProductsUiFactory : Ui.Factory {
+    override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
+        is DesktopScreen.Products -> ui<ProductsUiState> { state, modifier ->
+            ProductsScreenUi(
+                state = state,
+                modifier = modifier,
+                onNavigate = LocalDesktopNavigate.current,
+                isSidebarExpanded = LocalSidebarExpanded.current,
+                onToggleSidebar = LocalToggleSidebar.current,
+                onProfileClick = LocalProfileClick.current
+            )
+        }
+        else -> null
+    }
+}
