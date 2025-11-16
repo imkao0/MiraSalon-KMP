@@ -1,0 +1,93 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+  weights:
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+  exclude:
+    - 'DetektProgressListener'
+
+console-reports:
+  active: true
+  exclude:
+    - 'ProjectStatisticsReport'
+    - 'ComplexityReport'
+    - 'NotificationReport'
+    - 'FindingsReport'
+    - 'FileBasedFindingsReport'
+    - 'LiteFindingsReport'
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 600
+  LongParameterList:
+    active: true
+    functionThreshold: 30
+    constructorThreshold: 30
+  LargeClass:
+    active: true
+    threshold: 2000
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 100
+    thresholdInClasses: 80
+    thresholdInInterfaces: 50
+    thresholdInObjects: 50
+    thresholdInEnums: 50
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 100
+  NestedBlockDepth:
+    active: true
+    threshold: 15
+  ComplexCondition:
+    active: true
+    threshold: 10
+
+style:
+  active: true
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+  MaxLineLength:
+    active: true
+    maxLineLength: 300
+  UnusedPrivateClass:
+    active: false
+  UnusedPrivateMember:
+    active: false
+  UnusedPrivateProperty:
+    active: false
+  UseCheckOrError:
+    active: false
+
+naming:
+  active: true
+  MatchingDeclarationName:
+    active: false
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
+  TooGenericExceptionThrown:
+    active: false
+
+empty-blocks:
+  active: true
+  EmptyCatchBlock:
+    active: true
+    allowedExceptionNameRegex: 'expected|ignored'
+  EmptyFunctionBlock:
+    active: false
