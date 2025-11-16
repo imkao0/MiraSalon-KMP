@@ -7,18 +7,12 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
-compose.resources {
-    publicResClass = true
-    packageOfResClass = "iz.mkao.mirasalon.feature.favourites"
-    generateResClass = always
-}
-
 val skipAndroid = providers.systemProperty("skipAndroid").getOrElse("false") == "true"
 
 kotlin {
     if (!skipAndroid) {
         (this as ExtensionAware).extensions.configure<KotlinMultiplatformAndroidLibraryTarget>("android") {
-            namespace = "iz.mkao.mirasalon.salon.favourites"
+            namespace = "iz.mkao.mirasalon.feature.auth"
         }
     }
     sourceSets {
@@ -30,8 +24,6 @@ kotlin {
             implementation(project(":core:network"))
             implementation(project(":core:realtime"))
             implementation(project(":core:database"))
-            implementation(project(":feature:feature-products"))
-            implementation(project(":feature:feature-specialists"))
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -56,10 +48,12 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+
+            implementation(libs.jetbrains.navigation3.ui)
         }
         commonTest.dependencies {
-            implementation(project(":core:testing"))
-            implementation(libs.bundles.testing.common)
+            implementation(libs.kotlin.test)
+            implementation(libs.circuit.test)
             implementation(libs.kotlinx.coroutines.test)
         }
     }
