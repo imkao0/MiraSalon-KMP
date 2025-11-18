@@ -9,7 +9,7 @@ plugins {
 
 compose.resources {
     publicResClass = true
-    packageOfResClass = "iz.mkao.mirasalon.feature.favourites"
+    packageOfResClass = "iz.mkao.mirasalon.feature.salon"
     generateResClass = always
 }
 
@@ -18,20 +18,19 @@ val skipAndroid = providers.systemProperty("skipAndroid").getOrElse("false") == 
 kotlin {
     if (!skipAndroid) {
         (this as ExtensionAware).extensions.configure<KotlinMultiplatformAndroidLibraryTarget>("android") {
-            namespace = "iz.mkao.mirasalon.salon.favourites"
+            namespace = "iz.mkao.mirasalon.feature.salon"
         }
     }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:common"))
-            implementation(project(":core:domain"))
-            implementation(project(":core:navigation"))
-            implementation(project(":core:designsystem"))
             implementation(project(":core:network"))
             implementation(project(":core:realtime"))
+            implementation(project(":core:designsystem"))
+            implementation(project(":core:domain"))
             implementation(project(":core:database"))
-            implementation(project(":feature:feature-products"))
             implementation(project(":feature:feature-specialists"))
+            implementation(project(":feature:feature-profile"))
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -51,6 +50,7 @@ kotlin {
             implementation(libs.circuit.codegen.annotations)
 
             implementation(libs.napier)
+
             implementation(libs.bundles.ktor.client)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
@@ -58,8 +58,8 @@ kotlin {
             implementation(libs.coil.network.ktor)
         }
         commonTest.dependencies {
-            implementation(project(":core:testing"))
-            implementation(libs.bundles.testing.common)
+            implementation(libs.kotlin.test)
+            implementation(libs.circuit.test)
             implementation(libs.kotlinx.coroutines.test)
         }
     }
