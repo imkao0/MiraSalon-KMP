@@ -74,7 +74,7 @@ sealed interface SubmissionState {
 @Composable
 fun ReviewBottomSheet(
     onDismiss: () -> Unit,
-    onReviewSubmit: suspend (Int, String) -> Result<Unit>?,
+    onReviewSubmit: suspend (Int, String) -> Result<Unit>,
 ) {
     var rating by rememberSaveable { mutableStateOf(0) }
     var reviewText by rememberSaveable { mutableStateOf("") }
@@ -160,10 +160,10 @@ fun ReviewBottomSheet(
                                 submissionState = SubmissionState.Submitting
                                 val result = onReviewSubmit(rating, reviewText)
                                 submissionState =
-                                    if (result?.isSuccess == true) {
+                                    if (result.isSuccess) {
                                         SubmissionState.Success
                                     } else {
-                                        SubmissionState.Error(result?.exceptionOrNull()?.message ?: "Something went wrong")
+                                        SubmissionState.Error(result.exceptionOrNull()?.message ?: "Something went wrong")
                                     }
                             }
                         },
