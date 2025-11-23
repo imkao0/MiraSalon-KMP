@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="salon_specialists">Salon Specialists</string>
+    <string name="specialist_detail">Specialist Detail</string>
+    <string name="message">Message</string>
+    <string name="services">Services</string>
+    <string name="reviews">Reviews</string>
+    <string name="no_services">No services listed yet</string>
+    <string name="no_reviews">No reviews yet</string>
+    <string name="customers">Customers</string>
+    <string name="years_exp">Years Exp</string>
+</resources>
