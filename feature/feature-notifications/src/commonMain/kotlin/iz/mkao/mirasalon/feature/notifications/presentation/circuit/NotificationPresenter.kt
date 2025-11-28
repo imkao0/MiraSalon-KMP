@@ -18,7 +18,7 @@ import iz.mkao.mirasalon.core.domain.model.NotificationType
 import iz.mkao.mirasalon.core.domain.repository.NotificationRepository
 import iz.mkao.mirasalon.core.navigation.NotificationRoute
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -98,7 +98,7 @@ class NotificationPresenter(
             else -> return null
         }
 
-        val eventTime = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp) + duration
+        val eventTime = kotlin.time.Instant.fromEpochMilliseconds(timestamp) + duration
         val formattedTime = DateUtils.formatTime(eventTime.epochSeconds)
 
         return when {
