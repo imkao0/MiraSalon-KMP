@@ -13,7 +13,7 @@ import io.ktor.client.HttpClient
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSalonTheme
 import iz.mkao.mirasalon.feature.profile.domain.model.AppSettings
 import iz.mkao.mirasalon.feature.profile.domain.model.AppTheme
-import iz.mkao.mirasalon.feature.profile.domain.model.AppSettingsRepository
+import iz.mkao.mirasalon.feature.profile.domain.repository.AppSettingsRepository
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 
