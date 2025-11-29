@@ -75,6 +75,10 @@ import iz.mkao.mirasalon.core.domain.model.Product
 import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.network.util.toPriceString
 import iz.mkao.mirasalon.feature.favourites.Res
+import iz.mkao.mirasalon.feature.favourites.favourites
+import iz.mkao.mirasalon.feature.favourites.no_favourites_category
+import iz.mkao.mirasalon.feature.favourites.products
+import iz.mkao.mirasalon.feature.favourites.services
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -93,7 +97,7 @@ fun FavouritesContent(
 
     Scaffold(
         topBar = {
-            MiraTopAppBar(title = "Favourites", onBackClick = onBackClick)
+            MiraTopAppBar(title = stringResource(Res.string.favourites), onBackClick = onBackClick)
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
@@ -121,7 +125,7 @@ fun FavouritesContent(
                     onClick = { selectedTab = 0 },
                     text = {
                         Text(
-                            "Products",
+                            stringResource(Res.string.products),
                             fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -133,7 +137,7 @@ fun FavouritesContent(
                     onClick = { selectedTab = 1 },
                     text = {
                         Text(
-                            "Services",
+                            stringResource(Res.string.services),
                             fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                             color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -146,7 +150,7 @@ fun FavouritesContent(
 
             if (isEmpty) {
                 MiraEmptyState(
-                    message = "No Favourites",
+                    message = stringResource(Res.string.no_favourites_category),
                     description = "Start adding items to your favorites",
                     icon = Icons.Outlined.FavoriteBorder
                 )
@@ -297,7 +301,7 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = product.price.toPriceString(),
+                        text = product.discountedPrice.toPriceString(),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold,
@@ -432,7 +436,7 @@ fun FavouriteServiceCard(service: Service, onClick: () -> Unit, onRemoveFavorite
     
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            kotlinx.coroutines.delay(100)
+            kotlinx.coroutines.delay(100.milliseconds)
             isPressed = false
         }
     }

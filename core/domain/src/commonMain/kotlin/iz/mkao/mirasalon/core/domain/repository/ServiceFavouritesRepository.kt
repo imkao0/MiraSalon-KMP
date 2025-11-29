@@ -9,3 +9,4 @@ interface ServiceFavouritesRepository {
     suspend fun addServiceToFavourites(service: Service)
     suspend fun removeServiceFromFavourites(serviceId: String)
 }
+

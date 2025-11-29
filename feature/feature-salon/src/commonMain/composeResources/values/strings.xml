@@ -1,0 +1,27 @@
+<resources>
+    <string name="services_title">Services</string>
+    <string name="search_services_placeholder">Search services...</string>
+    <string name="all_categories">All Categories</string>
+    <string name="no_services_found">No services found</string>
+    <string name="try_different_search">Try a different search or category</string>
+    <string name="duration_min">%1$d min</string>
+    <string name="book_service">Book Service</string>
+    <string name="book_now">Book Now</string>
+    <string name="uncategorized">Uncategorized</string>
+
+    <string name="salon_title">MiraSalon</string>
+    <string name="notification_content_description">Notifications</string>
+    <string name="service_categories_title">Service Categories</string>
+    <string name="specialists_title">Specialists</string>
+    <string name="view_all">see all</string>
+    <string name="show_less">Show Less</string>
+    <string name="get_started">Get Started</string>
+    <string name="retry">Retry</string>
+
+    <string name="morning_greeting">Good Morning</string>
+    <string name="afternoon_greeting">Good Afternoon</string>
+    <string name="evening_greeting">Good Evening</string>
+    <string name="explore_nearby">Explore nearby</string>
+    <string name="most_popular">Most Popular</string>
+    <string name="near_by">Near by offers</string>
+</resources>
