@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="favourites">Favourites</string>
+    <string name="products">Products</string>
+    <string name="services">Services</string>
+    <string name="no_favourites_category">No favourites in this category</string>
+</resources>
