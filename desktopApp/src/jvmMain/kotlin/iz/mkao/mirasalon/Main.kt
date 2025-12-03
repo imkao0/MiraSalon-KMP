@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
 import org.koin.core.context.GlobalContext
+import org.koin.core.qualifier.named
 
 fun main() {
     Napier.base(DebugAntilog())
@@ -64,7 +65,7 @@ fun main() {
 
     @OptIn(ExperimentalCoilApi::class)
     SingletonImageLoader.setSafe {
-        val httpClient: HttpClient = GlobalContext.get().get()
+        val httpClient: HttpClient = GlobalContext.get().get(named("imageLoader"))
         ImageLoader.Builder(it)
             .components {
                 add(KtorNetworkFetcherFactory(httpClient))

@@ -60,6 +60,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
 import iz.mkao.mirasalon.core.domain.model.Notification
 import iz.mkao.mirasalon.core.domain.repository.NotificationRepository
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.data.local.TokenManager
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -81,7 +82,8 @@ fun DashboardHeader(
     val scope = rememberCoroutineScope()
     var showNotifications by remember { mutableStateOf(false) }
     
-    val effectiveAvatar = userAvatar ?: session.avatarUrl
+    val rawAvatar = userAvatar ?: session.avatarUrl
+    val effectiveAvatar = remember(rawAvatar) { ApiEndpoints.resolveImageUrl(rawAvatar) }
 
     Row(
         modifier = Modifier.fillMaxWidth().height(64.dp),
