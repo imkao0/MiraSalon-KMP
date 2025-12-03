@@ -1,0 +1,8 @@
+<resources>
+    <string name="error_select_service">Select a service to continue</string>
+    <string name="error_select_date">Select a date to continue</string>
+    <string name="error_select_time">Select a time slot to continue</string>
+    <string name="error_select_specialist">Select a specialist to continue</string>
+    <string name="booking_failed">Booking failed</string>
+    <string name="payment_failed">Payment failed. Please try again.</string>
+</resources>

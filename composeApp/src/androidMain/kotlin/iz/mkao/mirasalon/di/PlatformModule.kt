@@ -7,7 +7,6 @@ import com.russhwolf.settings.SharedPreferencesSettings
 import io.ktor.client.HttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 actual val platformModule: Module = module {
@@ -17,7 +16,7 @@ actual val platformModule: Module = module {
     }
 
     single<ImageLoader> {
-        val imageHttpClient = get<HttpClient>(named("imageLoader"))
+        val imageHttpClient = get<HttpClient>(org.koin.core.qualifier.named("imageLoader"))
         ImageLoader.Builder(androidContext())
             .components {
                 add(KtorNetworkFetcherFactory(imageHttpClient))

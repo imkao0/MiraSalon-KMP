@@ -5,3 +5,5 @@ build/
 local.properties
 .env
 *.env.local
+.env
+*.env.local

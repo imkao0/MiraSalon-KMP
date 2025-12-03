@@ -48,13 +48,7 @@ data class ReviewDto(
     val targetType: String = "",
     val targetName: String = "",
     val imageUrl: String? = null,
-    val reviewId: String = "",
-    val customerId: String = "",
-    val customerName: String = "",
-    val customerAvatarUrl: String? = null,
-    val specialistId: String = "",
-    val specialistName: String = "",
-    val createdAt: Long = 0L,
+    val reviewId: String = ""
 )
 
 @Serializable
