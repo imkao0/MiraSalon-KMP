@@ -1,0 +1,7 @@
+pre-commit:
+  parallel: true
+  commands:
+    detekt:
+      run: ./gradlew detekt
+    ktlint:
+      run: ./gradlew ktlintCheck

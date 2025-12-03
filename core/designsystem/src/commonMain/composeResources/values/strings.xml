@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">MiraSalon</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="close">Close</string>
+    <string name="cart">Cart</string>
+    <string name="error_unknown">An unknown error occurred</string>
+    <string name="product_detail">Product Detail</string>
+    <string name="product_details">Product Details</string>
+    <string name="favorite">Favorite</string>
+    <string name="out_of_stock">Out of Stock</string>
+    <string name="select_option">Select Option</string>
+    <string name="add_to_cart">Add to Cart</string>
+    <string name="in_stock">In Stock</string>
+    <string name="only_left">Only %d left</string>
+    <string name="variations">Variations</string>
+    <string name="reviews">Reviews</string>
+    <string name="leave_review">Leave Review</string>
+    <string name="no_reviews">No reviews yet</string>
+    <string name="recently">Recently Viewed</string>
+    <string name="admin_reply">Admin Reply</string>
+    <string name="featured">Featured</string>
+    <string name="filters">Filters</string>
+    <string name="no_products_found">No products found</string>
+    <string name="products">Products</string>
+
+    <!-- Auth -->
+    <string name="welcome_to_mira_salon">Welcome to Mira Salon</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="name">Name</string>
+    <string name="dont_have_account">Don\'t have an account? Register Now</string>
+    <string name="already_have_account">Already have an account? Login Now</string>
+    <string name="welcome_back_headline">Welcome back! Glad\nto see you, Again!</string>
+    <string name="register_headline">Hello! Register to get\nstarted</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="or_login_with">Or Login with</string>
+    <string name="or_register_with">Or Register with</string>
+    <string name="register_now">Register Now</string>
+    <string name="login_now">Login Now</string>
+    <string name="continue_as_guest">Continue as a guest</string>
+    <string name="enter_your_email">Enter your email</string>
+    <string name="enter_your_password">Enter your password</string>
+    <string name="username">Username</string>
+    <string name="confirm_password">Confirm password</string>
+</resources>

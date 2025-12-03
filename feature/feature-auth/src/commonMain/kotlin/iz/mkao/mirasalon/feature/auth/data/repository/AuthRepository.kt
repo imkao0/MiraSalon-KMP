@@ -12,3 +12,4 @@ interface AuthRepository {
     suspend fun saveEmail(email: String?)
     suspend fun getSavedEmail(): String?
 }
+

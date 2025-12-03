@@ -9,18 +9,114 @@
 /* Begin PBXBuildFile section */
 		058557BB273AAA24004C7B11 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557BA273AAA24004C7B11 /* Assets.xcassets */; };
 		058557D9273AAEEB004C7B11 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 058557D8273AAEEB004C7B11 /* Preview Assets.xcassets */; };
+		0E92D36391ADDA785E49863C /* Core/MiraTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C854FD0C5E56E4E332531B43 /* Core/MiraTopBar.swift */; };
+		113F2B105F4F36756F080230 /* Features/Appointments/AppointmentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297B0E928261E9DB235111E4 /* Features/Appointments/AppointmentDetailView.swift */; };
+		176FBF061113CE88F3A83E0B /* Features/Chat/ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52E8083BBC5D4FE9E1002BC4 /* Features/Chat/ChatListView.swift */; };
+		1DE4D890AEBE1510DF0DCFAD /* Features/Booking/BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8717D0F9BD3A9C988785E393 /* Features/Booking/BookingView.swift */; };
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
+		26DF15B00170F9EF8E5C9E59 /* Features/Profile/PaymentMethodsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7B38AE9B2C6AB74AE8A612 /* Features/Profile/PaymentMethodsView.swift */; };
+		28680923FEB73E2063CACF78 /* Features/Profile/AddressFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A150132A4F9661B6B51D424 /* Features/Profile/AddressFormView.swift */; };
+		31D5EFB2818A132AC7C36F7E /* Features/Favourites/FavouritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 371B9E0CCBFB50D055F914FC /* Features/Favourites/FavouritesView.swift */; };
+		32ED396340D8902B6B29C6A3 /* Features/Products/ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 833AF8304B780C76845DEBAF /* Features/Products/ProductDetailView.swift */; };
+		5E9BECC3470C7E1A2630B272 /* Features/Auth/AuthComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BB9D349247127C3FF68E301 /* Features/Auth/AuthComponents.swift */; };
+		5FAE0DCA38347042A92D0888 /* Features/Appointments/AppointmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD110934F81A754DB6D162C /* Features/Appointments/AppointmentsView.swift */; };
+		63BD9598918E27C5E1577861 /* Features/Profile/ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB5FF726147C3AF0F5C4A945 /* Features/Profile/ProfileView.swift */; };
+		739D20D400DF3102FDD77EAD /* Features/Profile/AddressListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CA9D39DCA5D9A84BC252C65 /* Features/Profile/AddressListView.swift */; };
+		74EF69758C7930600E4B2810 /* Core/MiraDesignSystem+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67868D9C426344DBD2F734E /* Core/MiraDesignSystem+Tokens.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
+		83D1C85D1589E47E9480740F /* Core/KotlinBridge+Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D4116700B284CDE60D0971 /* Core/KotlinBridge+Helpers.swift */; };
+		8581F189D4B540EDB2B7D26B /* Features/Booking/MyBookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4640E50AD638C6FAA6019D1 /* Features/Booking/MyBookingsView.swift */; };
+		99EF120F4B45431CA173FA4F /* Features/Auth/LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDBAAED3E18B2B0565A1AA0 /* Features/Auth/LoginView.swift */; };
+		9ACC2C1AA7D9A8A35BB0E877 /* Core/MiraSharedPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805C35FD0EAFA91955CF166A /* Core/MiraSharedPrimitives.swift */; };
+		9CA3B4942CD122A3DFA0AD5A /* Features/Chat/ChatDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53549F75CC5553A6E36C315 /* Features/Chat/ChatDetailView.swift */; };
+		9D9875E31F8C4D734E89E446 /* Features/Auth/RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60EA355CCB331051B1308DAE /* Features/Auth/RegisterView.swift */; };
+		AA0000000000000000000C01B /* Core/Circuit/CircuitNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C01F /* Core/Circuit/CircuitNavigation.swift */; };
+		AA0000000000000000000C02B /* Core/Circuit/CircuitRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C02F /* Core/Circuit/CircuitRegistry.swift */; };
+		AA0000000000000000000C03B /* Core/Circuit/CircuitStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C03F /* Core/Circuit/CircuitStack.swift */; };
+		AA0000000000000000000C04B /* Core/Circuit/CircuitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C04F /* Core/Circuit/CircuitView.swift */; };
+		AA0000000000000000000C05B /* Features/Home/HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C05F /* Features/Home/HomeView.swift */; };
+		AA0000000000000000000C06B /* Features/Products/ProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C06F /* Features/Products/ProductsView.swift */; };
+		AA0000000000000000000C07B /* Features/Cart/CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C07F /* Features/Cart/CartView.swift */; };
+		AA0000000000000000000C08B /* Features/Specialists/SpecialistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C08F /* Features/Specialists/SpecialistsView.swift */; };
+		AA0000000000000000000C09B /* Features/Specialists/SpecialistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000C09F /* Features/Specialists/SpecialistDetailView.swift */; };
+		AB11F51C1AFF5BAE1AFCF0FB /* Features/Booking/EReceiptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1048E4177D9BF4FD08BABBE /* Features/Booking/EReceiptView.swift */; };
+		B703E5333E826E4C10A67DB8 /* Features/Products/ExploreCategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E082CBCC701B99301A3CD62 /* Features/Products/ExploreCategoriesView.swift */; };
+		BC311E014561888816FC5169 /* Core/MiraQRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364F12BA06BBD62A6D5E23FD /* Core/MiraQRCode.swift */; };
+		BFA72B4B6B95046F3B4C3B17 /* Features/Booking/PaymentSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B203300485F5F130B7CDC9 /* Features/Booking/PaymentSuccessView.swift */; };
+		C49E4AF2A4CC022C5E4F0DA6 /* Core/MiraDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA37B225E40867B446E9E8C /* Core/MiraDesignSystem.swift */; };
+		CDB32C5E1162E52B788B6A1C /* Features/Home/ServicesDiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E7FB835F3ADA9C0E1782F0 /* Features/Home/ServicesDiscoveryView.swift */; };
+		D418395ECD3AEA3BAB189ABE /* Features/Profile/EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA28CF9DAC7840F8711B7DA /* Features/Profile/EditProfileView.swift */; };
+		D5F7E106ACD9B763390B9AA0 /* Features/Auth/WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A27BD353A10639E7DDF5D1 /* Features/Auth/WelcomeView.swift */; };
+		E1D4222B37A83F502C298B15 /* Features/Home/ServiceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8848AE2CE115D413DAAF2B7 /* Features/Home/ServiceDetailView.swift */; };
+		E5D7A330D9CE5CB13FBDDC5E /* Core/MiraComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41E83BE8919F104B8F636D3 /* Core/MiraComponents.swift */; };
+		EE0000000000000000000102 /* Features/Notifications/NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000101 /* Features/Notifications/NotificationsView.swift */; };
+		EE0000000000000000000202 /* Features/Cart/OrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000201 /* Features/Cart/OrdersView.swift */; };
+		EE0000000000000000000302 /* Features/Cart/OrderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000301 /* Features/Cart/OrderDetailView.swift */; };
+		EE0000000000000000000402 /* Features/Cart/CartPaymentSuccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000000000000000000401 /* Features/Cart/CartPaymentSuccessView.swift */; };
+		B00100000000000000000001 /* Core/BadgeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000001 /* Core/BadgeStore.swift */; };
+		B00100000000000000000002 /* Core/SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000002 /* Core/SessionStore.swift */; };
+		B00100000000000000000003 /* Core/ReviewItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000003 /* Core/ReviewItemView.swift */; };
+		B00100000000000000000004 /* Features/Booking/BookingComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000004 /* Features/Booking/BookingComponents.swift */; };
+		B00100000000000000000005 /* Core/EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000005 /* Core/EmptyStateView.swift */; };
+		F1BBF838B134EBC178B378B5 /* Features/Booking/CheckoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF82C64CC73D17F961697472 /* Features/Booking/CheckoutView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		058557BA273AAA24004C7B11 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		058557D8273AAEEB004C7B11 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2152FB032600AC8F00CF470E /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
-		7555FF7B242A565900829871 /* MiraSalon-KMP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiraSalon-KMP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		22E7FB835F3ADA9C0E1782F0 /* Features/Home/ServicesDiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/ServicesDiscoveryView.swift; sourceTree = "<group>"; };
+		297B0E928261E9DB235111E4 /* Features/Appointments/AppointmentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Appointments/AppointmentDetailView.swift; sourceTree = "<group>"; };
+		2BB9D349247127C3FF68E301 /* Features/Auth/AuthComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/AuthComponents.swift; sourceTree = "<group>"; };
+		2CA9D39DCA5D9A84BC252C65 /* Features/Profile/AddressListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/AddressListView.swift; sourceTree = "<group>"; };
+		364F12BA06BBD62A6D5E23FD /* Core/MiraQRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/MiraQRCode.swift; sourceTree = "<group>"; };
+		371B9E0CCBFB50D055F914FC /* Features/Favourites/FavouritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Favourites/FavouritesView.swift; sourceTree = "<group>"; };
+		38D4116700B284CDE60D0971 /* Core/KotlinBridge+Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/KotlinBridge+Helpers.swift"; sourceTree = "<group>"; };
+		3E082CBCC701B99301A3CD62 /* Features/Products/ExploreCategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Products/ExploreCategoriesView.swift; sourceTree = "<group>"; };
+		4EDBAAED3E18B2B0565A1AA0 /* Features/Auth/LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/LoginView.swift; sourceTree = "<group>"; };
+		52E8083BBC5D4FE9E1002BC4 /* Features/Chat/ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Chat/ChatListView.swift; sourceTree = "<group>"; };
+		60EA355CCB331051B1308DAE /* Features/Auth/RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/RegisterView.swift; sourceTree = "<group>"; };
+		7555FF7B242A565900829871 /* MiraSalon-KMP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MiraSalon-KMP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7A150132A4F9661B6B51D424 /* Features/Profile/AddressFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/AddressFormView.swift; sourceTree = "<group>"; };
+		805C35FD0EAFA91955CF166A /* Core/MiraSharedPrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/MiraSharedPrimitives.swift; sourceTree = "<group>"; };
+		833AF8304B780C76845DEBAF /* Features/Products/ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Products/ProductDetailView.swift; sourceTree = "<group>"; };
+		8717D0F9BD3A9C988785E393 /* Features/Booking/BookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/BookingView.swift; sourceTree = "<group>"; };
+		9E7B38AE9B2C6AB74AE8A612 /* Features/Profile/PaymentMethodsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/PaymentMethodsView.swift; sourceTree = "<group>"; };
+		A53549F75CC5553A6E36C315 /* Features/Chat/ChatDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Chat/ChatDetailView.swift; sourceTree = "<group>"; };
+		A5B203300485F5F130B7CDC9 /* Features/Booking/PaymentSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/PaymentSuccessView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C01F /* Core/Circuit/CircuitNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Circuit/CircuitNavigation.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C02F /* Core/Circuit/CircuitRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Circuit/CircuitRegistry.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C03F /* Core/Circuit/CircuitStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Circuit/CircuitStack.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C04F /* Core/Circuit/CircuitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Circuit/CircuitView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C05F /* Features/Home/HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/HomeView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C06F /* Features/Products/ProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Products/ProductsView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C07F /* Features/Cart/CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Cart/CartView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C08F /* Features/Specialists/SpecialistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Specialists/SpecialistsView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000C09F /* Features/Specialists/SpecialistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Specialists/SpecialistDetailView.swift; sourceTree = "<group>"; };
 		AB3632DC29227652001CCB65 /* Config.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		ACA28CF9DAC7840F8711B7DA /* Features/Profile/EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/EditProfileView.swift; sourceTree = "<group>"; };
+		ACA37B225E40867B446E9E8C /* Core/MiraDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/MiraDesignSystem.swift; sourceTree = "<group>"; };
+		B00200000000000000000005 /* Core/EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/EmptyStateView.swift; sourceTree = "<group>"; };
+		ADD110934F81A754DB6D162C /* Features/Appointments/AppointmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Appointments/AppointmentsView.swift; sourceTree = "<group>"; };
+		B41E83BE8919F104B8F636D3 /* Core/MiraComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/MiraComponents.swift; sourceTree = "<group>"; };
+		B4640E50AD638C6FAA6019D1 /* Features/Booking/MyBookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/MyBookingsView.swift; sourceTree = "<group>"; };
+		B8A27BD353A10639E7DDF5D1 /* Features/Auth/WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/WelcomeView.swift; sourceTree = "<group>"; };
+		C1048E4177D9BF4FD08BABBE /* Features/Booking/EReceiptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/EReceiptView.swift; sourceTree = "<group>"; };
+		C67868D9C426344DBD2F734E /* Core/MiraDesignSystem+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/MiraDesignSystem+Tokens.swift"; sourceTree = "<group>"; };
+		C854FD0C5E56E4E332531B43 /* Core/MiraTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/MiraTopBar.swift; sourceTree = "<group>"; };
+		CF82C64CC73D17F961697472 /* Features/Booking/CheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/CheckoutView.swift; sourceTree = "<group>"; };
+		D8848AE2CE115D413DAAF2B7 /* Features/Home/ServiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Home/ServiceDetailView.swift; sourceTree = "<group>"; };
+		EB5FF726147C3AF0F5C4A945 /* Features/Profile/ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/ProfileView.swift; sourceTree = "<group>"; };
+		EE0000000000000000000101 /* Features/Notifications/NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Notifications/NotificationsView.swift; sourceTree = "<group>"; };
+		EE0000000000000000000201 /* Features/Cart/OrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Cart/OrdersView.swift; sourceTree = "<group>"; };
+		EE0000000000000000000301 /* Features/Cart/OrderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Cart/OrderDetailView.swift; sourceTree = "<group>"; };
+		EE0000000000000000000401 /* Features/Cart/CartPaymentSuccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Cart/CartPaymentSuccessView.swift; sourceTree = "<group>"; };
+		B00200000000000000000001 /* Core/BadgeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/BadgeStore.swift; sourceTree = "<group>"; };
+		B00200000000000000000002 /* Core/SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/SessionStore.swift; sourceTree = "<group>"; };
+		B00200000000000000000003 /* Core/ReviewItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/ReviewItemView.swift; sourceTree = "<group>"; };
+		B00200000000000000000004 /* Features/Booking/BookingComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Booking/BookingComponents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +168,54 @@
 			children = (
 				058557BA273AAA24004C7B11 /* Assets.xcassets */,
 				7555FF82242A565900829871 /* ContentView.swift */,
+				AA0000000000000000000C01F /* Core/Circuit/CircuitNavigation.swift */,
+				AA0000000000000000000C02F /* Core/Circuit/CircuitRegistry.swift */,
+				AA0000000000000000000C03F /* Core/Circuit/CircuitStack.swift */,
+				AA0000000000000000000C04F /* Core/Circuit/CircuitView.swift */,
+				AA0000000000000000000C05F /* Features/Home/HomeView.swift */,
+				AA0000000000000000000C06F /* Features/Products/ProductsView.swift */,
+				AA0000000000000000000C07F /* Features/Cart/CartView.swift */,
+				AA0000000000000000000C08F /* Features/Specialists/SpecialistsView.swift */,
+				AA0000000000000000000C09F /* Features/Specialists/SpecialistDetailView.swift */,
+				38D4116700B284CDE60D0971 /* Core/KotlinBridge+Helpers.swift */,
+				B41E83BE8919F104B8F636D3 /* Core/MiraComponents.swift */,
+				C67868D9C426344DBD2F734E /* Core/MiraDesignSystem+Tokens.swift */,
+				ACA37B225E40867B446E9E8C /* Core/MiraDesignSystem.swift */,
+				364F12BA06BBD62A6D5E23FD /* Core/MiraQRCode.swift */,
+				805C35FD0EAFA91955CF166A /* Core/MiraSharedPrimitives.swift */,
+				B00200000000000000000005 /* Core/EmptyStateView.swift */,
+				C854FD0C5E56E4E332531B43 /* Core/MiraTopBar.swift */,
+				297B0E928261E9DB235111E4 /* Features/Appointments/AppointmentDetailView.swift */,
+				ADD110934F81A754DB6D162C /* Features/Appointments/AppointmentsView.swift */,
+				2BB9D349247127C3FF68E301 /* Features/Auth/AuthComponents.swift */,
+				4EDBAAED3E18B2B0565A1AA0 /* Features/Auth/LoginView.swift */,
+				60EA355CCB331051B1308DAE /* Features/Auth/RegisterView.swift */,
+				B8A27BD353A10639E7DDF5D1 /* Features/Auth/WelcomeView.swift */,
+				8717D0F9BD3A9C988785E393 /* Features/Booking/BookingView.swift */,
+				CF82C64CC73D17F961697472 /* Features/Booking/CheckoutView.swift */,
+				C1048E4177D9BF4FD08BABBE /* Features/Booking/EReceiptView.swift */,
+				B4640E50AD638C6FAA6019D1 /* Features/Booking/MyBookingsView.swift */,
+				A5B203300485F5F130B7CDC9 /* Features/Booking/PaymentSuccessView.swift */,
+				A53549F75CC5553A6E36C315 /* Features/Chat/ChatDetailView.swift */,
+				52E8083BBC5D4FE9E1002BC4 /* Features/Chat/ChatListView.swift */,
+				371B9E0CCBFB50D055F914FC /* Features/Favourites/FavouritesView.swift */,
+				D8848AE2CE115D413DAAF2B7 /* Features/Home/ServiceDetailView.swift */,
+				22E7FB835F3ADA9C0E1782F0 /* Features/Home/ServicesDiscoveryView.swift */,
+				3E082CBCC701B99301A3CD62 /* Features/Products/ExploreCategoriesView.swift */,
+				833AF8304B780C76845DEBAF /* Features/Products/ProductDetailView.swift */,
+				7A150132A4F9661B6B51D424 /* Features/Profile/AddressFormView.swift */,
+				2CA9D39DCA5D9A84BC252C65 /* Features/Profile/AddressListView.swift */,
+				ACA28CF9DAC7840F8711B7DA /* Features/Profile/EditProfileView.swift */,
+				9E7B38AE9B2C6AB74AE8A612 /* Features/Profile/PaymentMethodsView.swift */,
+				EB5FF726147C3AF0F5C4A945 /* Features/Profile/ProfileView.swift */,
+				EE0000000000000000000101 /* Features/Notifications/NotificationsView.swift */,
+				EE0000000000000000000201 /* Features/Cart/OrdersView.swift */,
+				EE0000000000000000000301 /* Features/Cart/OrderDetailView.swift */,
+				EE0000000000000000000401 /* Features/Cart/CartPaymentSuccessView.swift */,
+				B00200000000000000000001 /* Core/BadgeStore.swift */,
+				B00200000000000000000002 /* Core/SessionStore.swift */,
+				B00200000000000000000003 /* Core/ReviewItemView.swift */,
+				B00200000000000000000004 /* Features/Booking/BookingComponents.swift */,
 				7555FF8C242A565B00829871 /* Info.plist */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
 				058557D7273AAEEB004C7B11 /* Preview Content */,
@@ -175,7 +319,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\nunset ANDROID_USER_HOME ANDROID_PREFS_ROOT\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -186,6 +330,54 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				AA0000000000000000000C01B /* Core/Circuit/CircuitNavigation.swift in Sources */,
+				AA0000000000000000000C02B /* Core/Circuit/CircuitRegistry.swift in Sources */,
+				AA0000000000000000000C03B /* Core/Circuit/CircuitStack.swift in Sources */,
+				AA0000000000000000000C04B /* Core/Circuit/CircuitView.swift in Sources */,
+				AA0000000000000000000C05B /* Features/Home/HomeView.swift in Sources */,
+				AA0000000000000000000C06B /* Features/Products/ProductsView.swift in Sources */,
+				AA0000000000000000000C07B /* Features/Cart/CartView.swift in Sources */,
+				AA0000000000000000000C08B /* Features/Specialists/SpecialistsView.swift in Sources */,
+				AA0000000000000000000C09B /* Features/Specialists/SpecialistDetailView.swift in Sources */,
+				83D1C85D1589E47E9480740F /* Core/KotlinBridge+Helpers.swift in Sources */,
+				E5D7A330D9CE5CB13FBDDC5E /* Core/MiraComponents.swift in Sources */,
+				74EF69758C7930600E4B2810 /* Core/MiraDesignSystem+Tokens.swift in Sources */,
+				C49E4AF2A4CC022C5E4F0DA6 /* Core/MiraDesignSystem.swift in Sources */,
+				BC311E014561888816FC5169 /* Core/MiraQRCode.swift in Sources */,
+				9ACC2C1AA7D9A8A35BB0E877 /* Core/MiraSharedPrimitives.swift in Sources */,
+				0E92D36391ADDA785E49863C /* Core/MiraTopBar.swift in Sources */,
+				113F2B105F4F36756F080230 /* Features/Appointments/AppointmentDetailView.swift in Sources */,
+				5FAE0DCA38347042A92D0888 /* Features/Appointments/AppointmentsView.swift in Sources */,
+				5E9BECC3470C7E1A2630B272 /* Features/Auth/AuthComponents.swift in Sources */,
+				99EF120F4B45431CA173FA4F /* Features/Auth/LoginView.swift in Sources */,
+				9D9875E31F8C4D734E89E446 /* Features/Auth/RegisterView.swift in Sources */,
+				D5F7E106ACD9B763390B9AA0 /* Features/Auth/WelcomeView.swift in Sources */,
+				1DE4D890AEBE1510DF0DCFAD /* Features/Booking/BookingView.swift in Sources */,
+				F1BBF838B134EBC178B378B5 /* Features/Booking/CheckoutView.swift in Sources */,
+				AB11F51C1AFF5BAE1AFCF0FB /* Features/Booking/EReceiptView.swift in Sources */,
+				8581F189D4B540EDB2B7D26B /* Features/Booking/MyBookingsView.swift in Sources */,
+				BFA72B4B6B95046F3B4C3B17 /* Features/Booking/PaymentSuccessView.swift in Sources */,
+				9CA3B4942CD122A3DFA0AD5A /* Features/Chat/ChatDetailView.swift in Sources */,
+				176FBF061113CE88F3A83E0B /* Features/Chat/ChatListView.swift in Sources */,
+				31D5EFB2818A132AC7C36F7E /* Features/Favourites/FavouritesView.swift in Sources */,
+				E1D4222B37A83F502C298B15 /* Features/Home/ServiceDetailView.swift in Sources */,
+				CDB32C5E1162E52B788B6A1C /* Features/Home/ServicesDiscoveryView.swift in Sources */,
+				B703E5333E826E4C10A67DB8 /* Features/Products/ExploreCategoriesView.swift in Sources */,
+				32ED396340D8902B6B29C6A3 /* Features/Products/ProductDetailView.swift in Sources */,
+				28680923FEB73E2063CACF78 /* Features/Profile/AddressFormView.swift in Sources */,
+				739D20D400DF3102FDD77EAD /* Features/Profile/AddressListView.swift in Sources */,
+				D418395ECD3AEA3BAB189ABE /* Features/Profile/EditProfileView.swift in Sources */,
+				26DF15B00170F9EF8E5C9E59 /* Features/Profile/PaymentMethodsView.swift in Sources */,
+				63BD9598918E27C5E1577861 /* Features/Profile/ProfileView.swift in Sources */,
+				EE0000000000000000000102 /* Features/Notifications/NotificationsView.swift in Sources */,
+				EE0000000000000000000202 /* Features/Cart/OrdersView.swift in Sources */,
+				EE0000000000000000000302 /* Features/Cart/OrderDetailView.swift in Sources */,
+				EE0000000000000000000402 /* Features/Cart/CartPaymentSuccessView.swift in Sources */,
+				B00100000000000000000001 /* Core/BadgeStore.swift in Sources */,
+				B00100000000000000000002 /* Core/SessionStore.swift in Sources */,
+				B00100000000000000000003 /* Core/ReviewItemView.swift in Sources */,
+				B00100000000000000000004 /* Features/Booking/BookingComponents.swift in Sources */,
+				B00100000000000000000005 /* Core/EmptyStateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,7 +437,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -302,7 +494,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -319,19 +511,19 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = QA7L7N3GVU;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)\n$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 				);
 				INFOPLIST_FILE = iosApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "${BUNDLE_ID}${TEAM_ID}";
+				PRODUCT_BUNDLE_IDENTIFIER = "${BUNDLE_ID}";
 				PRODUCT_NAME = "${APP_NAME}";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -346,19 +538,19 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = QA7L7N3GVU;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)\n$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 				);
 				INFOPLIST_FILE = iosApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "${BUNDLE_ID}${TEAM_ID}";
+				PRODUCT_BUNDLE_IDENTIFIER = "${BUNDLE_ID}";
 				PRODUCT_NAME = "${APP_NAME}";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
