@@ -164,9 +164,14 @@ fun Route.reviewRoutes(
             val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
             val query = call.request.queryParameters["query"]
 
-            val pagedReviews = reviewRepository.findAllPaginated(page, pageSize, query)
-            log.info("Admin ${call.getUserId()} fetched all reviews (page $page, size $pageSize, query $query)")
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
+            try {
+                val pagedReviews = reviewRepository.findAllPaginated(page, pageSize, query)
+                log.info("Admin ${call.getUserId()} fetched all reviews (page $page, size $pageSize, query $query)")
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
+            } catch (e: Exception) {
+                log.error("Error fetching all reviews", e)
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to fetch reviews"))
+            }
         }
 
         /**
