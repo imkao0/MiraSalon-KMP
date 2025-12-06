@@ -136,11 +136,16 @@ fun Route.specialistRoutes(
     }
 
     get("") {
-        val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
-        val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
-        val query = call.request.queryParameters["query"]
-        val result = specialistRepository.findAll(null, page, pageSize, query)
-        call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result))
+        try {
+            val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+            val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
+            val query = call.request.queryParameters["query"]
+            val result = specialistRepository.findAll(null, page, pageSize, query)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result))
+        } catch (e: Exception) {
+            log.error("Error fetching specialists", e)
+            call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to fetch specialists"))
+        }
     }
 
     get("/all") {
