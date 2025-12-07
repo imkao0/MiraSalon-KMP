@@ -12,8 +12,8 @@ import iz.mkao.mirasalon.core.network.model.dto.CategoryDto
 import iz.mkao.mirasalon.core.network.model.dto.CreateProductRequest
 import iz.mkao.mirasalon.core.network.model.dto.ProductDto
 import iz.mkao.mirasalon.core.network.model.dto.ProductPageDto
-import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
 import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
+import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
 import iz.mkao.mirasalon.server.data.tables.ProductCategoriesTable
 import iz.mkao.mirasalon.server.data.tables.ProductsTable
 import iz.mkao.mirasalon.server.data.tables.ReviewsTable
@@ -556,7 +556,7 @@ class ProductRepository(
             name = this@toProduct[ProductsTable.name],
             category = this@toProduct[ProductsTable.category],
             description = this@toProduct[ProductsTable.description],
-            imageUrl = this@toProduct[ProductsTable.imageUrl] ?: "",
+            imageUrl = this@toProduct[ProductsTable.imageUrl],
             price = this@toProduct[ProductsTable.price],
             stockQuantity = this@toProduct[ProductsTable.stockQuantity],
             discountPercent = this@toProduct[ProductsTable.discountPercent],
@@ -597,7 +597,7 @@ class ProductRepository(
             category = this@toProductDto[ProductsTable.category],
             subCategory = this@toProductDto[ProductsTable.subCategory],
             description = this@toProductDto[ProductsTable.description],
-            imageUrl = this@toProductDto[ProductsTable.imageUrl] ?: "",
+            imageUrl = this@toProductDto[ProductsTable.imageUrl],
             price = this@toProductDto[ProductsTable.price],
             discountPercent = this@toProductDto[ProductsTable.discountPercent],
             stockQuantity = this@toProductDto[ProductsTable.stockQuantity],
