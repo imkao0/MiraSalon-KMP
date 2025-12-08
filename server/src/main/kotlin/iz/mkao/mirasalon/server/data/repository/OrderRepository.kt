@@ -526,15 +526,24 @@ class OrderRepository(
         val totalAmount = this[OrdersTable.totalAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
         val discountAmount = this[OrdersTable.discountAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
 
+        val userEmail = this.getOrNull(UsersTable.email)
+        val userPhone = this.getOrNull(UsersTable.phone)
+
         return OrderDto(
             id = orderId,
             userId = userId,
             userName = resolvedName,
+            userEmail = userEmail,
+            userPhone = userPhone,
             items = resolvedItems,
-            totalAmount = totalAmount,
+            subtotalAmount = totalAmount - discountAmount,
+            taxAmount = 0.0,
+            shippingFees = 0.0,
             discountAmount = discountAmount,
+            totalAmount = totalAmount,
             status = statusEnum,
             createdAt = this[OrdersTable.createdAt],
+            updatedAt = this[OrdersTable.createdAt],
             promoCode = this[OrdersTable.promoCode],
             expiresAt = this[OrdersTable.expiresAt]?.let { it / 1000 },
             shippingAddress = this[OrdersTable.shippingAddress],
