@@ -45,18 +45,30 @@ fun Route.analyticsRoutes(
             call.ensureAdmin()
             val timer = Timer.start(meterRegistry)
             val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
-            val stats = calculateAppointmentStats(appointmentRepository, orderRepository, days)
-            timer.stop(meterRegistry.timer("analytics_query_duration", "type", "appointments"))
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = stats))
+            try {
+                val stats = calculateAppointmentStats(appointmentRepository, orderRepository, days)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "appointments"))
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = stats))
+            } catch (e: Exception) {
+                log.error("Error calculating appointment stats", e)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "appointments"))
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate appointment stats"))
+            }
         }
 
         get("/specialists") {
             call.ensureAdmin()
             val timer = Timer.start(meterRegistry)
             val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
-            val performance = calculateSpecialistPerformance(appointmentRepository, specialistRepository, days)
-            timer.stop(meterRegistry.timer("analytics_query_duration", "type", "specialists"))
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = performance))
+            try {
+                val performance = calculateSpecialistPerformance(appointmentRepository, specialistRepository, days)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "specialists"))
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = performance))
+            } catch (e: Exception) {
+                log.error("Error calculating specialist performance", e)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "specialists"))
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate specialist performance"))
+            }
         }
 
         get("/services") {
@@ -96,62 +108,74 @@ fun Route.analyticsRoutes(
             call.ensureAdmin()
             val timer = Timer.start(meterRegistry)
             val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
-            val trend = calculateSalesTrend(appointmentRepository, orderRepository, days)
-            timer.stop(meterRegistry.timer("analytics_query_duration", "type", "sales"))
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = trend))
+            try {
+                val trend = calculateSalesTrend(appointmentRepository, orderRepository, days)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "sales"))
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = trend))
+            } catch (e: Exception) {
+                log.error("Error calculating sales trend", e)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "sales"))
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate sales trend"))
+            }
         }
 
         get("/activity") {
             call.ensureAdmin()
             val timer = Timer.start(meterRegistry)
-            val now = System.currentTimeMillis()
-            // ...
-            // Expand range to include recent past and upcoming appointments
-            val start = now - (30L * 24 * 60 * 60 * 1000) // Last 30 days
-            val end = now + (30L * 24 * 60 * 60 * 1000)   // Next 30 days
+            try {
+                val now = System.currentTimeMillis()
+                // ...
+                // Expand range to include recent past and upcoming appointments
+                val start = now - (30L * 24 * 60 * 60 * 1000) // Last 30 days
+                val end = now + (30L * 24 * 60 * 60 * 1000)   // Next 30 days
 
-            val appointments = appointmentRepository.findByDateRange(start, end)
-            val orders = orderRepository.findByDateRange(start, now)
+                val appointments = appointmentRepository.findByDateRange(start, end)
+                val orders = orderRepository.findByDateRange(start, now)
 
-            val appActivities = appointments.map { app ->
-                ActivityEventDto(
-                    id = app.id,
-                    type = "APPOINTMENT",
-                    customerEmail = app.userName ?: "Unknown",
-                    status = app.status.name,
-                    timestamp = app.dateTime.toString(),
-                    imageUrl = app.specialistAvatarUrl ?: app.specialistId,
-                    serviceName = app.services.firstOrNull()?.name ?: "Service",
-                    details = "Booking for ${app.services.joinToString { it.name }}"
+                val appActivities = appointments.map { app ->
+                    ActivityEventDto(
+                        id = app.id,
+                        type = "APPOINTMENT",
+                        customerEmail = app.userName ?: "Unknown",
+                        status = app.status.name,
+                        timestamp = app.dateTime.toString(),
+                        imageUrl = app.specialistAvatarUrl ?: app.specialistId,
+                        serviceName = app.services.firstOrNull()?.name ?: "Service",
+                        details = "Booking for ${app.services.joinToString { it.name }}"
+                    )
+                }
+
+                val orderActivities = orders.map { order ->
+                    ActivityEventDto(
+                        id = order.id,
+                        type = "STORE_ORDER",
+                        customerEmail = order.userName ?: order.userId,
+                        status = order.status.name,
+                        timestamp = order.createdAt.toString(),
+                        imageUrl = null,
+                        serviceName = "Product Purchase",
+                        details = "Bought ${order.items.size} item(s) for ${order.totalAmount.toPriceString()}"
+                    )
+                }
+
+                // Sort by proximity to 'now' so that current/upcoming/recent activity is prioritized
+                val allActivities = (appActivities + orderActivities)
+                    .sortedBy { abs((it.timestamp.toLongOrNull() ?: 0L) - now) }
+                    .take(40)
+
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "activity"))
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse(
+                        success = true,
+                        data = allActivities
+                    )
                 )
+            } catch (e: Exception) {
+                log.error("Error calculating activity", e)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "activity"))
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate activity"))
             }
-
-            val orderActivities = orders.map { order ->
-                ActivityEventDto(
-                    id = order.id,
-                    type = "STORE_ORDER",
-                    customerEmail = order.userName ?: order.userId,
-                    status = order.status.name,
-                    timestamp = order.createdAt.toString(),
-                    imageUrl = null,
-                    serviceName = "Product Purchase",
-                    details = "Bought ${order.items.size} item(s) for ${order.totalAmount.toPriceString()}"
-                )
-            }
-
-            // Sort by proximity to 'now' so that current/upcoming/recent activity is prioritized
-            val allActivities = (appActivities + orderActivities)
-                .sortedBy { abs((it.timestamp.toLongOrNull() ?: 0L) - now) }
-                .take(40)
-
-            timer.stop(meterRegistry.timer("analytics_query_duration", "type", "activity"))
-            call.respond(
-                HttpStatusCode.OK,
-                ApiResponse(
-                    success = true,
-                    data = allActivities
-                )
-            )
         }
     }
 }
