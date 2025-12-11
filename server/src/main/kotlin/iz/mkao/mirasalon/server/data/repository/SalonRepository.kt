@@ -5,6 +5,7 @@ import iz.mkao.mirasalon.core.domain.model.SalonHome
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.dto.SalonDto
+import iz.mkao.mirasalon.core.network.model.dto.SalonPaginatedResponseDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateSalonRequest
 import iz.mkao.mirasalon.server.data.tables.SalonsTable
 import org.jetbrains.exposed.sql.ResultRow
@@ -24,13 +25,6 @@ sealed class SalonUpdateResult {
     data class Failure(val message: String) : SalonUpdateResult()
 }
 
-data class SalonPaginatedResponse(
-    val items: List<SalonDto>,
-    val total: Long,
-    val page: Int,
-    val pageSize: Int
-)
-
 class SalonRepository : CoreSalonRepository {
 
     override suspend fun getHome(): Outcome<SalonHome> {
@@ -45,7 +39,7 @@ class SalonRepository : CoreSalonRepository {
     override suspend fun getSalon(id: String): Outcome<Salon> {
         return when (val result = findById(id)) {
             is SalonFetchResult.Success -> Outcome.Success(result.salon.toDomain())
-            is SalonFetchResult.NotFound -> Outcome.Error(iz.mkao.mirasalon.core.domain.outcome.Failure.ClientError(404, "Salon not found"))
+            is SalonFetchResult.NotFound -> Outcome.Error(Failure.ClientError(404, "Salon not found"))
         }
     }
 
@@ -55,13 +49,13 @@ class SalonRepository : CoreSalonRepository {
             .singleOrNull()?.let { SalonFetchResult.Success(it) } ?: SalonFetchResult.NotFound
     }
 
-    fun findAll(page: Int, pageSize: Int): SalonPaginatedResponse = transaction {
+    fun findAll(page: Int, pageSize: Int): SalonPaginatedResponseDto = transaction {
         val total = SalonsTable.selectAll().count()
         val items = SalonsTable.selectAll()
             .limit(pageSize).offset(((page - 1) * pageSize).toLong())
             .map { it.toSalonDto() }
         
-        SalonPaginatedResponse(items, total, page, pageSize)
+        SalonPaginatedResponseDto(items, total, page, pageSize)
     }
 
     fun update(id: String, request: UpdateSalonRequest): SalonUpdateResult = transaction {
