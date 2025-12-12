@@ -28,7 +28,7 @@ fun Application.configureStatusPages() {
         exception<ValidationException> { call, cause ->
             call.respond(
                 HttpStatusCode.UnprocessableEntity,
-                ApiResponse(success = false, error = cause.message, data = cause.errors)
+                ApiResponse<Map<String, List<String>>>(success = false, error = cause.message, data = cause.errors)
             )
         }
 
