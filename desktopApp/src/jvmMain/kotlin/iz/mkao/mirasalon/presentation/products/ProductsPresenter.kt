@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.slack.circuit.runtime.presenter.Presenter
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.domain.repository.ProductRepository
@@ -95,10 +96,15 @@ class ProductsPresenter(
 
                     if (categoriesResult is Outcome.Success) {
                         newCategories = categoriesResult.data.map { it.name }
+                        Napier.d { "[ProductsPresenter] Loaded ${newCategories.size} categories" }
                     }
 
                     if (productsResult is Outcome.Success) {
                         newProducts = productsResult.data.products
+                        Napier.d { "[ProductsPresenter] Loaded ${newProducts.size} products" }
+                        newProducts.forEach { p ->
+                            Napier.v { "[ProductsPresenter] Product: ${p.name}, Image: ${p.imageUrl}" }
+                        }
                         totalPages = if (productsResult.data.hasMore) {
                             currentPage + 1
                         } else {

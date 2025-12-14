@@ -145,8 +145,8 @@ class SpecialistAvailabilityRepository {
                     specialistId = it[SpecialistAbsencesTable.specialistId],
                     startTime = it[SpecialistAbsencesTable.startTime],
                     endTime = it[SpecialistAbsencesTable.endTime],
-                    reason = it[SpecialistAbsenceRecord::reason.name], // Fix: use reason correctly
-                    createdAt = it[SpecialistAbsenceRecord::createdAt.name]
+                    reason = it[SpecialistAbsencesTable.reason],
+                    createdAt = it[SpecialistAbsencesTable.createdAt]
                 )
             }
     }

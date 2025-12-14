@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.slack.circuit.runtime.presenter.Presenter
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.result.NetworkResult
 import iz.mkao.mirasalon.core.domain.model.ServiceFilter
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
@@ -79,6 +80,10 @@ class StaffPresenter(
 
                     if (staffResult is NetworkResult.Success) {
                         newStaff = staffResult.data
+                        Napier.d { "[StaffPresenter] Loaded ${newStaff.size} staff members" }
+                        newStaff.forEach { s ->
+                            Napier.v { "[StaffPresenter] Specialist: ${s.name}, Image: ${s.imageUrl}" }
+                        }
                     }
 
                     if (servicesResult is NetworkResult.Success) {

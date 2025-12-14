@@ -57,7 +57,7 @@ fun Route.serviceRoutes(
             return@get call.respondRedirect(path)
         }
 
-        val cleanPath = path.removePrefix("/uploads/").removePrefix("/")
+        val cleanPath = path.removePrefix("/uploads/").removePrefix("uploads/").removePrefix("/")
         val file = File(appConfig.uploadDir, cleanPath)
         if (file.exists()) {
             val contentType = ContentType.fromFilePath(file.name).firstOrNull() ?: ContentType.Image.Any
@@ -81,7 +81,7 @@ fun Route.serviceRoutes(
             return@get call.respondRedirect(path)
         }
 
-        val cleanPath = path.removePrefix("/uploads/").removePrefix("/")
+        val cleanPath = path.removePrefix("/uploads/").removePrefix("uploads/").removePrefix("/")
         val file = File(appConfig.uploadDir, cleanPath)
         if (file.exists()) {
             val contentType = ContentType.fromFilePath(file.name).firstOrNull() ?: ContentType.Image.Any
@@ -181,8 +181,7 @@ fun Route.serviceRoutes(
                 request.name?.let { requireNotBlank("name", it) }
             }
 
-            val result = serviceRepository.update(id, request)
-            when (result) {
+            when (val result = serviceRepository.update(id, request)) {
                 is ServiceUpdateResult.Success -> {
                     log.info("Admin {} updated service: {}", adminId, id)
                     call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))

@@ -25,8 +25,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * Limits are configurable via environment variables.
  */
 fun Application.configureRateLimiting() {
-    val generalLimit = System.getenv("RATE_LIMIT_GENERAL")?.toIntOrNull() ?: 60
-    val authLimit = System.getenv("RATE_LIMIT_AUTH")?.toIntOrNull() ?: 10
+    val generalLimit = System.getenv("RATE_LIMIT_GENERAL")?.toIntOrNull() ?: 500
+    val authLimit = System.getenv("RATE_LIMIT_AUTH")?.toIntOrNull() ?: 50
     val refillPeriodMs = 60_000L
 
     val generalBuckets = ConcurrentHashMap<String, TokenBucket>()
