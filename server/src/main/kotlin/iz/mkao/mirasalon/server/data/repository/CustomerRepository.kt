@@ -5,12 +5,25 @@ import iz.mkao.mirasalon.core.domain.model.CustomerSummary
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.PagedResponse
-import iz.mkao.mirasalon.core.network.model.dto.*
-import iz.mkao.mirasalon.server.data.tables.*
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import iz.mkao.mirasalon.core.network.model.dto.CustomerDetailDto
+import iz.mkao.mirasalon.core.network.model.dto.CustomerSummaryDto
+import iz.mkao.mirasalon.core.network.model.dto.SimpleAppointmentDto
+import iz.mkao.mirasalon.core.network.model.dto.SimpleOrderDto
+import iz.mkao.mirasalon.core.network.model.dto.UpdateCustomerRequestDto
+import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
+import iz.mkao.mirasalon.server.data.tables.OrdersTable
+import iz.mkao.mirasalon.server.data.tables.UsersTable
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.lowerCase
+import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.util.*
+import org.jetbrains.exposed.sql.update
+import java.util.UUID
 import iz.mkao.mirasalon.core.domain.repository.CustomerRepository as CoreCustomerRepository
 
 class CustomerRepository(private val userRepository: UserRepository) : CoreCustomerRepository {
@@ -139,7 +152,7 @@ class CustomerRepository(private val userRepository: UserRepository) : CoreCusto
         PagedResponse(items, total, page, pageSize, totalPages)
     }
 
-    fun getCustomerDetailLegacy(id: String): CustomerDetailDto? = transaction {
+    fun getCustomerDetail(id: String): CustomerDetailDto? = transaction {
         val user = UsersTable.selectAll().where { (UsersTable.id eq id) and (UsersTable.isDeleted eq false) }
             .singleOrNull() ?: return@transaction null
         
@@ -198,7 +211,7 @@ class CustomerRepository(private val userRepository: UserRepository) : CoreCusto
         id
     }
 
-    fun updateCustomer(id: String, request: UpdateCustomerRequestDto): Boolean = transaction {
+    fun update(id: String, request: UpdateCustomerRequestDto): Boolean = transaction {
         val updatedRows = UsersTable.update({ UsersTable.id eq id }) {
             request.name?.let { name -> it[UsersTable.name] = name }
             request.email?.let { email -> it[UsersTable.email] = email }

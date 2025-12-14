@@ -505,7 +505,7 @@ class SpecialistRepository(
             userId = this@toSpecialistDto[SpecialistsTable.userId],
             name = this@toSpecialistDto[SpecialistsTable.name],
             role = this@toSpecialistDto[SpecialistsTable.role],
-            imageUrl = if (this@toSpecialistDto[SpecialistsTable.imageUrl] != null) "/v1/api/specialists/$id/avatar" else null,
+            imageUrl = this@toSpecialistDto[SpecialistsTable.imageUrl],
             bio = this@toSpecialistDto[SpecialistsTable.bio],
             rating = avgRating,
             salonId = this@toSpecialistDto[SpecialistsTable.salonId],

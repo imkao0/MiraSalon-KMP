@@ -80,7 +80,12 @@ val serverModule = module {
 
             uploadDir = ServerEnvironment.orDefault("UPLOAD_DIR", run {
                 val rootUploads = File("server/uploads")
-                if (rootUploads.exists()) "server/uploads" else "./uploads"
+                val nestedUploads = File("server/server/uploads")
+                when {
+                    nestedUploads.exists() -> "server/server/uploads"
+                    rootUploads.exists() -> "server/uploads"
+                    else -> "./uploads"
+                }
             }),
 
             environment = ServerEnvironment.environment()
@@ -131,10 +136,9 @@ val serverModule = module {
 
     single {
         StartupTasks(
-            userRepository = get(),
+            appConfig = get(),
             streamSyncService = get(),
-            orderRepository = get(),
-            promotionRepository = get()
+            orderRepository = get()
         )
     }
 }

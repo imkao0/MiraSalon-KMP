@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.defaultheaders)
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.server.auto.head.response)
     implementation(libs.ktor.server.call.logging)

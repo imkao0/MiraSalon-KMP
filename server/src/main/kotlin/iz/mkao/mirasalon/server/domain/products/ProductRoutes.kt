@@ -79,7 +79,7 @@ fun Route.productRoutes(
             return@get call.respondRedirect(path)
         }
 
-        val cleanPath = path.removePrefix("/uploads/").removePrefix("/")
+        val cleanPath = path.removePrefix("/uploads/").removePrefix("uploads/").removePrefix("/")
         val file = File(appConfig.uploadDir, cleanPath)
         if (file.exists()) {
             val contentType = ContentType.fromFilePath(file.name).firstOrNull() ?: ContentType.Image.Any
@@ -105,7 +105,7 @@ fun Route.productRoutes(
             return@get call.respondRedirect(path)
         }
 
-        val cleanPath = path.removePrefix("/uploads/").removePrefix("/")
+        val cleanPath = path.removePrefix("/uploads/").removePrefix("uploads/").removePrefix("/")
         val file = File(appConfig.uploadDir, cleanPath)
         if (file.exists()) {
             val contentType = ContentType.fromFilePath(file.name).firstOrNull() ?: ContentType.Image.Any
