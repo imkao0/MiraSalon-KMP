@@ -25,6 +25,12 @@ import iz.mkao.mirasalon.server.data.repository.RefreshTokenRepository
 import iz.mkao.mirasalon.server.data.repository.RegisterResult
 import iz.mkao.mirasalon.server.data.repository.UpdateProfileResult
 import iz.mkao.mirasalon.server.data.repository.UserRepository
+import iz.mkao.mirasalon.server.error.EmailAlreadyExistsException
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.InvalidCredentialsException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.service.StreamSyncService
 import iz.mkao.mirasalon.server.util.JwtConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
@@ -98,10 +104,10 @@ fun Route.authRoutes(
                 )
             }
             is RegisterResult.Failure -> {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ApiResponse<Unit>(success = false, error = result.message)
-                )
+                if (result.message.contains("already registered", ignoreCase = true)) {
+                    throw EmailAlreadyExistsException()
+                }
+                throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
             }
         }
     }
@@ -116,23 +122,14 @@ fun Route.authRoutes(
         }
 
         val user = userRepository.findByEmail(request.email)
-            ?: return@post call.respond(
-                HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(success = false, error = "Invalid credentials")
-            )
+            ?: throw InvalidCredentialsException()
 
         if (!userRepository.verifyPassword(request.password, user.passwordHash)) {
-            return@post call.respond(
-                HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(success = false, error = "Invalid credentials")
-            )
+            throw InvalidCredentialsException()
         }
 
         if (!user.isActive) {
-            return@post call.respond(
-                HttpStatusCode.Forbidden,
-                ApiResponse<Unit>(success = false, error = "Account disabled by administrator")
-            )
+            throw ForbiddenException("Account disabled by administrator")
         }
 
         try {
@@ -187,16 +184,10 @@ fun Route.authRoutes(
         get("/profile") {
             val userId = call.principal<JWTPrincipal>()
                 ?.payload?.getClaim("userId")?.asString()
-                ?: return@get call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Invalid token")
-                )
+                ?: throw UnauthorizedException("Invalid token")
 
             val user = userRepository.findById(userId)
-                ?: return@get call.respond(
-                    HttpStatusCode.NotFound,
-                    ApiResponse<Unit>(success = false, error = "User not found")
-                )
+                ?: throw ResourceNotFoundException("User not found")
 
             call.respond(
                 HttpStatusCode.OK,
@@ -223,10 +214,7 @@ fun Route.authRoutes(
         put("/profile") {
             val userId = call.principal<JWTPrincipal>()
                 ?.payload?.getClaim("userId")?.asString()
-                ?: return@put call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Invalid token")
-                )
+                ?: throw UnauthorizedException("Invalid token")
 
             val request = call.receive<UpdateProfileRequest>()
             validate {
@@ -265,10 +253,10 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Profile updated"))
                 }
                 is UpdateProfileResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "User not found"))
+                    throw ResourceNotFoundException("User not found")
                 }
                 is UpdateProfileResult.Failure -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -277,10 +265,7 @@ fun Route.authRoutes(
         delete("/profile") {
             val userId = call.principal<JWTPrincipal>()
                 ?.payload?.getClaim("userId")?.asString()
-                ?: return@delete call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Invalid token")
-                )
+                ?: throw UnauthorizedException("Invalid token")
 
             val result = userRepository.deleteAccount(userId)
             when (result) {
@@ -289,10 +274,10 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Account deleted"))
                 }
                 is DeleteAccountResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "User not found"))
+                    throw ResourceNotFoundException("User not found")
                 }
                 is DeleteAccountResult.Failure -> {
-                    call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.InternalServerError)
                 }
             }
         }
@@ -328,7 +313,7 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = authResponse))
                 }
                 is RegisterResult.Failure -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -339,17 +324,11 @@ fun Route.authRoutes(
         val storedToken = refreshTokenRepository.findByToken(request.refreshToken)
 
         if (storedToken == null || storedToken.revoked || storedToken.expiresAt < System.currentTimeMillis()) {
-            return@post call.respond(
-                HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(success = false, error = "Invalid or expired refresh token")
-            )
+            throw UnauthorizedException("Invalid or expired refresh token")
         }
 
         val user = userRepository.findById(storedToken.userId)
-            ?: return@post call.respond(
-                HttpStatusCode.Unauthorized,
-                ApiResponse<Unit>(success = false, error = "User not found")
-            )
+            ?: throw UnauthorizedException("User not found")
 
         val newAccessToken = jwtConfig.generateToken(user.id, user.email, user.role, user.tokenVersion)
         val newRefreshToken = jwtConfig.generateRefreshToken(user.id)

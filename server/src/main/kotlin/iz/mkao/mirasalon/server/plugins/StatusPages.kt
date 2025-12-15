@@ -8,7 +8,7 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.server.error.DomainException
-import iz.mkao.mirasalon.server.util.ValidationException
+import iz.mkao.mirasalon.server.error.ValidationException
 import kotlinx.serialization.SerializationException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
