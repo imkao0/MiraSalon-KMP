@@ -6,6 +6,8 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import iz.mkao.mirasalon.core.domain.model.UserRole
 import iz.mkao.mirasalon.server.error.DomainException
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.ValidationException
 
 fun ApplicationCall.getUserId(): String? =
     principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
@@ -19,7 +21,7 @@ fun ApplicationCall.isSpecialist(): Boolean = getUserRole() == UserRole.SPECIALI
 
 fun ApplicationCall.ensureAdmin() {
     if (!isAdmin()) {
-        throw DomainException("Access denied: Admin role required", HttpStatusCode.Forbidden)
+        throw ForbiddenException("Access denied: Admin role required")
     }
 }
 
