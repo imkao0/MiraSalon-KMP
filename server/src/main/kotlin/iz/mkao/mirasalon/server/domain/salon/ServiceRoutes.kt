@@ -26,6 +26,9 @@ import iz.mkao.mirasalon.server.data.repository.ServiceDeleteResult
 import iz.mkao.mirasalon.server.data.repository.ServiceFetchResult
 import iz.mkao.mirasalon.server.data.repository.ServiceRepository
 import iz.mkao.mirasalon.server.data.repository.ServiceUpdateResult
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.getUserId
@@ -50,8 +53,8 @@ fun Route.serviceRoutes(
     }
 
     get("/{id}/image") {
-        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-        val path = serviceRepository.getImagePath(id) ?: return@get call.respond(HttpStatusCode.NotFound)
+        val id = call.parameters["id"] ?: throw GeneralDomainException("Missing ID", HttpStatusCode.BadRequest)
+        val path = serviceRepository.getImagePath(id) ?: throw ResourceNotFoundException("Service image not found")
 
         if (path.startsWith("http")) {
             return@get call.respondRedirect(path)
@@ -64,7 +67,7 @@ fun Route.serviceRoutes(
             call.respond(LocalFileContent(file, contentType))
         } else {
             log.warn("Service image file not found: ${file.absolutePath} (from path: $path)")
-            call.respond(HttpStatusCode.NotFound)
+            throw ResourceNotFoundException("Image file not found")
         }
     }
 
@@ -74,8 +77,8 @@ fun Route.serviceRoutes(
     }
 
     get("/categories/{id}/image") {
-        val categoryId = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-        val path = serviceRepository.getCategoryImagePath(categoryId) ?: return@get call.respond(HttpStatusCode.NotFound)
+        val categoryId = call.parameters["id"] ?: throw GeneralDomainException("Missing ID", HttpStatusCode.BadRequest)
+        val path = serviceRepository.getCategoryImagePath(categoryId) ?: throw ResourceNotFoundException("Category image not found")
 
         if (path.startsWith("http")) {
             return@get call.respondRedirect(path)
@@ -88,21 +91,20 @@ fun Route.serviceRoutes(
             call.respond(LocalFileContent(file, contentType))
         } else {
             log.warn("Category image file not found: ${file.absolutePath} (from path: $path)")
-            call.respond(HttpStatusCode.NotFound)
+            throw ResourceNotFoundException("Image file not found")
         }
     }
 
     get("/{id}") {
-        val id = call.parameters["id"] ?: return@get call.respond(
-            HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Missing ID")
-        )
+        val id = call.parameters["id"] ?: throw GeneralDomainException("Missing ID", HttpStatusCode.BadRequest)
+        
         val serviceFetch = serviceRepository.findById(id)
         when (serviceFetch) {
             is ServiceFetchResult.Success -> {
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = serviceFetch.service))
             }
             is ServiceFetchResult.NotFound -> {
-                call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Service not found"))
+                throw ResourceNotFoundException("Service not found")
             }
         }
     }
@@ -110,36 +112,36 @@ fun Route.serviceRoutes(
     authenticate("auth-jwt") {
         route("/categories") {
             post {
-                if (!call.isAdmin()) return@post call.respond(HttpStatusCode.Forbidden)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
                 val request = call.receive<CreateServiceCategoryRequest>()
                 val result = serviceRepository.createCategory(request.name, request.iconName, request.imageUrl)
                 when (result) {
                     is CategoryOperationResult.Success -> call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.category))
-                    is CategoryOperationResult.Failure -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    is CategoryOperationResult.Failure -> throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
 
             put("/{id}") {
-                if (!call.isAdmin()) return@put call.respond(HttpStatusCode.Forbidden)
-                val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
+                val id = call.parameters["id"] ?: throw GeneralDomainException("Missing ID", HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateServiceCategoryRequest>()
                 val result = serviceRepository.updateCategory(id, request.name, request.iconName, request.imageUrl)
                 when (result) {
                     is CategoryOperationResult.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result.category))
-                    is CategoryOperationResult.NotFound -> call.respond(HttpStatusCode.NotFound)
-                    is CategoryOperationResult.Failure -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    is CategoryOperationResult.NotFound -> throw ResourceNotFoundException("Category not found")
+                    is CategoryOperationResult.Failure -> throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
 
             delete("/{id}") {
-                if (!call.isAdmin()) return@delete call.respond(HttpStatusCode.Forbidden)
-                val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
+                val id = call.parameters["id"] ?: throw GeneralDomainException("Missing ID", HttpStatusCode.BadRequest)
                 val result = serviceRepository.deleteCategory(id)
                 when (result) {
                     is CategoryDeleteResult.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Category deleted"))
-                    is CategoryDeleteResult.NotFound -> call.respond(HttpStatusCode.NotFound)
-                    is CategoryDeleteResult.Failure -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    is CategoryDeleteResult.NotFound -> throw ResourceNotFoundException("Category not found")
+                    is CategoryDeleteResult.Failure -> throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -161,7 +163,7 @@ fun Route.serviceRoutes(
                     call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.service))
                 }
                 is ServiceCreateResult.Failure -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -171,8 +173,7 @@ fun Route.serviceRoutes(
             val adminId = call.getUserId()
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "ID required"))
-                return@put
+                throw GeneralDomainException("ID required", HttpStatusCode.BadRequest)
             }
 
             val request = call.receive<UpdateServiceRequestDto>()
@@ -187,10 +188,10 @@ fun Route.serviceRoutes(
                     call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
                 }
                 is ServiceUpdateResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Service not found"))
+                    throw ResourceNotFoundException("Service not found")
                 }
                 is ServiceUpdateResult.Failure -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -200,8 +201,7 @@ fun Route.serviceRoutes(
             val adminId = call.getUserId()
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "ID required"))
-                return@delete
+                throw GeneralDomainException("ID required", HttpStatusCode.BadRequest)
             }
 
             val result = serviceRepository.delete(id)
@@ -211,10 +211,10 @@ fun Route.serviceRoutes(
                     call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
                 }
                 is ServiceDeleteResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Service not found"))
+                    throw ResourceNotFoundException("Service not found")
                 }
                 is ServiceDeleteResult.Failure -> {
-                    call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.InternalServerError)
                 }
             }
         }
