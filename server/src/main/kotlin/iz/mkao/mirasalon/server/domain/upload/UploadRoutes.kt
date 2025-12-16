@@ -45,7 +45,7 @@ fun Route.uploadRoutes(storageService: StorageService) {
                         if (ext in allowedExtensions && contentType in allowedTypes) {
                             val key = "images/${UUID.randomUUID()}.$ext"
                             uploadResult = storageService.uploadStream(
-                                stream = part.provider(),
+                                stream = { part.provider() },
                                 key = key,
                                 originalFileName = originalFileName,
                                 contentType = contentType

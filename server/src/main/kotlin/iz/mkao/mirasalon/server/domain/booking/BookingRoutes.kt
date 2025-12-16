@@ -16,6 +16,12 @@ import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.AppointmentStatus
 import iz.mkao.mirasalon.server.data.repository.AppointmentUpdateResult
 import iz.mkao.mirasalon.server.data.repository.BookingResult
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.ScheduleOverlapException
+import iz.mkao.mirasalon.server.error.ServiceUnavailableException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.getUserId
 import iz.mkao.mirasalon.server.util.isAdmin
 import iz.mkao.mirasalon.server.util.validate
@@ -63,20 +69,14 @@ fun Route.bookingRoutes(
 
         get("/{id}") {
             val id = call.parameters["id"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                    success = false, error = "Missing appointment ID"
-                ))
+                ?: throw GeneralDomainException("Missing appointment ID", HttpStatusCode.BadRequest)
 
             val booking = appointmentRepository.findById(id)
-                ?: return@get call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(
-                    success = false, error = "Appointment not found"
-                ))
+                ?: throw ResourceNotFoundException("Appointment not found")
 
             val userId = call.getUserId()
             if (userId != null && booking.userId != userId && !call.isAdmin()) {
-                return@get call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(
-                    success = false, error = "Access denied"
-                ))
+                throw ForbiddenException("Access denied")
             }
 
             call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = booking))
@@ -114,19 +114,18 @@ fun Route.bookingRoutes(
                     call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.appointment))
                 }
                 is BookingResult.Error -> {
-                    val status = when (result) {
-                        is BookingResult.Error.ScheduleOverlap -> HttpStatusCode.Conflict
-                        is BookingResult.Error.ServiceUnavailable -> HttpStatusCode.Gone
-                        is BookingResult.Error.SpecialistNotFound -> HttpStatusCode.NotFound
-                        is BookingResult.Error.SpecialistUnqualified -> HttpStatusCode.BadRequest
-                        is BookingResult.Error.SalonMismatch -> HttpStatusCode.BadRequest
-                        is BookingResult.Error.LeadTimeViolation -> HttpStatusCode.BadRequest
-                        is BookingResult.Error.ShiftMismatch -> HttpStatusCode.BadRequest
-                        is BookingResult.Error.SpecialistAbsent -> HttpStatusCode.Conflict
-                        is BookingResult.Error.PromoError -> HttpStatusCode.BadRequest
-                        else -> HttpStatusCode.BadRequest
+                    throw when (result) {
+                        is BookingResult.Error.ScheduleOverlap -> ScheduleOverlapException(result.message)
+                        is BookingResult.Error.ServiceUnavailable -> ServiceUnavailableException(result.message)
+                        is BookingResult.Error.SpecialistNotFound -> ResourceNotFoundException(result.message)
+                        is BookingResult.Error.SpecialistUnqualified -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                        is BookingResult.Error.SalonMismatch -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                        is BookingResult.Error.LeadTimeViolation -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                        is BookingResult.Error.ShiftMismatch -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                        is BookingResult.Error.SpecialistAbsent -> ScheduleOverlapException(result.message)
+                        is BookingResult.Error.PromoError -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
+                        else -> GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                     }
-                    call.respond(status, ApiResponse<Unit>(success = false, error = result.message))
                 }
             }
         }
@@ -134,9 +133,7 @@ fun Route.bookingRoutes(
 
         put("/{id}/status") {
             val id = call.parameters["id"]
-                ?: return@put call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                    success = false, error = "Missing appointment ID"
-                ))
+                ?: throw GeneralDomainException("Missing appointment ID", HttpStatusCode.BadRequest)
 
             val request = call.receive<UpdateAppointmentStatusRequest>()
             validate {
@@ -149,28 +146,23 @@ fun Route.bookingRoutes(
 
     
             if (!call.isAdmin()) {
-                return@put call.respond(
-                    HttpStatusCode.Forbidden,
-                    ApiResponse<Unit>(success = false, error = "Only admins can change status")
-                )
+                throw ForbiddenException("Only admins can change status")
             }
 
             // Already validated against the allowed set above; map safely without `!!`.
             val newStatus = AppointmentStatus.fromString(request.status)
-                ?: return@put call.respond(
-                    HttpStatusCode.BadRequest,
-                    ApiResponse<Unit>(success = false, error = "Invalid status")
-                )
+                ?: throw GeneralDomainException("Invalid status", HttpStatusCode.BadRequest)
+            
             val result = appointmentRepository.updateStatus(id, newStatus)
             when (result) {
                 is AppointmentUpdateResult.Success -> {
                     call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result.appointment))
                 }
                 is AppointmentUpdateResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Appointment not found"))
+                    throw ResourceNotFoundException("Appointment not found")
                 }
                 is AppointmentUpdateResult.Error -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.toString()))
+                    throw GeneralDomainException(result.toString(), HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -178,15 +170,10 @@ fun Route.bookingRoutes(
 
         delete("/{id}") {
             val id = call.parameters["id"]
-                ?: return@delete call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                    success = false, error = "Missing appointment ID"
-                ))
+                ?: throw GeneralDomainException("Missing appointment ID", HttpStatusCode.BadRequest)
 
             if (!call.isAdmin()) {
-                return@delete call.respond(
-                    HttpStatusCode.Forbidden,
-                    ApiResponse<Unit>(success = false, error = "Only admins can delete bookings")
-                )
+                throw ForbiddenException("Only admins can delete bookings")
             }
 
             val deleted = appointmentRepository.delete(id)
@@ -199,22 +186,17 @@ fun Route.bookingRoutes(
                     )
                 )
             } else {
-                call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Appointment not found"))
+                throw ResourceNotFoundException("Appointment not found")
             }
         }
 
 
         put("/{id}/reminder") {
             val id = call.parameters["id"]
-                ?: return@put call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                    success = false, error = "Missing appointment ID"
-                ))
+                ?: throw GeneralDomainException("Missing appointment ID", HttpStatusCode.BadRequest)
 
             val userId = call.getUserId()
-                ?: return@put call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Authentication required")
-                )
+                ?: throw UnauthorizedException("Authentication required")
 
             val request = call.receive<UpdateReminderRequest>()
             validate {
@@ -225,7 +207,7 @@ fun Route.bookingRoutes(
             if (result.isSuccess) {
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = Unit))
             } else {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.exceptionOrNull()?.message ?: "Update failed"))
+                throw GeneralDomainException(result.exceptionOrNull()?.message ?: "Update failed", HttpStatusCode.BadRequest)
             }
         }
     }

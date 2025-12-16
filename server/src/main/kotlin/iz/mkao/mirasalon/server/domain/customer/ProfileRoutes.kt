@@ -242,7 +242,7 @@ fun Route.profileRoutes(
                             }
                             val originalName = part.originalFileName ?: "avatar.$ext"
                             uploadResult = storageService.uploadStream(
-                                stream = part.provider(),
+                                stream = { part.provider() },
                                 key = "images/avatars/${UUID.randomUUID()}.$ext",
                                 originalFileName = originalName,
                                 contentType = contentType,
