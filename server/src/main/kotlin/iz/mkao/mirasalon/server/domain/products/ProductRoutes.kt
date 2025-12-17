@@ -23,6 +23,7 @@ import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductCategoryRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
 import iz.mkao.mirasalon.server.data.repository.ProductRepository
+import iz.mkao.mirasalon.server.error.*
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.getUserId
 import iz.mkao.mirasalon.server.util.isAdmin
@@ -58,12 +59,11 @@ fun Route.productRoutes(
     get("/{id}") {
         val id = call.parameters["id"]
         if (id.isNullOrBlank()) {
-            call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Product ID required"))
-            return@get
+            throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
         }
         val product = productRepository.findById(id)
         if (product == null) {
-            call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Product not found"))
+            throw ResourceNotFoundException("Product not found")
         } else {
             call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = product))
         }
@@ -71,9 +71,9 @@ fun Route.productRoutes(
 
     // Get product image
     get("/{id}/image") {
-        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        val id = call.parameters["id"] ?: throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
         log.debug("[ProductRoutes] Fallback image request for product ID: $id")
-        val path = productRepository.getImagePath(id) ?: return@get call.respond(HttpStatusCode.NotFound)
+        val path = productRepository.getImagePath(id) ?: throw ResourceNotFoundException("Product image not found")
 
         if (path.startsWith("http")) {
             return@get call.respondRedirect(path)
@@ -86,7 +86,7 @@ fun Route.productRoutes(
             call.respond(LocalFileContent(file, contentType))
         } else {
             log.warn("Product image file not found: ${file.absolutePath} (from path: $path)")
-            call.respond(HttpStatusCode.NotFound)
+            throw ResourceNotFoundException("Image file not found")
         }
     }
 
@@ -98,8 +98,8 @@ fun Route.productRoutes(
 
     // Get category image
     get("/categories/{name}/image") {
-        val categoryName = call.parameters["name"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-        val path = productRepository.getCategoryImagePath(categoryName) ?: return@get call.respond(HttpStatusCode.NotFound)
+        val categoryName = call.parameters["name"] ?: throw GeneralDomainException("Category name required", HttpStatusCode.BadRequest)
+        val path = productRepository.getCategoryImagePath(categoryName) ?: throw ResourceNotFoundException("Category image not found")
 
         if (path.startsWith("http")) {
             return@get call.respondRedirect(path)
@@ -112,7 +112,7 @@ fun Route.productRoutes(
             call.respond(LocalFileContent(file, contentType))
         } else {
             log.warn("Product category image file not found: ${file.absolutePath} (name: $categoryName, from path: $path)")
-            call.respond(HttpStatusCode.NotFound)
+            throw ResourceNotFoundException("Image file not found")
         }
     }
 
@@ -139,11 +139,11 @@ fun Route.productRoutes(
      * Returns reviews for a specific product.
      */
     get("/{id}/reviews") {
-        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        val id = call.parameters["id"] ?: throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
         val result = productRepository.getReviews(id)
         when (result) {
             is Outcome.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result.data))
-            is Outcome.Error -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.failure.toString()))
+            is Outcome.Error -> throw GeneralDomainException(result.failure.toString(), HttpStatusCode.BadRequest)
             else -> {}
         }
     }
@@ -151,18 +151,14 @@ fun Route.productRoutes(
     // ── Admin‑only endpoints ──
     authenticate("auth-jwt") {
 
-        /**
-         * POST /v1/api/products/{id}/reviews
-         * Add a review for a product.
-         */
         post("/{id}/reviews") {
-            val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
             val request = call.receive<SubmitReviewRequest>()
             
             val result = productRepository.submitReview(id, request.rating, request.comment)
             when (result) {
                 is Outcome.Success -> call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.data))
-                is Outcome.Error -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.failure.toString()))
+                is Outcome.Error -> throw GeneralDomainException(result.failure.toString(), HttpStatusCode.BadRequest)
                 else -> {}
             }
         }
@@ -170,44 +166,43 @@ fun Route.productRoutes(
         // ── Product Categories (Admin) ──
         route("/categories") {
             post {
-                if (!call.isAdmin()) return@post call.respond(HttpStatusCode.Forbidden)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
                 val request = call.receive<CreateProductCategoryRequest>()
                 val result = productRepository.createCategory(request.name, request.imageUrl, request.description)
                 when (result) {
                     is Outcome.Success -> call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.data))
                     is Outcome.Error -> {
                         val message = (result.failure as? Failure.ServerError)?.message ?: "Database error"
-                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = message))
+                        throw GeneralDomainException(message, HttpStatusCode.BadRequest)
                     }
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
 
             put("/{id}") {
-                if (!call.isAdmin()) return@put call.respond(HttpStatusCode.Forbidden)
-                val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
+                val id = call.parameters["id"] ?: throw GeneralDomainException("Category ID required", HttpStatusCode.BadRequest)
                 val request = call.receive<UpdateProductCategoryRequest>()
                 val result = productRepository.updateCategory(id, request.name, request.imageUrl, request.description)
                 when (result) {
                     is Outcome.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result.data))
                     is Outcome.Error -> {
-                         // Simple error handling
-                         call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Update failed"))
+                         throw GeneralDomainException("Update failed", HttpStatusCode.BadRequest)
                     }
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
 
             delete("/{id}") {
-                if (!call.isAdmin()) return@delete call.respond(HttpStatusCode.Forbidden)
-                val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                if (!call.isAdmin()) throw ForbiddenException("Admin access required")
+                val id = call.parameters["id"] ?: throw GeneralDomainException("Category ID required", HttpStatusCode.BadRequest)
                 val result = productRepository.deleteCategory(id)
                 when (result) {
                     is Outcome.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Category deleted"))
                     is Outcome.Error -> {
-                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Delete failed"))
+                        throw GeneralDomainException("Delete failed", HttpStatusCode.BadRequest)
                     }
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
         }
@@ -215,8 +210,7 @@ fun Route.productRoutes(
         // Create product (staff)
         post("") {
             if (!call.isAdmin() && !call.isSpecialist()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Staff access required"))
-                return@post
+                throw ForbiddenException("Staff access required")
             }
             val request = call.receive<CreateProductRequest>()
             validateProduct(request)
@@ -239,10 +233,7 @@ fun Route.productRoutes(
                 is Outcome.Error -> {
                     log.warn("Product creation failed: {}", result.failure)
                     val message = (result.failure as? Failure.ServerError)?.message ?: "Creation failed"
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, error = message)
-                    )
+                    throw GeneralDomainException(message, HttpStatusCode.BadRequest)
                 }
                 else -> {}
             }
@@ -251,13 +242,11 @@ fun Route.productRoutes(
         // Update product (staff)
         put("/{id}") {
             if (!call.isAdmin() && !call.isSpecialist()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Staff access required"))
-                return@put
+                throw ForbiddenException("Staff access required")
             }
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Product ID required"))
-                return@put
+                throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
             }
             val request = call.receive<UpdateProductRequest>()
             validateProduct(request)
@@ -280,7 +269,7 @@ fun Route.productRoutes(
                 }
                 is Outcome.Error -> {
                     log.warn("Product update failed for {}: {}", id, result.failure)
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Update failed"))
+                    throw GeneralDomainException("Update failed", HttpStatusCode.BadRequest)
                 }
                 else -> {}
             }
@@ -289,13 +278,11 @@ fun Route.productRoutes(
         // Delete product (staff)
         delete("/{id}") {
             if (!call.isAdmin() && !call.isSpecialist()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Staff access required"))
-                return@delete
+                throw ForbiddenException("Staff access required")
             }
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Product ID required"))
-                return@delete
+                throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
             }
             val result = productRepository.delete(id)
             when (result) {
@@ -305,7 +292,7 @@ fun Route.productRoutes(
                 }
                 is Outcome.Error -> {
                     log.warn("Product deletion failed for {}: {}", id, result.failure)
-                    call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Deletion failed"))
+                    throw GeneralDomainException("Deletion failed", HttpStatusCode.InternalServerError)
                 }
                 else -> {}
             }

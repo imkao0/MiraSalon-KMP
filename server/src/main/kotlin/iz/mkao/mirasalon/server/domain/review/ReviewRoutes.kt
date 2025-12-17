@@ -1,17 +1,28 @@
 package iz.mkao.mirasalon.server.domain.review
 
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.createRouteScopedPlugin
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
-import io.ktor.server.routing.*
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
+import io.ktor.server.routing.route
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.dto.UpdateReviewVisibilityRequest
 import iz.mkao.mirasalon.server.data.repository.AdminReplyResult
 import iz.mkao.mirasalon.server.data.repository.ReviewCreationResult
 import iz.mkao.mirasalon.server.data.repository.ReviewRepository
-import iz.mkao.mirasalon.server.util.*
+import iz.mkao.mirasalon.server.error.DomainException
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
+import iz.mkao.mirasalon.server.util.getUserId
+import iz.mkao.mirasalon.server.util.isAdmin
+import iz.mkao.mirasalon.server.util.validate
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
@@ -30,14 +41,7 @@ fun Route.reviewRoutes(
     get("") {
         val targetId = call.request.queryParameters["targetId"]
         if (targetId.isNullOrBlank()) {
-            call.respond(
-                HttpStatusCode.BadRequest,
-                ApiResponse<Unit>(
-                    success = false,
-                    error = "targetId is required"
-                )
-            )
-            return@get
+            throw GeneralDomainException("targetId is required", HttpStatusCode.BadRequest)
         }
 
         val targetType = call.request.queryParameters["targetType"]
@@ -77,14 +81,7 @@ fun Route.reviewRoutes(
     get("/specialist/{id}") {
         val specialistId = call.parameters["id"]
         if (specialistId.isNullOrBlank()) {
-            call.respond(
-                HttpStatusCode.BadRequest,
-                ApiResponse<Unit>(
-                    success = false,
-                    error = "specialistId is required"
-                )
-            )
-            return@get
+            throw GeneralDomainException("specialistId is required", HttpStatusCode.BadRequest)
         }
 
         val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
@@ -109,10 +106,7 @@ fun Route.reviewRoutes(
          */
         post("") {
             val userId = call.getUserId()
-                ?: return@post call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Authentication required")
-                )
+                ?: throw UnauthorizedException("Authentication required")
             val request = call.receive<CreateReviewRequest>()
 
             log.info("Review creation requested by user $userId for target ${request.targetType}:${request.targetId}")
@@ -140,25 +134,19 @@ fun Route.reviewRoutes(
                     }
                     is ReviewCreationResult.Error -> {
                         log.warn("Review creation failed: ${result.message} for user $userId")
-                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                        throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                     }
                 }
             } catch (e: Exception) {
+                if (e is DomainException) throw e
                 log.error("Unexpected error creating review", e)
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    ApiResponse<Unit>(success = false, error = "Internal server error")
-                )
+                throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
             }
         }
 
         get("/all") {
             if (!call.isAdmin()) {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ApiResponse<Unit>(success = false, error = "Admin access required")
-                )
-                return@get
+                throw ForbiddenException("Admin access required")
             }
             val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
             val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
@@ -170,7 +158,7 @@ fun Route.reviewRoutes(
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
             } catch (e: Exception) {
                 log.error("Error fetching all reviews", e)
-                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to fetch reviews"))
+                throw GeneralDomainException("Failed to fetch reviews", HttpStatusCode.InternalServerError)
             }
         }
 
@@ -180,20 +168,12 @@ fun Route.reviewRoutes(
          */
         post("/{id}/reply") {
             if (!call.isAdmin()) {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ApiResponse<Unit>(success = false, error = "Admin access required")
-                )
-                return@post
+                throw ForbiddenException("Admin access required")
             }
 
             val reviewId = call.parameters["id"]
             if (reviewId.isNullOrBlank()) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ApiResponse<Unit>(success = false, error = "Review ID required")
-                )
-                return@post
+                throw GeneralDomainException("Review ID required", HttpStatusCode.BadRequest)
             }
 
             val request = call.receive<AdminReplyRequest>()
@@ -209,12 +189,12 @@ fun Route.reviewRoutes(
                 }
 
                 is AdminReplyResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Review not found"))
+                    throw ResourceNotFoundException("Review not found")
                 }
 
                 is AdminReplyResult.Error -> {
                     log.warn("Reply failed for review $reviewId: $result")
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.message))
+                    throw GeneralDomainException(result.message, HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -225,10 +205,9 @@ fun Route.reviewRoutes(
          */
         put("/{id}/visibility") {
             if (!call.isAdmin()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Admin access required"))
-                return@put
+                throw ForbiddenException("Admin access required")
             }
-            val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: throw GeneralDomainException("Review ID required", HttpStatusCode.BadRequest)
             val request = call.receive<UpdateReviewVisibilityRequest>()
 
             reviewRepository.updateVisibility(id, request.isVisible)
@@ -241,10 +220,9 @@ fun Route.reviewRoutes(
          */
         delete("/{id}") {
             if (!call.isAdmin()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Admin access required"))
-                return@delete
+                throw ForbiddenException("Admin access required")
             }
-            val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: throw GeneralDomainException("Review ID required", HttpStatusCode.BadRequest)
 
             reviewRepository.deleteReview(id)
             call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = Unit))
@@ -258,8 +236,7 @@ fun Route.reviewRoutes(
              */
             get {
                 if (!call.isAdmin()) {
-                    call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Admin access required"))
-                    return@get
+                    throw ForbiddenException("Admin access required")
                 }
                 val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
                 val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
