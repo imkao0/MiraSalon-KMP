@@ -22,6 +22,7 @@ import iz.mkao.mirasalon.core.network.model.dto.CreatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.ValidatePromoRequest
 import iz.mkao.mirasalon.server.data.repository.PromotionRepository
+import iz.mkao.mirasalon.server.error.*
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.getUserId
@@ -36,12 +37,12 @@ fun Route.promotionRoutes(
     appConfig: AppConfig
 ) {
     get("/{id}/image") {
-        val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+        val id = call.parameters["id"] ?: throw GeneralDomainException("Promotion ID required", HttpStatusCode.BadRequest)
         val pathResult = promotionRepository.getImagePath(id)
         val path = when (pathResult) {
             is Outcome.Success -> pathResult.data
             else -> null
-        } ?: return@get call.respond(HttpStatusCode.NotFound)
+        } ?: throw ResourceNotFoundException("Promotion image not found")
 
         if (path.startsWith("http")) {
             return@get call.respondRedirect(path)
@@ -54,7 +55,7 @@ fun Route.promotionRoutes(
             call.respond(LocalFileContent(file, contentType))
         } else {
             log.warn("Promotion image file not found: ${file.absolutePath} (from path: $path)")
-            call.respond(HttpStatusCode.NotFound)
+            throw ResourceNotFoundException("Image file not found")
         }
     }
 
@@ -136,10 +137,7 @@ fun Route.promotionRoutes(
                 val adminId = call.getUserId()
                 val id = call.parameters["id"]
                 if (id.isNullOrBlank()) {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                        success = false, error = "Promotion ID required"
-                    ))
-                    return@put
+                    throw GeneralDomainException("Promotion ID required", HttpStatusCode.BadRequest)
                 }
 
                 val request = call.receive<UpdatePromotionRequestDto>()
@@ -154,10 +152,12 @@ fun Route.promotionRoutes(
                         call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
                     }
                     is Outcome.Error -> {
-                        val status = if (result.failure is Failure.ClientError) HttpStatusCode.NotFound else HttpStatusCode.BadRequest
-                        call.respond(status, ApiResponse<Unit>(success = false, error = result.failure.toString()))
+                        if (result.failure is Failure.ClientError) {
+                            throw ResourceNotFoundException("Promotion not found")
+                        }
+                        throw GeneralDomainException(result.failure.toString(), HttpStatusCode.BadRequest)
                     }
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
 
@@ -166,10 +166,7 @@ fun Route.promotionRoutes(
                 val adminId = call.getUserId()
                 val id = call.parameters["id"]
                 if (id.isNullOrBlank()) {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(
-                        success = false, error = "Promotion ID required"
-                    ))
-                    return@delete
+                    throw GeneralDomainException("Promotion ID required", HttpStatusCode.BadRequest)
                 }
 
                 when (val result = promotionRepository.delete(id, actorId = adminId)) {
@@ -178,10 +175,12 @@ fun Route.promotionRoutes(
                         call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
                     }
                     is Outcome.Error -> {
-                        val status = if (result.failure is Failure.ClientError) HttpStatusCode.NotFound else HttpStatusCode.InternalServerError
-                        call.respond(status, ApiResponse<Unit>(success = false, error = result.failure.toString()))
+                        if (result.failure is Failure.ClientError) {
+                            throw ResourceNotFoundException("Promotion not found")
+                        }
+                        throw GeneralDomainException(result.failure.toString(), HttpStatusCode.InternalServerError)
                     }
-                    else -> call.respond(HttpStatusCode.InternalServerError)
+                    else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
                 }
             }
 
@@ -202,10 +201,7 @@ fun Route.promotionRoutes(
 
         post("/validate") {
             val userId = call.getUserId()
-                ?: return@post call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Authentication required")
-                )
+                ?: throw UnauthorizedException("Authentication required")
 
             val request = call.receive<ValidatePromoRequest>()
             when (val resultOutcome = promotionRepository.validatePromoCode(
@@ -218,25 +214,30 @@ fun Route.promotionRoutes(
                     val result = resultOutcome.data
                     if (!result.isValid) {
                         log.warn("Invalid promo validation: ${result.errorMessage} for user {}", userId)
+                        val errorMsg = result.errorMessage ?: "Invalid promo code"
+                        throw when {
+                            errorMsg.contains("expired", ignoreCase = true) -> PromoExpiredException(errorMsg)
+                            errorMsg.contains("limit", ignoreCase = true) -> PromoUsageLimitExceededException(errorMsg)
+                            else -> GeneralDomainException(errorMsg, HttpStatusCode.BadRequest)
+                        }
                     } else {
                         log.info("Promo validated successfully for user {}", userId)
                     }
                     call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result))
                 }
                 is Outcome.Error -> {
-                    val status = if (resultOutcome.failure is Failure.ClientError) HttpStatusCode.NotFound else HttpStatusCode.BadRequest
-                    call.respond(status, ApiResponse<Unit>(success = false, error = resultOutcome.failure.toString()))
+                    if (resultOutcome.failure is Failure.ClientError) {
+                        throw ResourceNotFoundException("Promo code not found")
+                    }
+                    throw GeneralDomainException(resultOutcome.failure.toString(), HttpStatusCode.BadRequest)
                 }
-                else -> call.respond(HttpStatusCode.InternalServerError)
+                else -> throw GeneralDomainException("Internal server error", HttpStatusCode.InternalServerError)
             }
         }
 
         get("/used") {
             val userId = call.getUserId()
-                ?: return@get call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ApiResponse<Unit>(success = false, error = "Authentication required")
-                )
+                ?: throw UnauthorizedException("Authentication required")
 
             when (val result = promotionRepository.getUserUsedPromotionIds(userId)) {
                 is Outcome.Success -> call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result.data))

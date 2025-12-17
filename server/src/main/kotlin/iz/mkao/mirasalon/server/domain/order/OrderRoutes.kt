@@ -18,6 +18,7 @@ import iz.mkao.mirasalon.server.data.repository.OrderCreationResult
 import iz.mkao.mirasalon.server.data.repository.OrderRepoStatus
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
 import iz.mkao.mirasalon.server.data.repository.OrderStatusUpdateResult
+import iz.mkao.mirasalon.server.error.*
 import iz.mkao.mirasalon.server.util.getUserId
 import iz.mkao.mirasalon.server.util.getUserRole
 import iz.mkao.mirasalon.server.util.isAdmin
@@ -32,25 +33,19 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
 
         post("/checkout") {
             val userId = call.getUserId()
-                ?: return@post call.respond(HttpStatusCode.Unauthorized)
+                ?: throw UnauthorizedException("Authentication required")
             val idempotencyKey = call.request.headers["Idempotency-Key"]
 
             val request = try {
                 call.receive<CreateOrderRequest>()
             } catch (e: Exception) {
                 log.warn("Invalid checkout request from user {}: {}", userId, e.message)
-                return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    ApiResponse<Unit>(success = false, error = "Invalid request format: ${e.message}")
-                )
+                throw GeneralDomainException("Invalid request format: ${e.message}", HttpStatusCode.BadRequest)
             }
 
             log.info("Checkout request from user {}: total {}, items {}", userId, request.totalAmount, request.items.size)
             
-            val salonId = request.salonId ?: return@post call.respond(
-                HttpStatusCode.BadRequest,
-                ApiResponse<Unit>(success = false, error = "Salon ID is required")
-            )
+            val salonId = request.salonId ?: throw GeneralDomainException("Salon ID is required", HttpStatusCode.BadRequest)
 
             val result = orderRepository.createOrder(
                 userId = userId,
@@ -71,7 +66,10 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
                 }
                 is OrderCreationResult.Error -> {
                     log.warn("Checkout failed for user {}: {}", userId, result.toString())
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.toString()))
+                    if (result.toString().contains("stock", ignoreCase = true)) {
+                        throw InsufficientStockException(result.toString())
+                    }
+                    throw GeneralDomainException(result.toString(), HttpStatusCode.BadRequest)
                 }
             }
         }
@@ -79,8 +77,7 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
 
         get("/all") {
             if (!call.isAdmin()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Admin access required"))
-                return@get
+                throw ForbiddenException("Admin access required")
             }
             val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
             val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
@@ -109,12 +106,11 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
         put("/{id}/status") {
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Order ID is required"))
-                return@put
+                throw GeneralDomainException("Order ID is required", HttpStatusCode.BadRequest)
             }
 
             // Check if user is owner of the order or an admin
-            val userId = call.getUserId() ?: return@put call.respond(HttpStatusCode.Unauthorized)
+            val userId = call.getUserId() ?: throw UnauthorizedException("Authentication required")
             val isAdmin = call.isAdmin()
 
             val request = call.receive<UpdateOrderStatusRequest>()
@@ -123,30 +119,26 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
             val status = try {
                 OrderRepoStatus.valueOf(statusParam.uppercase())
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid status: $statusParam"))
-                return@put
+                throw GeneralDomainException("Invalid status: $statusParam", HttpStatusCode.BadRequest)
             }
 
             // Authorization logic
             if (!isAdmin) {
                 val order = orderRepository.findOrderById(id)
                 if (order == null) {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Order not found"))
-                    return@put
+                    throw ResourceNotFoundException("Order not found")
                 }
 
                 val isOwner = order.userId == userId
                 val isSpecialistAtSalon = call.getUserRole() == UserRole.SPECIALIST // For now, allow all specialists or check salon
 
                 if (!isOwner && !isSpecialistAtSalon) {
-                    call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
-                    return@put
+                    throw ForbiddenException("Access denied")
                 }
 
                 // Owners can only cancel or see delivered
                 if (isOwner && !isSpecialistAtSalon && status != OrderRepoStatus.CANCELLED && status != OrderRepoStatus.DELIVERED) {
-                    call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied for status $status"))
-                    return@put
+                    throw ForbiddenException("Access denied for status $status")
                 }
 
                 // Specialists can update to any valid status for their salon (assuming they have access)
@@ -159,14 +151,14 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
                     call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
                 }
                 is OrderStatusUpdateResult.NotFound -> {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Order not found"))
+                    throw ResourceNotFoundException("Order not found")
                 }
                 is OrderStatusUpdateResult.InvalidTransition -> {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid status transition"))
+                    throw GeneralDomainException("Invalid status transition", HttpStatusCode.BadRequest)
                 }
                 is OrderStatusUpdateResult.DatabaseError -> {
                     log.error("DB error updating order status: {}", result.cause)
-                    call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Database error"))
+                    throw GeneralDomainException("Database error", HttpStatusCode.InternalServerError)
                 }
             }
         }
@@ -174,7 +166,7 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
 
         get("/my-orders") {
             val userId = call.getUserId()
-                ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                ?: throw UnauthorizedException("Authentication required")
             val page = call.request.queryParameters["page"]?.toIntOrNull()?.coerceAtLeast(1) ?: 1
             val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull()?.coerceIn(1, 100) ?: 20
             val status = call.request.queryParameters["status"] // optional filter
@@ -193,12 +185,11 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
         get("/{id}") {
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Order ID is required"))
-                return@get
+                throw GeneralDomainException("Order ID is required", HttpStatusCode.BadRequest)
             }
 
             val userId = call.getUserId()
-                ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                ?: throw UnauthorizedException("Authentication required")
             val isAdmin = call.isAdmin()
 
             val order = if (isAdmin) {
@@ -210,36 +201,33 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
             if (order != null) {
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = order))
             } else {
-                call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Order not found"))
+                throw ResourceNotFoundException("Order not found")
             }
         }
 
         delete("/{id}") {
             val id = call.parameters["id"]
             if (id.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Order ID is required"))
-                return@delete
+                throw GeneralDomainException("Order ID is required", HttpStatusCode.BadRequest)
             }
 
             val userId = call.getUserId()
-                ?: return@delete call.respond(HttpStatusCode.Unauthorized)
+                ?: throw UnauthorizedException("Authentication required")
             
             // Check if order exists and belongs to user
             val order = orderRepository.findOrderById(id)
             if (order == null) {
-                call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Order not found"))
-                return@delete
+                throw ResourceNotFoundException("Order not found")
             }
 
             if (order.userId != userId && !call.isAdmin()) {
-                call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
-                return@delete
+                throw ForbiddenException("Access denied")
             }
 
             val result = orderRepository.deleteOrder(id)
             when (result) {
                 is Outcome.Success -> call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true))
-                is Outcome.Error -> call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to delete order"))
+                is Outcome.Error -> throw GeneralDomainException("Failed to delete order", HttpStatusCode.InternalServerError)
                 else -> {}
             }
         }
