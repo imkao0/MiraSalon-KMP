@@ -36,7 +36,7 @@ stream-java = "1.45.0"
 micrometer = "1.14.4"
 
 # DI
-koin = "4.0.2"
+koin = "4.2.2"
 koinAnnotations = "2.3.1"
 
 # Navigation / Lifecycle
