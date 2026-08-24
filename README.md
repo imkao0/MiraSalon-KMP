@@ -45,6 +45,7 @@ The project follows a modern **Shared Presenter Architecture** using **Slack Cir
 ### 🚀 Shared / KMP
 - **[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform)** - Modern declarative UI shared across all platforms.
 - **[Slack Circuit](https://github.com/slackhq/circuit)** - A reactive architecture for building Compose-based UIs.
+- **[Stream Chat SDK](https://getstream.io/chat/docs/sdk/kotlin/)** - Real-time chat integration for Android and JVM (Desktop).
 - **[Koin](https://github.com/InsertKoinIO/koin)** - Lightweight dependency injection for Kotlin.
 - **[Navigation 3](https://developer.android.com/jetpack/compose/navigation)** - Modern, type-safe multiplatform navigation for Compose.
 - **[Ktor Client](https://github.com/ktorio/ktor)** - Multiplatform asynchronous HTTP client for networking.
@@ -72,13 +73,32 @@ The project follows a modern **Shared Presenter Architecture** using **Slack Cir
 ### 🧪 Testing & Quality
 - **[Kotest](https://github.com/kotest/kotest)** - Multiplatform testing framework.
 - **[Mockative](https://github.com/mockative/mockative)** - Mocking library for KMP.
-- **[Roborazzi](https://github.com/takahirom/roborazzi)** / **[Robolectric](https://github.com/robolectric/robolectric)** - Testing tools for Android.
+- **[Robolectric](https://github.com/robolectric/robolectric)** - Testing tools for Android.
 - **[Detekt](https://github.com/detekt/detekt)** / **[Ktlint](https://github.com/pinterest/ktlint)** - Static analysis and linting for code quality.
 
 ---
 
 ## 📸 Screenshots
-*(Coming Soon)*
+
+### Dashboard & Analytics
+| Overview | Business Analytics |
+| :---: | :---: |
+| <img src="./screenshots/dashboard_overview.png" width="400"> | <img src="./screenshots/business_analytics.png" width="400"> |
+
+### Management
+| Calendar | Staff | Bookings |
+| :---: | :---: | :---: |
+| <img src="./screenshots/salon_calendar_month.png" width="300"> | <img src="./screenshots/staff_management.png" width="300"> | <img src="./screenshots/bookings_list.png" width="300"> |
+
+### Services & Products
+| Services | Products | Orders |
+| :---: | :---: | :---: |
+| <img src="./screenshots/services_list.png" width="300"> | <img src="./screenshots/products_management.png" width="300"> | <img src="./screenshots/order_management.png" width="300"> |
+
+### Customer Engagement
+| Customers | Reviews | Promotions |
+| :---: | :---: | :---: |
+| <img src="./screenshots/customer_management.png" width="300"> | <img src="./screenshots/customer_feedback_reviews.png" width="300"> | <img src="./screenshots/promotions_offers.png" width="300"> |
 
 ---
 
