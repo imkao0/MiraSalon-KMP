@@ -36,7 +36,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -204,11 +208,29 @@ private fun ChatsContentUi(
                     )
                 }
             } else {
-                items(items = state.chats, key = { it.id }) { chat ->
-                    ChatRow(
-                        item = chat,
-                        onClick = { state.eventSink(ChatListEvent.OpenChat(chat.id)) },
+                items(items = state.chats.distinctBy { it.id }, key = { it.id }) { chat ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                state.eventSink(ChatListEvent.DeleteChat(chat.id))
+                                true
+                            } else {
+                                false
+                            }
+                        }
                     )
+
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = { DismissBackground(dismissState) }
+                    ) {
+                        ChatRow(
+                            item = chat,
+                            onClick = { state.eventSink(ChatListEvent.OpenChat(chat.id)) },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        )
+                    }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 80.dp),
                         thickness = 0.5.dp,
@@ -216,6 +238,33 @@ private fun ChatsContentUi(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DismissBackground(dismissState: SwipeToDismissBoxState) {
+    val color = when (dismissState.dismissDirection) {
+        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+        else -> Color.Transparent
+    }
+    val alignment = Alignment.CenterEnd
+    val icon = Icons.Outlined.Delete
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(color)
+            .padding(horizontal = 24.dp),
+        contentAlignment = alignment
+    ) {
+        if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+            Icon(
+                icon,
+                contentDescription = "Delete",
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
         }
     }
 }
@@ -233,7 +282,7 @@ private fun QuickAccessRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { QuickAccessSearchItem(onClick = onSearchClick) }
-        items(contacts, key = { it.id }) { contact ->
+        items(contacts.distinctBy { it.id }, key = { it.id }) { contact ->
             QuickAccessContactItem(
                 contact = contact,
                 onClick = { onContactClick(contact.id) },

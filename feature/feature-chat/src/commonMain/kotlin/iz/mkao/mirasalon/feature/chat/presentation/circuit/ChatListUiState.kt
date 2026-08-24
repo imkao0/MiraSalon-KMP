@@ -28,5 +28,6 @@ sealed interface ChatListEvent : CircuitUiEvent {
     data object OpenProfile : ChatListEvent
     data object OpenOptions : ChatListEvent
     data object DeleteHistory : ChatListEvent
+    data class DeleteChat(val chatId: String) : ChatListEvent
     data object Back : ChatListEvent
 }

@@ -2,6 +2,8 @@ package iz.mkao.mirasalon.feature.chat.di
 
 import iz.mkao.mirasalon.feature.chat.data.repository.ChatRepositoryImpl
 import iz.mkao.mirasalon.feature.chat.domain.repository.ChatRepository
+import iz.mkao.mirasalon.feature.chat.data.repository.UnreadMessagesSourceImpl
+import iz.mkao.mirasalon.core.domain.repository.UnreadMessagesSource
 import iz.mkao.mirasalon.feature.chat.presentation.circuit.*
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.ui.Ui
@@ -21,6 +23,7 @@ val chatModule = module {
             repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         )
     }
+    single<UnreadMessagesSource> { UnreadMessagesSourceImpl(get()) }
     
 
     single { ChatManualPresenterFactory(get(), get(), get()) } bind Presenter.Factory::class

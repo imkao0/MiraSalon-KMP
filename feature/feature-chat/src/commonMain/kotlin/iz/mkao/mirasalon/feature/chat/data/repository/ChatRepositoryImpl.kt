@@ -291,6 +291,15 @@ class ChatRepositoryImpl(
         _messages.value = emptyMap()
     }
 
+    override suspend fun deleteChat(conversationId: String) {
+        _conversations.update { current ->
+            current.filterNot { it.id == conversationId }
+        }
+        _messages.update { current ->
+            current.filterKeys { it != conversationId }
+        }
+    }
+
     override suspend fun getCurrentUserAvatarUrl(): String? = tokenProvider.userAvatarUrl()
 
     override suspend fun getCurrentUserName(): String? = tokenProvider.userName()

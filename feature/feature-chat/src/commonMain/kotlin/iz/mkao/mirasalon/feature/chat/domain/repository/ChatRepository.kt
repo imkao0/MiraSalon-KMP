@@ -12,6 +12,7 @@ interface ChatRepository {
     suspend fun sendMessage(conversationId: String, text: String): Result<Unit>
     suspend fun markAsRead(conversationId: String)
     suspend fun deleteHistory()
+    suspend fun deleteChat(conversationId: String)
 
     suspend fun getCurrentUserAvatarUrl(): String?
     suspend fun getCurrentUserName(): String?
