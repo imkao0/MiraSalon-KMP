@@ -2,27 +2,7 @@ package iz.mkao.mirasalon.server.util
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
-import iz.mkao.mirasalon.server.data.tables.OrderItemsTable
-import iz.mkao.mirasalon.server.data.tables.OrdersTable
-import iz.mkao.mirasalon.server.data.tables.OutboxTable
-import iz.mkao.mirasalon.server.data.tables.ProductCategoriesTable
-import iz.mkao.mirasalon.server.data.tables.ProductsTable
-import iz.mkao.mirasalon.server.data.tables.PromotionUsagesTable
-import iz.mkao.mirasalon.server.data.tables.PromotionsTable
-import iz.mkao.mirasalon.server.data.tables.RefreshTokensTable
-import iz.mkao.mirasalon.server.data.tables.ReviewsTable
-import iz.mkao.mirasalon.server.data.tables.SalonsTable
-import iz.mkao.mirasalon.server.data.tables.ServiceCategoriesTable
-import iz.mkao.mirasalon.server.data.tables.ServicesTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistAbsencesTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistClientNotesTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistServicesTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistShiftsTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
-import iz.mkao.mirasalon.server.data.tables.UserAddressesTable
-import iz.mkao.mirasalon.server.data.tables.UserNotificationPreferencesTable
-import iz.mkao.mirasalon.server.data.tables.UsersTable
+import iz.mkao.mirasalon.server.data.tables.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -59,7 +39,7 @@ object DatabaseFactory {
         Database.connect(dataSource)
 
         transaction {
-            SchemaUtils.create(
+            val tables = arrayOf(
                 UsersTable, 
                 RefreshTokensTable, 
                 SalonsTable, 
@@ -82,30 +62,12 @@ object DatabaseFactory {
                 UserAddressesTable, 
                 UserNotificationPreferencesTable
             )
+            
+            // This is the safest way to ensure the schema is up to date during development
+            @Suppress("DEPRECATION")
+            SchemaUtils.createMissingTablesAndColumns(*tables)
         }
     }
-
-
-    /*
-    private fun runMigrations(url: String, user: String, password: String) {
-        log.info("Running Flyway migrations...")
-        try {
-            val flyway = Flyway.configure()
-                .dataSource(url, user, password)
-                .locations("classpath:db/migration")
-                .baselineOnMigrate(true)
-                .validateOnMigrate(false)
-                .cleanDisabled(false)
-                .load()
-
-            flyway.repair()
-            flyway.migrate()
-            log.info("Flyway migrations completed successfully")
-        } catch (e: Exception) {
-            log.warn("Flyway migrations failed: {}. Schema will be created by SchemaUtils.", e.message)
-        }
-    }
-    */
 
     /**
      * Liveness probe: returns true only if a real DB connection can be obtained

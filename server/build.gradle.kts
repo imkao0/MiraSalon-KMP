@@ -6,6 +6,9 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
+    }
 }
 
 application {
@@ -14,9 +17,6 @@ application {
 
 tasks.withType<JavaExec> {
     // Non-sensitive local-development defaults only.
-    // Secrets (DATABASE_PASSWORD, STREAM_API_KEY/SECRET/APP_ID, JWT_SECRET,
-    // ADMIN_PASSWORD, METRICS_PASSWORD) must be injected via real environment
-    // variables or CI secrets. The server fails fast at startup when they are absent.
     environment("DATABASE_URL", "jdbc:postgresql://localhost:5432/mirasalon")
     environment("DATABASE_DRIVER", "org.postgresql.Driver")
     environment("DATABASE_USER", "mirasalon")

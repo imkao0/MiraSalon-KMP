@@ -217,6 +217,7 @@ fun Route.streamRoutes(
             
             val text = message?.get("text") as? String ?: ""
             val senderName = user?.get("name") as? String ?: "Client"
+            val senderAvatar = user?.get("image") as? String
             
             // Extract deterministic ID components if possible
             val normalizedCid = cid?.split(":")?.last() ?: cid ?: ""
@@ -227,6 +228,8 @@ fun Route.streamRoutes(
             notificationService?.sendChatNotification(
                 userId = "admin", // In a real app, resolve the correct recipient
                 senderName = senderName,
+                senderAvatarUrl = senderAvatar,
+                messageText = text,
                 conversationId = normalizedCid
             )
         }
@@ -263,13 +266,21 @@ fun Route.streamRoutes(
 
             val targetUserId = request["userId"]
             val senderName = request["senderName"] ?: "Staff"
+            val senderAvatar = request["senderAvatar"]
+            val messageText = request["message"]
             val conversationId = request["conversationId"]
 
             if (targetUserId == null) {
                 return@post call.respond(HttpStatusCode.BadRequest, "userId required")
             }
 
-            notificationService?.sendChatNotification(targetUserId, senderName, conversationId)
+            notificationService?.sendChatNotification(
+                userId = targetUserId,
+                senderName = senderName,
+                senderAvatarUrl = senderAvatar,
+                messageText = messageText,
+                conversationId = conversationId
+            )
             call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Notification sent"))
         }
     }

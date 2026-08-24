@@ -4,8 +4,6 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.domain.model.UserRole
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
-import iz.mkao.mirasalon.server.data.tables.ProductsTable
-import iz.mkao.mirasalon.server.data.tables.SalonsTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import iz.mkao.mirasalon.server.service.StreamSyncService
@@ -34,9 +32,9 @@ class StartupTasks(
         scope.launch(Dispatchers.IO) {
             try {
                 ensureAdminUser()
-                seedInitialData()
                 syncUsersToStream()
                 syncSpecialistsToStream()
+
                 Napier.i("All startup tasks completed successfully.")
             } catch (e: Exception) {
                 Napier.e("StartupTasks critical failure", e)
@@ -60,8 +58,8 @@ class StartupTasks(
 
     private suspend fun ensureAdminUser() {
         newSuspendedTransaction(Dispatchers.IO) {
-            val adminEmail = ServerEnvironment.orDefault("ADMIN_EMAIL", "admin@mirasalon.com")
-            val adminPassword = ServerEnvironment.secret("ADMIN_PASSWORD")
+            val adminEmail = ServerEnvironment.orDefault("ADMIN_EMAIL", "admin@mirasalon")
+            val adminPassword = ServerEnvironment.orDefault("ADMIN_PASSWORD", "password")
 
             val existing = UsersTable
                 .selectAll().where { UsersTable.email eq adminEmail }
@@ -86,74 +84,13 @@ class StartupTasks(
             } else {
                 UsersTable.update({ UsersTable.email eq adminEmail }) {
                     it[this.passwordHash] = passwordHash
-                    it[name] = "Sarah Johnson"
+                    it[name] = "Linet Johnson"
                     it[role] = UserRole.ADMIN.name
-                    it[avatarUrl] = ADMIN_AVATAR_URL // Force update existing admin avatar
+                    it[avatarUrl] = ADMIN_AVATAR_URL
                 }
             }
         }
     }
-
-    private suspend fun seedInitialData() {
-        newSuspendedTransaction(Dispatchers.IO) {
-            // Seed Salon if empty
-            if (SalonsTable.selectAll().empty()) {
-                Napier.i("Seeding initial salon data...")
-                val salonId = "main-salon"
-                SalonsTable.insert {
-                    it[id] = salonId
-                    it[name] = "Mira Salon Main"
-                    it[address] = "123 Beauty Lane, Styledale"
-                    it[imageUrl] = "/uploads/salons/main.jpeg"
-                    it[phone] = "+1 555-1234"
-                    it[rating] = 4.8
-                    it[openTime] = "09:00"
-                    it[closeTime] = "20:00"
-                }
-            } else {
-                // Ensure existing salon has an image
-                SalonsTable.update({ SalonsTable.id eq "main-salon" }) {
-                    it[imageUrl] = "/uploads/salons/main.jpeg"
-                }
-            }
-
-            // Force update or seed Sarah specialist
-            val sarahSpecId = "spec-sarah-johnson"
-            val sarahExists = SpecialistsTable.selectAll().where { SpecialistsTable.id eq sarahSpecId }.firstOrNull() != null
-            if (!sarahExists) {
-                Napier.i("Seeding Sarah Johnson specialist...")
-                SpecialistsTable.insert {
-                    it[id] = sarahSpecId
-                    it[this.salonId] = "main-salon"
-                    it[name] = "Sarah Johnson"
-                    it[role] = "Senior Hair Specialist"
-                    it[imageUrl] = "/uploads/specialists/sarah.jpeg"
-                    it[bio] = "Expert in color and precision cuts with 10 years of experience."
-                    it[status] = "ONLINE"
-                    it[isActive] = true
-                }
-            } else {
-                SpecialistsTable.update({ SpecialistsTable.id eq sarahSpecId }) {
-                    it[imageUrl] = "/uploads/specialists/sarah.jpeg"
-                }
-            }
-
-                // Seed Products
-                if (ProductsTable.selectAll().empty()) {
-                    Napier.i("Seeding initial product: Volume Boost Shampoo")
-                    ProductsTable.insert {
-                        it[id] = "prod-shampoo-1"
-                        it[name] = "Volume Boost Shampoo"
-                        it[category] = "Hair Care"
-                        it[description] = "Professional grade shampoo for thinning hair."
-                        it[price] = 24.99
-                        it[stockQuantity] = 50
-                        it[imageUrl] = "/uploads/products/shampoo.jpeg"
-                        it[createdAt] = System.currentTimeMillis()
-                    }
-                }
-            }
-        }
 
     private suspend fun syncUsersToStream() {
         val usersToSync = newSuspendedTransaction(Dispatchers.IO) {

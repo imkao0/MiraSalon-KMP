@@ -14,14 +14,18 @@ import iz.mkao.mirasalon.core.domain.util.PromotionValidator
 import iz.mkao.mirasalon.core.network.model.PagedResponse
 import iz.mkao.mirasalon.core.network.model.dto.CreatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdatePromotionRequestDto
+import iz.mkao.mirasalon.server.data.tables.ProductsTable
 import iz.mkao.mirasalon.server.data.tables.PromotionUsagesTable
 import iz.mkao.mirasalon.server.data.tables.PromotionsTable
+import iz.mkao.mirasalon.server.data.tables.ServicesTable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
+import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteAll
@@ -30,14 +34,14 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.transactions.experimental.withSuspendTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.Clock
 import java.util.UUID
-import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import iz.mkao.mirasalon.core.domain.repository.PromoRepository as CorePromoRepository
-
 
 
 class PromotionRepository(
@@ -46,7 +50,6 @@ class PromotionRepository(
     private val clock: Clock
 ) : CorePromoRepository {
 
-    @OptIn(ExperimentalTime::class)
     override suspend fun validatePromo(code: String, cartItems: List<CartItem>): Outcome<PromoValidation> = try {
         newSuspendedTransaction {
             val promoRow = PromotionsTable.selectAll().where { PromotionsTable.code eq code }
@@ -97,7 +100,9 @@ class PromotionRepository(
 
     override suspend fun fetchPromotions(): Outcome<List<Promotion>> = try {
         newSuspendedTransaction {
-            Outcome.Success(PromotionsTable.selectAll().map { it.toDomain() })
+            Outcome.Success(PromotionsTable.selectAll()
+                .orderBy(PromotionsTable.createdAt to SortOrder.DESC)
+                .map { it.toDomain() })
         }
     } catch (e: Exception) {
         Outcome.Error(Failure.ServerError(500, "Failed to fetch promotions: ${e.message}"))
@@ -118,7 +123,9 @@ class PromotionRepository(
                 query.andWhere { PromotionsTable.targetUserId.isNull() }
             }
 
-            val items = query.limit(pageSize).offset(((page - 1) * pageSize).toLong())
+            val items = query
+                .orderBy(PromotionsTable.createdAt to SortOrder.DESC)
+                .limit(pageSize).offset(((page - 1) * pageSize).toLong())
                 .map { it.toDomain() }
 
             Outcome.Success(items)
@@ -141,6 +148,7 @@ class PromotionRepository(
 
             val total = baseQuery.count()
             val items = baseQuery
+                .orderBy(PromotionsTable.createdAt to SortOrder.DESC)
                 .limit(pageSize).offset(((page - 1) * pageSize).toLong())
                 .map { it.toDomain() }
 
@@ -302,34 +310,53 @@ class PromotionRepository(
         Outcome.Error(Failure.ServerError(500, "Failed to delete all promotions: ${e.message}"))
     }
 
-    suspend fun getUserPromoUsageCount(promotionId: String, userId: String): Int = newSuspendedTransaction {
-        PromotionUsagesTable.selectAll()
+    suspend fun getUserPromoUsageCount(promotionId: String, userId: String): Int {
+        val tx = TransactionManager.currentOrNull()
+        return tx?.withSuspendTransaction {
+            getUserPromoUsageCountInternal(promotionId, userId)
+        }
+            ?: newSuspendedTransaction {
+                getUserPromoUsageCountInternal(promotionId, userId)
+            }
+    }
+
+    private fun Transaction.getUserPromoUsageCountInternal(promotionId: String, userId: String): Int {
+        return PromotionUsagesTable.selectAll()
             .where { (PromotionUsagesTable.promotionId eq promotionId) and (PromotionUsagesTable.userId eq userId) }
             .count()
             .toInt()
     }
 
-    suspend fun recordPromoUsage(promotionId: String, userId: String, orderId: String): Outcome<Unit> = try {
-        newSuspendedTransaction {
-            PromotionUsagesTable.insert {
-                it[PromotionUsagesTable.id] = UUID.randomUUID().toString()
-                it[PromotionUsagesTable.promotionId] = promotionId
-                it[PromotionUsagesTable.userId] = userId
-                it[PromotionUsagesTable.orderId] = orderId
-                it[PromotionUsagesTable.createdAt] = clock.millis()
+    suspend fun recordPromoUsage(promotionId: String, userId: String, orderId: String?): Outcome<Unit> = try {
+        val tx = TransactionManager.currentOrNull()
+        if (tx != null) {
+            tx.withSuspendTransaction {
+                recordPromoUsageInternal(promotionId, userId, orderId)
             }
-
-            PromotionsTable.update({ PromotionsTable.id eq promotionId }) {
-                it[currentUsageCount] = PromotionsTable.currentUsageCount.plus(1)
+        } else {
+            newSuspendedTransaction {
+                recordPromoUsageInternal(promotionId, userId, orderId)
             }
-
-            Outcome.Success(Unit)
         }
+        Outcome.Success(Unit)
     } catch (e: Exception) {
         Outcome.Error(Failure.ServerError(500, "Failed to record promo usage: ${e.message}"))
     }
 
-    @OptIn(ExperimentalTime::class)
+    private fun recordPromoUsageInternal(promotionId: String, userId: String, orderId: String?) {
+        PromotionUsagesTable.insert {
+            it[PromotionUsagesTable.id] = UUID.randomUUID().toString()
+            it[PromotionUsagesTable.promotionId] = promotionId
+            it[PromotionUsagesTable.userId] = userId
+            it[PromotionUsagesTable.orderId] = orderId
+            it[PromotionUsagesTable.createdAt] = clock.millis()
+        }
+
+        PromotionsTable.update({ PromotionsTable.id eq promotionId }) {
+            it[currentUsageCount] = PromotionsTable.currentUsageCount.plus(1)
+        }
+    }
+
     suspend fun validatePromoCode(
         code: String,
         userId: String,
@@ -337,36 +364,67 @@ class PromotionRepository(
         serviceIds: List<String>? = null,
         categoryIds: List<String>? = null
     ): Outcome<PromoValidation> = try {
-        newSuspendedTransaction {
-            val promoRow = PromotionsTable.selectAll().where { PromotionsTable.code eq code }.singleOrNull()
-                ?: return@newSuspendedTransaction Outcome.Error(Failure.ClientError(404, "Promo code not found"))
-
-            val promo = promoRow.toDomain()
-            val userUsageCount = getUserPromoUsageCount(promoRow[PromotionsTable.id], userId)
-
-            val result = PromotionValidator.validate(
-                promo = promo,
-                cartTotal = cartTotal,
-                userId = userId,
-                serviceIds = serviceIds,
-                categoryIds = categoryIds,
-                userUsageCount = userUsageCount,
-                now = Instant.fromEpochMilliseconds(clock.millis())
-            )
-
-            Outcome.Success(
-                PromoValidation(
-                    promoCode = code,
-                    isValid = result.isValid,
-                    discountAmount = result.discountAmount,
-                    applicableServices = result.applicableServices,
-                    applicableCategories = result.applicableCategories,
-                    errorMessage = result.errorMessage
-                )
-            )
+        val tx = TransactionManager.currentOrNull()
+        tx?.withSuspendTransaction {
+            validatePromoCodeInternal(code, userId, cartTotal, serviceIds, categoryIds)
         }
+            ?: newSuspendedTransaction {
+                validatePromoCodeInternal(code, userId, cartTotal, serviceIds, categoryIds)
+            }
     } catch (e: Exception) {
         Outcome.Error(Failure.ServerError(500, "Validation failed: ${e.message}"))
+    }
+
+    private suspend fun validatePromoCodeInternal(
+        code: String,
+        userId: String,
+        cartTotal: Double,
+        serviceIds: List<String>?,
+        categoryIds: List<String>?
+    ): Outcome<PromoValidation> {
+        val promoRow = PromotionsTable.selectAll().where { PromotionsTable.code eq code }.singleOrNull()
+            ?: return Outcome.Error(Failure.ClientError(404, "Promo code not found"))
+
+        val promo = promoRow.toDomain()
+        
+        // Resolve categories if not provided (lookup by service/product IDs)
+        val resolvedCategoryIds = categoryIds?.toMutableList() ?: mutableListOf()
+        if (!serviceIds.isNullOrEmpty()) {
+            val serviceCats = ServicesTable
+                .select(ServicesTable.categoryId)
+                .where { ServicesTable.id inList serviceIds }
+                .map { it[ServicesTable.categoryId] }
+            resolvedCategoryIds.addAll(serviceCats)
+
+            val productCats = ProductsTable
+                .select(ProductsTable.category)
+                .where { ProductsTable.id inList serviceIds }
+                .map { it[ProductsTable.category] }
+            resolvedCategoryIds.addAll(productCats)
+        }
+        
+        val userUsageCount = getUserPromoUsageCount(promoRow[PromotionsTable.id], userId)
+
+        val result = PromotionValidator.validate(
+            promo = promo,
+            cartTotal = cartTotal,
+            userId = userId,
+            serviceIds = serviceIds,
+            categoryIds = resolvedCategoryIds.distinct(),
+            userUsageCount = userUsageCount,
+            now = Instant.fromEpochMilliseconds(clock.millis())
+        )
+
+        return Outcome.Success(
+            PromoValidation(
+                promoCode = code,
+                isValid = result.isValid,
+                discountAmount = result.discountAmount,
+                applicableServices = result.applicableServices,
+                applicableCategories = result.applicableCategories,
+                errorMessage = result.errorMessage
+            )
+        )
     }
 
     private fun ResultRow.toDomain() = Promotion(

@@ -23,7 +23,10 @@ import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductCategoryRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
 import iz.mkao.mirasalon.server.data.repository.ProductRepository
-import iz.mkao.mirasalon.server.error.*
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.getUserId
 import iz.mkao.mirasalon.server.util.isAdmin
@@ -152,10 +155,11 @@ fun Route.productRoutes(
     authenticate("auth-jwt") {
 
         post("/{id}/reviews") {
+            val userId = call.getUserId() ?: throw UnauthorizedException("Authentication required")
             val id = call.parameters["id"] ?: throw GeneralDomainException("Product ID required", HttpStatusCode.BadRequest)
             val request = call.receive<SubmitReviewRequest>()
             
-            val result = productRepository.submitReview(id, request.rating, request.comment)
+            val result = productRepository.submitReview(id, request.rating, request.comment, userId)
             when (result) {
                 is Outcome.Success -> call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.data))
                 is Outcome.Error -> throw GeneralDomainException(result.failure.toString(), HttpStatusCode.BadRequest)
@@ -292,7 +296,18 @@ fun Route.productRoutes(
                 }
                 is Outcome.Error -> {
                     log.warn("Product deletion failed for {}: {}", id, result.failure)
-                    throw GeneralDomainException("Deletion failed", HttpStatusCode.InternalServerError)
+                    when (val failure = result.failure) {
+                        is Failure.ServerError -> {
+                            if (failure.code == 404) {
+                                throw ResourceNotFoundException(failure.message)
+                            } else {
+                                throw GeneralDomainException(failure.message, HttpStatusCode.InternalServerError)
+                            }
+                        }
+                        else -> {
+                            throw GeneralDomainException("Deletion failed", HttpStatusCode.InternalServerError)
+                        }
+                    }
                 }
                 else -> {}
             }

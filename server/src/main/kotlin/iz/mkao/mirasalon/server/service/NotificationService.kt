@@ -7,6 +7,7 @@ import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.AppointmentStatus
 import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
 import iz.mkao.mirasalon.server.data.tables.OutboxTable
+import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
 import java.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
+import java.util.UUID
 
 class NotificationService(
     private val appointmentRepository: AppointmentRepository,
@@ -48,7 +50,8 @@ class NotificationService(
         val thirtyMinutesFromNow = now + (30 * 60 * 1000)
         val thirtyFiveMinutesFromNow = now + (35 * 60 * 1000)
 
-        val upcomingAppointments = AppointmentsTable.selectAll()
+        val upcomingAppointments = (AppointmentsTable innerJoin SpecialistsTable)
+            .select(AppointmentsTable.columns + SpecialistsTable.name + SpecialistsTable.imageUrl)
             .where {
                 (AppointmentsTable.dateTime greaterEq thirtyMinutesFromNow) and
                 (AppointmentsTable.dateTime lessEq thirtyFiveMinutesFromNow) and
@@ -60,14 +63,18 @@ class NotificationService(
             val userId = row[AppointmentsTable.userId]
             val appointmentId = row[AppointmentsTable.id]
             val appointmentTime = row[AppointmentsTable.dateTime]
+            val specialistName = row[SpecialistsTable.name]
+            val specialistAvatarUrl = row[SpecialistsTable.imageUrl]
 
             val event = DomainEvent.AppointmentReminder(
-                eventId = java.util.UUID.randomUUID().toString(),
+                eventId = UUID.randomUUID().toString(),
                 timestamp = now,
-                message = "Your appointment is in 30 minutes!",
+                message = "Your appointment with $specialistName is in 30 minutes!",
                 appointmentId = appointmentId,
                 appointmentTime = appointmentTime,
-                reminderType = "30_MINUTES"
+                reminderType = "30_MINUTES",
+                specialistName = specialistName,
+                specialistAvatarUrl = specialistAvatarUrl
             )
 
             OutboxTable.insert {
@@ -84,13 +91,22 @@ class NotificationService(
         }
     }
 
-    suspend fun sendChatNotification(userId: String, senderName: String, conversationId: String? = null) = newSuspendedTransaction(Dispatchers.IO) {
+    suspend fun sendChatNotification(
+        userId: String,
+        senderName: String,
+        senderAvatarUrl: String? = null,
+        messageText: String? = null,
+        conversationId: String? = null
+    ) = newSuspendedTransaction(Dispatchers.IO) {
+        val displayMessage = messageText ?: "New message from $senderName"
         val event = DomainEvent.NotificationReceived(
-            eventId = java.util.UUID.randomUUID().toString(),
+            eventId = UUID.randomUUID().toString(),
             timestamp = clock.millis(),
-            message = "New message from $senderName",
+            message = displayMessage,
             type = "CHAT_MESSAGE",
-            referenceId = conversationId
+            referenceId = conversationId,
+            senderName = senderName,
+            senderAvatarUrl = senderAvatarUrl
         )
         OutboxTable.insert {
             it[eventId] = event.eventId

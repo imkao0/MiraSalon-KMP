@@ -22,7 +22,11 @@ import iz.mkao.mirasalon.core.network.model.dto.CreatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.ValidatePromoRequest
 import iz.mkao.mirasalon.server.data.repository.PromotionRepository
-import iz.mkao.mirasalon.server.error.*
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.PromoExpiredException
+import iz.mkao.mirasalon.server.error.PromoUsageLimitExceededException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.getUserId
@@ -45,6 +49,17 @@ fun Route.promotionRoutes(
         } ?: throw ResourceNotFoundException("Promotion image not found")
 
         if (path.startsWith("http")) {
+            val localUploadMarkers = listOf("127.0.0.1:8080/uploads", "localhost:8080/uploads")
+            val matchingMarker = localUploadMarkers.find { path.contains(it) }
+            
+            if (matchingMarker != null) {
+                val localPath = path.substringAfter("/uploads/")
+                val file = File(appConfig.uploadDir, localPath)
+                if (file.exists()) {
+                    val contentType = ContentType.fromFilePath(file.name).firstOrNull() ?: ContentType.Image.Any
+                    return@get call.respond(LocalFileContent(file, contentType))
+                }
+            }
             return@get call.respondRedirect(path)
         }
 
@@ -217,7 +232,8 @@ fun Route.promotionRoutes(
                         val errorMsg = result.errorMessage ?: "Invalid promo code"
                         throw when {
                             errorMsg.contains("expired", ignoreCase = true) -> PromoExpiredException(errorMsg)
-                            errorMsg.contains("limit", ignoreCase = true) -> PromoUsageLimitExceededException(errorMsg)
+                            errorMsg.contains("limit", ignoreCase = true) || errorMsg.contains("used", ignoreCase = true) -> 
+                                PromoUsageLimitExceededException(errorMsg)
                             else -> GeneralDomainException(errorMsg, HttpStatusCode.BadRequest)
                         }
                     } else {

@@ -16,6 +16,7 @@ import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
 import iz.mkao.mirasalon.server.data.tables.ProductCategoriesTable
 import iz.mkao.mirasalon.server.data.tables.ProductsTable
+import iz.mkao.mirasalon.server.data.tables.PromotionsTable
 import iz.mkao.mirasalon.server.data.tables.ReviewsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,10 @@ class ProductRepository(
         meterRegistry.gauge("products_low_stock_count", this) {
             transaction {
                 try {
-                    ProductsTable.selectAll().where { ProductsTable.stockQuantity less 5 }.count().toDouble()
+                    ProductsTable.selectAll().where { 
+                        (ProductsTable.stockQuantity less 5) and 
+                        (ProductsTable.name.lowerCase() notLike "%test%") 
+                    }.count().toDouble()
                 } catch (e: Exception) {
                     0.0
                 }
@@ -175,16 +179,16 @@ class ProductRepository(
         })
     }
 
-    override suspend fun submitReview(productId: String, rating: Int, comment: String): Outcome<Review> {
+    override suspend fun submitReview(productId: String, rating: Int, comment: String, userId: String?): Outcome<Review> {
         return transaction {
             try {
                 val id = UUID.randomUUID().toString()
-                val userId = UsersTable.selectAll().limit(1).map { it[UsersTable.id] }.singleOrNull() ?: return@transaction Outcome.Error(Failure.ClientError(404, "User not found"))
-                val user = UsersTable.selectAll().where { UsersTable.id eq userId }.singleOrNull()
+                val finalUserId = userId ?: return@transaction Outcome.Error(Failure.ClientError(401, "Authentication required"))
+                val user = UsersTable.selectAll().where { UsersTable.id eq finalUserId }.singleOrNull()
             
                 ReviewsTable.insert {
                     it[ReviewsTable.id] = id
-                    it[ReviewsTable.userId] = userId
+                    it[ReviewsTable.userId] = finalUserId
                     it[ReviewsTable.targetId] = productId
                     it[ReviewsTable.targetType] = "PRODUCT"
                     it[ReviewsTable.rating] = rating
@@ -201,7 +205,7 @@ class ProductRepository(
                     val event = DomainEvent.ReviewSubmitted(
                         eventId = UUID.randomUUID().toString(),
                         timestamp = System.currentTimeMillis(),
-                        actorId = userId,
+                        actorId = finalUserId,
                         message = "Review submitted for product $productId",
                         reviewId = id,
                         targetId = productId,
@@ -210,7 +214,7 @@ class ProductRepository(
                         userName = user?.get(UsersTable.name),
                         userAvatarUrl = user?.get(UsersTable.avatarUrl)
                     )
-                    outboxRepository.save(userId, json.encodeToString(event))
+                    outboxRepository.save(finalUserId, json.encodeToString(event))
                     Outcome.Success(review)
                 }
                 else Outcome.Error(Failure.ServerError(500, "Failed to create review"))
@@ -381,7 +385,10 @@ class ProductRepository(
     }
 
     fun findLowStock(threshold: Int): List<ProductDto> = transaction {
-        ProductsTable.selectAll().where { ProductsTable.stockQuantity lessEq threshold }
+        ProductsTable.selectAll().where { 
+            (ProductsTable.stockQuantity lessEq threshold) and 
+            (ProductsTable.name.lowerCase() notLike "%test%") 
+        }
             .map { it.toProductDto() }
     }
 
@@ -541,6 +548,7 @@ class ProductRepository(
 
     private fun ResultRow.toProduct() = transaction {
         val id = this@toProduct[ProductsTable.id]
+        val category = this@toProduct[ProductsTable.category]
         val reviews = ReviewsTable.join(UsersTable, JoinType.INNER, ReviewsTable.userId, UsersTable.id)
             .selectAll().where { 
                 (ReviewsTable.targetId eq id) and 
@@ -550,16 +558,21 @@ class ProductRepository(
             .map { it.toReview() }
 
         val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
+        
+        // Dynamic discount calculation based on category promotions
+        val autoDiscountPercent = getBestAutomaticDiscountPercent(category, this@toProduct[ProductsTable.price])
+        val baseDiscountPercent = this@toProduct[ProductsTable.discountPercent]
+        val effectiveDiscountPercent = maxOf(autoDiscountPercent, baseDiscountPercent)
 
         Product(
             id = id,
             name = this@toProduct[ProductsTable.name],
-            category = this@toProduct[ProductsTable.category],
+            category = category,
             description = this@toProduct[ProductsTable.description],
             imageUrl = this@toProduct[ProductsTable.imageUrl],
             price = this@toProduct[ProductsTable.price],
             stockQuantity = this@toProduct[ProductsTable.stockQuantity],
-            discountPercent = this@toProduct[ProductsTable.discountPercent],
+            discountPercent = effectiveDiscountPercent,
             averageRating = avgRating,
             reviewCount = reviews.size,
             gender = this@toProduct[ProductsTable.gender],
@@ -568,8 +581,32 @@ class ProductRepository(
         )
     }
 
+    private fun getBestAutomaticDiscountPercent(categoryName: String, itemPrice: Double): Int {
+        val now = System.currentTimeMillis()
+        return transaction {
+            PromotionsTable.selectAll().where {
+                (PromotionsTable.status eq "ACTIVE") and
+                // Allow "welcome" promo to be automatic if the user wants it to be "auto"
+                (PromotionsTable.code.isNull() or (PromotionsTable.code eq "welcome")) and
+                (PromotionsTable.discountType eq "PERCENTAGE") and
+                (PromotionsTable.validFrom.isNull() or (PromotionsTable.validFrom lessEq now)) and
+                (PromotionsTable.validUntil.isNull() or (PromotionsTable.validUntil greaterEq now))
+            }.mapNotNull { row ->
+                val categories = row[PromotionsTable.applicableCategories]
+                    ?.split(",")
+                    ?.map { it.trim().lowercase() } ?: emptyList()
+                val minVal = row[PromotionsTable.minOrderValue] ?: 0.0
+                
+                if (categoryName.trim().lowercase() in categories && itemPrice >= minVal) {
+                    row[PromotionsTable.discountValue].toInt()
+                } else null
+            }.maxOrNull() ?: 0
+        }
+    }
+
     private fun ResultRow.toProductDto() = transaction {
         val id = this@toProductDto[ProductsTable.id]
+        val category = this@toProductDto[ProductsTable.category]
         val reviews = ReviewsTable.join(UsersTable, JoinType.INNER, ReviewsTable.userId, UsersTable.id)
             .selectAll().where { 
                 (ReviewsTable.targetId eq id) and 
@@ -591,15 +628,20 @@ class ProductRepository(
 
         val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
 
+        // Dynamic discount calculation based on category promotions
+        val autoDiscountPercent = getBestAutomaticDiscountPercent(category, this@toProductDto[ProductsTable.price])
+        val baseDiscountPercent = this@toProductDto[ProductsTable.discountPercent]
+        val effectiveDiscountPercent = maxOf(autoDiscountPercent, baseDiscountPercent)
+
         ProductDto(
             id = id,
             name = this@toProductDto[ProductsTable.name],
-            category = this@toProductDto[ProductsTable.category],
+            category = category,
             subCategory = this@toProductDto[ProductsTable.subCategory],
             description = this@toProductDto[ProductsTable.description],
-            imageUrl = this@toProductDto[ProductsTable.imageUrl],
+            imageUrl = this@toProductDto.getOrNull(ProductsTable.imageUrl),
             price = this@toProductDto[ProductsTable.price],
-            discountPercent = this@toProductDto[ProductsTable.discountPercent],
+            discountPercent = effectiveDiscountPercent,
             stockQuantity = this@toProductDto[ProductsTable.stockQuantity],
             isAvailable = this@toProductDto[ProductsTable.isAvailable],
             averageRating = avgRating,

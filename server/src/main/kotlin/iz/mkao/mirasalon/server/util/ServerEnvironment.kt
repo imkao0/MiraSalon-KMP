@@ -5,8 +5,16 @@ import java.io.File
 object ServerEnvironment {
     private val envMap: Map<String, String> by lazy {
         val map = mutableMapOf<String, String>()
-        val dotenvFile = File(".env")
-        if (dotenvFile.exists()) {
+        // Try to find .env in multiple locations (root, current dir, parent dir)
+        val locations = listOf(
+            File(".env"),
+            File("../.env"),
+            File("server/.env")
+        )
+        
+        val dotenvFile = locations.find { it.exists() }
+        
+        if (dotenvFile != null) {
             dotenvFile.readLines().forEach { line ->
                 val trimmed = line.trim()
                 if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
