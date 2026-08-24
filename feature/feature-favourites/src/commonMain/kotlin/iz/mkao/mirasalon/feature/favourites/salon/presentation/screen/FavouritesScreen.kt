@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -62,10 +63,12 @@ import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.theme.CardImageHeight
 import iz.mkao.mirasalon.core.designsystem.theme.ElevationLow
 import iz.mkao.mirasalon.core.designsystem.theme.ElevationMedium
+import iz.mkao.mirasalon.core.designsystem.theme.ElevationNone
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeMedium
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeSmall
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusTiny
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
@@ -93,105 +96,110 @@ fun FavouritesContent(
     onRemoveServiceFavorite: (String) -> Unit,
     onBackClick: () -> Unit,
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
-
     Scaffold(
         topBar = {
             MiraTopAppBar(title = stringResource(Res.string.favourites), onBackClick = onBackClick)
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
-            // Modern Tab Row with pill indicator
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primary,
-                divider = { },
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        height = 3.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+        val isEmpty = products.isEmpty() && services.isEmpty()
+
+        if (isEmpty) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text(
-                            stringResource(Res.string.products),
-                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            stringResource(Res.string.services),
-                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-            val isEmpty = if (selectedTab == 0) products.isEmpty() else services.isEmpty()
-
-            if (isEmpty) {
                 MiraEmptyState(
                     message = stringResource(Res.string.no_favourites_category),
                     description = "Start adding items to your favorites",
                     icon = Icons.Outlined.FavoriteBorder
                 )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentPadding = PaddingValues(SpacingMedium),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingDefault),
-                    verticalArrangement = Arrangement.spacedBy(SpacingDefault),
-                ) {
-                    if (selectedTab == 0) {
-                        items(
-                            items = products,
-                            key = { it.id },
-                            contentType = { "product" }
-                        ) { product ->
-                            FavouriteProductCard(
-                                product = product,
-                                onClick = { onProductClick(product.id) },
-                                onRemoveFavorite = { onRemoveProductFavorite(product.id) }
-                            )
-                        }
-                    } else {
-                        items(
-                            items = services,
-                            key = { it.id },
-                            contentType = { "service" }
-                        ) { service ->
-                            FavouriteServiceCard(
-                                service = service,
-                                onClick = { onServiceClick(service.id) },
-                                onRemoveFavorite = { onRemoveServiceFavorite(service.id) }
-                            )
-                        }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(SpacingMedium),
+                horizontalArrangement = Arrangement.spacedBy(SpacingDefault),
+                verticalArrangement = Arrangement.spacedBy(SpacingDefault),
+            ) {
+                // Products section
+                if (products.isNotEmpty()) {
+                    item(
+                        span = { GridItemSpan(2) },
+                        contentType = "header"
+                    ) {
+                        SectionHeader(
+                            title = stringResource(Res.string.products),
+                            count = products.size
+                        )
+                    }
+                    items(
+                        items = products.distinctBy { it.id },
+                        key = { it.id },
+                        contentType = { "product" }
+                    ) { product ->
+                        FavouriteProductCard(
+                            product = product,
+                            onClick = { onProductClick(product.id) },
+                            onRemoveFavorite = { onRemoveProductFavorite(product.id) }
+                        )
+                    }
+                }
+
+                // Services section
+                if (services.isNotEmpty()) {
+                    item(
+                        span = { GridItemSpan(2) },
+                        contentType = "header"
+                    ) {
+                        SectionHeader(
+                            title = stringResource(Res.string.services),
+                            count = services.size
+                        )
+                    }
+                    items(
+                        items = services.distinctBy { it.id },
+                        key = { it.id },
+                        contentType = { "service" }
+                    ) { service ->
+                        FavouriteServiceCard(
+                            service = service,
+                            onClick = { onServiceClick(service.id) },
+                            onRemoveFavorite = { onRemoveServiceFavorite(service.id) }
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, count: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = SpacingSmall),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "$count items",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -210,7 +218,7 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(240.dp)
             .scale(scale)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -220,10 +228,10 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                     onClick()
                 }
             ),
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = ElevationLow,
-            pressedElevation = ElevationMedium
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
         ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
@@ -232,7 +240,7 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(CardImageHeight)
+                    .height(180.dp)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)
@@ -252,9 +260,9 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                    Color.Black.copy(alpha = 0.6f)
                                 ),
-                                startY = 100f
+                                startY = 80f
                             )
                         )
                 )
@@ -264,10 +272,10 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(SpacingSmall)
-                    .size(StepperButtonSize)
+                    .padding(8.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.9f))
+                    .background(Color.White.copy(alpha = 0.95f))
                     .clickable { onRemoveFavorite() },
                 contentAlignment = Alignment.Center
             ) {
@@ -275,7 +283,7 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                     imageVector = Icons.Outlined.Favorite,
                     contentDescription = "Remove from favorites",
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(IconSizeSmall)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -284,7 +292,7 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(SpacingDefault)
+                    .padding(12.dp)
             ) {
                 Text(
                     text = product.name,
@@ -292,9 +300,9 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                 )
-                Spacer(modifier = Modifier.height(SpacingTiny))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -306,18 +314,20 @@ fun FavouriteProductCard(product: Product, onClick: () -> Unit, onRemoveFavorite
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "SALE",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Bold,
+                    if (product.discountPercent > 0) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(6.dp),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                        ) {
+                            Text(
+                                text = "-${product.discountPercent}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -347,7 +357,7 @@ fun FavouriteServiceCard(service: Service, onClick: () -> Unit, onRemoveFavorite
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp)
+            .height(180.dp)
             .scale(scale)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -357,60 +367,41 @@ fun FavouriteServiceCard(service: Service, onClick: () -> Unit, onRemoveFavorite
                     onClick()
                 }
             ),
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusTiny),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = ElevationLow,
-            pressedElevation = ElevationMedium
+            defaultElevation = ElevationNone,
+            pressedElevation = ElevationNone
         ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         ),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(SpacingDefault),
-            contentAlignment = Alignment.Center
+                .padding(12.dp),
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            // Service icon placeholder with gradient background
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(115.dp)
+                    .clip(RoundedCornerShape(RadiusTiny))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                // Service icon placeholder
-                Box(
-                    modifier = Modifier
-                        .size(IconSizeLarge)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Favorite,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(IconSizeMedium)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(SpacingSmall))
-                
-                Text(
-                    text = service.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-                
-                Spacer(modifier = Modifier.height(SpacingTiny))
-                
-                Text(
-                    text = service.price.toPriceString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.ExtraBold,
+                Icon(
+                    imageVector = Icons.Outlined.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
                 )
             }
             
@@ -418,9 +409,9 @@ fun FavouriteServiceCard(service: Service, onClick: () -> Unit, onRemoveFavorite
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(StepperButtonSize)
+                    .size(32.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.9f))
+                    .background(Color.White.copy(alpha = 0.95f))
                     .clickable { onRemoveFavorite() },
                 contentAlignment = Alignment.Center
             ) {
@@ -428,7 +419,32 @@ fun FavouriteServiceCard(service: Service, onClick: () -> Unit, onRemoveFavorite
                     imageVector = Icons.Outlined.Favorite,
                     contentDescription = "Remove from favorites",
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(IconSizeSmall)
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            // Content at bottom
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = service.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = service.price.toPriceString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }

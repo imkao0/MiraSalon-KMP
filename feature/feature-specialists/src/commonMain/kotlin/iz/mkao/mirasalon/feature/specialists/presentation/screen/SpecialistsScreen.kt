@@ -109,7 +109,7 @@ private fun SpecialistsGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        items(specialists, key = { it.id }) { specialist ->
+        items(specialists.distinctBy { it.id }, key = { it.id }) { specialist ->
             SpecialistItem(
                 specialist = specialist,
                 onClick = { onSpecialistClick(specialist.id) },

@@ -8,8 +8,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistDto
+import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.result.apiCall
-import kotlinx.serialization.Serializable
 
 class KtorSpecialistsApi(private val httpClient: HttpClient) : SpecialistsApi {
 
@@ -21,19 +21,16 @@ class KtorSpecialistsApi(private val httpClient: HttpClient) : SpecialistsApi {
         httpClient.get(Endpoints.specialist(id))
     }
 
-    override suspend fun submitReview(specialistId: String, rating: Int, comment: String): Outcome<Unit> = apiCall {
+    override suspend fun submitReview(specialistId: String, rating: Int, comment: String): Outcome<Unit> = apiCall<String> {
         httpClient.post(Endpoints.reviews(specialistId)) {
             contentType(ContentType.Application.Json)
-            setBody(ReviewRequest(rating, comment))
+            setBody(SubmitReviewRequest(rating, comment, targetId = specialistId, targetType = "SPECIALIST"))
         }
-    }
+    }.map { Unit }
 
     private object Endpoints {
         const val SPECIALISTS = "/v1/api/specialists"
         fun specialist(id: String) = "/v1/api/specialists/$id"
         fun reviews(id: String) = "/v1/api/specialists/$id/reviews"
     }
-
-    @Serializable
-    private data class ReviewRequest(val rating: Int, val comment: String)
 }

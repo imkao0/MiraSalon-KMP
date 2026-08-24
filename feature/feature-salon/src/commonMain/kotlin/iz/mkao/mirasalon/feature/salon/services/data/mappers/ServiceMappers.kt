@@ -26,7 +26,7 @@ fun ServiceDto.toDomain() = Service(
     price = price,
     discountPercent = discountPercent,
     categoryId = categoryId ?: "",
-    imageUrl = ApiEndpoints.resolveImageUrl(imageUrl),
+    imageUrl = ApiEndpoints.resolveImageUrl(imageUrl) ?: ApiEndpoints.getServicePlaceholder(name),
     reviews = reviews.map { it.toDomain() }
 )
 
@@ -48,7 +48,7 @@ fun ServiceEntity.toDomain() = Service(
     price = price,
     discountPercent = discountPercent,
     categoryId = categoryId,
-    imageUrl = imageUrl,
+    imageUrl = imageUrl ?: ApiEndpoints.getServicePlaceholder(name),
     rating = rating
 )
 

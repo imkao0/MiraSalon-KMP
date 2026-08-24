@@ -708,7 +708,7 @@ private fun SpecialistChip(specialist: Specialist, onClick: () -> Unit) {
                     modifier = Modifier.size(12.dp)
                 )
                 Text(
-                    text = "${((specialist.rating * 10).toInt() / 10.0)}",
+                    text = specialist.rating.formatRating(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
