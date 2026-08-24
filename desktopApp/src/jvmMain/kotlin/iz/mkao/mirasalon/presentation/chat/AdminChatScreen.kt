@@ -68,7 +68,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.ChatTextSent
 import iz.mkao.mirasalon.core.designsystem.theme.ChatTimeText
 import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
 import iz.mkao.mirasalon.core.domain.model.Specialist
 import iz.mkao.mirasalon.core.domain.model.chat.ChatMessage
@@ -124,7 +124,7 @@ fun AdminChatScreenUi(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 color = Color.White,
                 shadowElevation = 0.dp,
                 border = BorderStroke(1.dp, MiraBorder)
@@ -198,7 +198,7 @@ fun AdminChatScreenUi(
 
                 Surface(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(RadiusSmall),
                     color = Color.White,
                     shadowElevation = 0.dp,
                     border = BorderStroke(1.dp, MiraBorder)
@@ -531,12 +531,12 @@ fun DesktopAdminChatView(
                     modifier = Modifier
                         .padding(bottom = 12.dp)
                         .size(112.dp)
-                        .border(1.dp, MiraBorder, RoundedCornerShape(RadiusMedium))
+                        .border(1.dp, MiraBorder, RoundedCornerShape(RadiusSmall))
                 ) {
                     androidx.compose.foundation.Image(
                         bitmap = preview,
                         contentDescription = "Selected image",
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(RadiusMedium)),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(RadiusSmall)),
                         contentScale = ContentScale.Crop
                     )
                     IconButton(
@@ -569,7 +569,7 @@ fun DesktopAdminChatView(
                     onValueChange = onInputTextChanged,
                     modifier = Modifier.weight(1f),
                     placeholder = { Text(if (pendingImagePreview == null) "Type a message..." else "Add a caption...") },
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(RadiusSmall),
                     enabled = !isSendingImage,
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -645,7 +645,7 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
 
             Surface(
                 color = if (isMe) ChatBubbleSent else ChatBubbleReceived,
-                shape = RoundedCornerShape(RadiusMedium)
+                shape = RoundedCornerShape(RadiusSmall)
             ) {
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                     when (val content = message.content) {
@@ -663,7 +663,7 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
                                     contentDescription = null,
                                     modifier = Modifier
                                         .sizeIn(maxWidth = 300.dp, maxHeight = 300.dp)
-                                        .clip(RoundedCornerShape(RadiusMedium)),
+                                        .clip(RoundedCornerShape(RadiusSmall)),
                                     contentScale = ContentScale.Crop,
                                     onError = {
                                         Napier.e(it.result.throwable) { "Coil failed to load chat message image: ${content.url}" }

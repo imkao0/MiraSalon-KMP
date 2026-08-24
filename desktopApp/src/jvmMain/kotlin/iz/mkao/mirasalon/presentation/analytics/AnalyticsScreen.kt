@@ -47,7 +47,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraYellow
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.VelvetaPistachioSoft
 import iz.mkao.mirasalon.core.designsystem.theme.VelvetaSlateBlue
 import iz.mkao.mirasalon.presentation.DesktopScreen
@@ -87,9 +87,9 @@ fun AnalyticsScreenUi(
             Box {
                 Surface(
                     onClick = { showTimeRangeMenu = true },
-                    modifier = Modifier.background(Color.White, RoundedCornerShape(RadiusMedium)).border(1.dp, MiraBorder, RoundedCornerShape(RadiusMedium)),
+                    modifier = Modifier.background(Color.White, RoundedCornerShape(RadiusSmall)).border(1.dp, MiraBorder, RoundedCornerShape(RadiusSmall)),
                     color = Color.White,
-                    shape = RoundedCornerShape(RadiusMedium)
+                    shape = RoundedCornerShape(RadiusSmall)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

@@ -35,6 +35,7 @@ class PromotionsPresenter(
         var serviceCategories by remember { mutableStateOf(emptyList<ServiceCategory>()) }
         var searchQuery by remember { mutableStateOf("") }
         var isLoading by remember { mutableStateOf(false) }
+        var uploadProgress by remember { mutableStateOf(0f) }
         val scope = rememberCoroutineScope()
         var loadJob by remember { mutableStateOf<Job?>(null) }
 
@@ -73,7 +74,8 @@ class PromotionsPresenter(
             productCategories = productCategories,
             serviceCategories = serviceCategories,
             searchQuery = searchQuery,
-            isLoading = isLoading
+            isLoading = isLoading,
+            uploadProgress = uploadProgress
         ) { event ->
             when (event) {
                 is PromotionsEvent.Search -> {
@@ -100,6 +102,16 @@ class PromotionsPresenter(
                         is NetworkResult.Success -> loadPromotions(searchQuery)
                         else -> isLoading = false
                     }
+                }
+                is PromotionsEvent.UploadImage -> scope.launch {
+                    uploadProgress = 0.1f
+                    val result = uploadRepository.uploadImage(event.bytes, event.name, "image/jpeg").toNetworkResult()
+                    val url = (result as? NetworkResult.Success)?.data
+                    uploadProgress = if (url != null) 1.0f else 0f
+                    event.onResult(url)
+                }
+                PromotionsEvent.ResetUploadProgress -> {
+                    uploadProgress = 0f
                 }
                 PromotionsEvent.ClearAll -> scope.launch {
                     isLoading = true

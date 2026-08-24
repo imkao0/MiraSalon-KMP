@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.data.repository
 
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialist
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistShift
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistStats
@@ -44,6 +45,8 @@ class KtorAdminSpecialistRepository(
             yearsOfExperience = specialist.yearsOfExperience,
             serviceIds = specialist.services.map { it.id }
         )
+        
+        Napier.d { "[KtorAdminSpecialistRepository] Updating specialist ${specialist.id}, imageUrl: ${request.imageUrl}" }
 
         return api.updateStaff(specialist.id, request)
     }

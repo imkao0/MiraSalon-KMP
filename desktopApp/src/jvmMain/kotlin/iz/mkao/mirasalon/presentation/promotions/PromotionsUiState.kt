@@ -14,6 +14,7 @@ data class PromotionsUiState(
     val serviceCategories: List<ServiceCategory> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
+    val uploadProgress: Float = 0f,
     val eventSink: (PromotionsEvent) -> Unit = {}
 ) : CircuitUiState
 
@@ -23,6 +24,8 @@ sealed interface PromotionsEvent : CircuitUiEvent {
     data class CreatePromotion(val promotion: AdminPromotion) : PromotionsEvent
     data class UpdatePromotion(val promotion: AdminPromotion) : PromotionsEvent
     data class DeletePromotion(val id: String) : PromotionsEvent
+    data class UploadImage(val bytes: ByteArray, val name: String, val onResult: (String?) -> Unit) : PromotionsEvent
+    data object ResetUploadProgress : PromotionsEvent
     data object ClearAll : PromotionsEvent
     data object Refresh : PromotionsEvent
 }

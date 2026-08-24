@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -273,58 +274,30 @@ fun ServiceCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(380.dp)
             .background(Color.White)
-            .padding(24.dp)
     ) {
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "ID: ${service.id.takeLast(6).uppercase()}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MiraTextSecondary.copy(alpha = 0.5f),
-                letterSpacing = 1.sp
+        // 1. Background Image
+        val imageUrl = service.imageUrl
+        if (!imageUrl.isNullOrBlank()) {
+            val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = service.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onError = {
+                    Napier.e(it.result.throwable) { "Coil failed to load service image: $fullUrl" }
+                }
             )
-            
-            Row {
-                IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.Edit, null, tint = MiraTextSecondary.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.Delete, null, tint = MiraCoral.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            val imageUrl = service.imageUrl
-            if (!imageUrl.isNullOrBlank()) {
-                val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
-                AsyncImage(
-                    model = fullUrl,
-                    contentDescription = service.name,
-                    modifier = Modifier.size(140.dp),
-                    contentScale = ContentScale.Fit,
-                    onError = {
-                        Napier.e(it.result.throwable) { "Coil failed to load service image: $fullUrl" }
-                    }
-                )
-            } else {
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     Icons.Outlined.Spa,
                     null,
@@ -334,37 +307,108 @@ fun ServiceCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-
-        Text(
-            text = service.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        // 2. White Fade Gradient at the bottom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.5f),
+                            Color.White
+                        ),
+                        startY = 100f // Start fading early
+                    )
+                )
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // 3. Content on top
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
         ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(2.dp)
+                ) {
+                    Text(
+                        text = "ID: ${service.id.takeLast(6).uppercase()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MiraTextPrimary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Row {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(28.dp),
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            Icons.Outlined.Edit,
+                            null,
+                            tint = MiraTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(28.dp),
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            null,
+                            tint = MiraCoral,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+
             Text(
-                "${service.durationMinutes} MIN",
-                style = MaterialTheme.typography.bodySmall,
-                color = MiraTextSecondary,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                "$${service.price}",
-                style = MaterialTheme.typography.titleLarge,
+                text = service.name,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${service.durationMinutes} MIN",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MiraTextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "$${service.price}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
         }
     }
 }

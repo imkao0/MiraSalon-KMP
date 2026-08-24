@@ -83,6 +83,7 @@ fun DesktopDashboardScreenUi(
                     DashboardContent(
                         salesTrend = state.salesTrend,
                         appointmentStats = state.appointmentStats,
+                        upcomingStats = state.upcomingStats,
                         recentActivity = state.recentActivity,
                         lowStockProducts = state.lowStockProducts
                     )
@@ -97,6 +98,7 @@ fun DesktopDashboardScreenUi(
 private fun DashboardContent(
     salesTrend: SalesTrend?,
     appointmentStats: AdminAppointmentStats?,
+    upcomingStats: AdminAppointmentStats?,
     recentActivity: List<ActivityEvent>,
     lowStockProducts: List<Product>
 ) {
@@ -118,7 +120,7 @@ private fun DashboardContent(
             Spacer(modifier = Modifier.width(20.dp))
             UpcomingAppointmentsCard(
                 modifier = Modifier.weight(0.8f).fillMaxHeight(),
-                data = appointmentStats
+                data = upcomingStats
             )
         }
 

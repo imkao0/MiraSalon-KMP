@@ -60,36 +60,46 @@ class DashboardPresenter(
             try {
                 coroutineScope {
                     val statsDeferred = async { repository.getStats(selectedDays).toNetworkResult() }
+                    val overviewDeferred = async { repository.getOverviewStats(selectedDays).toNetworkResult() }
                     val salesDeferred = async { repository.getSalesTrend(selectedDays).toNetworkResult() }
                     val activityDeferred = async { repository.getRecentActivity().toNetworkResult() }
                     val perfDeferred = async { repository.getSpecialistPerformance(selectedDays).toNetworkResult() }
                     val popDeferred = async { repository.getServicePopularity(selectedDays).toNetworkResult() }
+                    val lowStockDeferred = async { repository.getLowStockProducts(10).toNetworkResult() }
 
                     val statsResult = statsDeferred.await()
+                    val overviewResult = overviewDeferred.await()
                     val salesResult = salesDeferred.await()
                     val activityResult = activityDeferred.await()
                     val perfResult = perfDeferred.await()
                     val popResult = popDeferred.await()
+                    val lowStockResult = lowStockDeferred.await()
 
-                    var newStats = value.appointmentStats
+                    var newStats = value.upcomingStats
+                    var newOverview = value.appointmentStats
                     var newSales = value.salesTrend
                     var newActivity = value.recentActivity
                     var newPerf = value.specialistPerformance
                     var newPop = value.servicePopularity
+                    var newLowStock = value.lowStockProducts
                     val errorMessage: String? = null
 
                     if (statsResult is NetworkResult.Success) newStats = statsResult.data
+                    if (overviewResult is NetworkResult.Success) newOverview = overviewResult.data
                     if (salesResult is NetworkResult.Success) newSales = salesResult.data
                     if (activityResult is NetworkResult.Success) newActivity = activityResult.data
                     if (perfResult is NetworkResult.Success) newPerf = perfResult.data
                     if (popResult is NetworkResult.Success) newPop = popResult.data
+                    if (lowStockResult is NetworkResult.Success) newLowStock = lowStockResult.data
 
                     value = value.copy(
-                        appointmentStats = newStats,
-                        salesTrend = newSales,
+                        upcomingStats = newStats,
+                        appointmentStats = newOverview,
                         recentActivity = newActivity,
                         specialistPerformance = newPerf,
                         servicePopularity = newPop,
+                        lowStockProducts = newLowStock,
+                        salesTrend = newSales,
                         error = errorMessage,
                         isLoading = false
                     )

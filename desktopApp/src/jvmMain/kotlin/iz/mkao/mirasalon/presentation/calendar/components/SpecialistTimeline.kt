@@ -44,7 +44,7 @@ import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.AdminAppointment
 import iz.mkao.mirasalon.core.domain.model.AdminAppointmentStatus
 import iz.mkao.mirasalon.core.domain.model.Specialist
@@ -153,7 +153,7 @@ fun AppointmentBlock(
                     onClick()
                 }
             },
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         color = bgColor,
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
