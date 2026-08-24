@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -70,7 +71,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraGreen
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.Product
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.presentation.DesktopScreen
@@ -131,7 +132,7 @@ fun ProductsScreenUi(
                             selected = state.selectedCategory == null,
                             onClick = { state.eventSink(ProductsEvent.CategorySelected(null)) },
                             label = { Text("All Products") },
-                            shape = RoundedCornerShape(RadiusMedium),
+                            shape = RoundedCornerShape(RadiusSmall),
                             border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = MiraFaintGray,
@@ -146,7 +147,7 @@ fun ProductsScreenUi(
                             selected = state.selectedCategory == category,
                             onClick = { state.eventSink(ProductsEvent.CategorySelected(category)) },
                             label = { Text(category) },
-                            shape = RoundedCornerShape(RadiusMedium),
+                            shape = RoundedCornerShape(RadiusSmall),
                             border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 containerColor = MiraFaintGray,
@@ -245,7 +246,7 @@ fun ProductsScreenUi(
                             horizontalArrangement = Arrangement.spacedBy(1.dp),
                             verticalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
-                            items(products, key = { it.id }) { product ->
+                            items(products.distinctBy { it.id }, key = { it.id }) { product ->
                                 AdminProductCard(
                                     product = product,
                                     onEdit = {
@@ -327,59 +328,31 @@ fun AdminProductCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(400.dp)
             .background(Color.White)
-            .padding(24.dp)
             .clickable { onEdit() }
     ) {
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "ID: ${product.id.takeLast(6).uppercase()}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MiraTextSecondary.copy(alpha = 0.5f),
-                letterSpacing = 1.sp
+        // 1. Background Image
+        val imageUrl = product.imageUrl
+        if (imageUrl.isNotBlank()) {
+            val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
+            AsyncImage(
+                model = fullUrl,
+                contentDescription = product.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onError = {
+                    Napier.e(it.result.throwable) { "Coil failed to load product image: $fullUrl" }
+                }
             )
-            
-            Row {
-                IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.Edit, null, tint = MiraTextSecondary.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.Delete, null, tint = MiraCoral.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            val imageUrl = product.imageUrl
-            if (imageUrl.isNotBlank()) {
-                val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
-                AsyncImage(
-                    model = fullUrl,
-                    contentDescription = product.name,
-                    modifier = Modifier.size(140.dp),
-                    contentScale = ContentScale.Fit,
-                    onError = {
-                        Napier.e(it.result.throwable) { "Coil failed to load product image: $fullUrl" }
-                    }
-                )
-            } else {
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     Icons.Outlined.Image,
                     null,
@@ -389,43 +362,114 @@ fun AdminProductCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-
-        Text(
-            text = product.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = product.category.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MiraTextSecondary,
-            letterSpacing = 1.sp
+        // 2. White Fade Gradient at the bottom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.5f),
+                            Color.White
+                        ),
+                        startY = 100f
+                    )
+                )
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // 3. Content on top
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
         ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(2.dp)
+                ) {
+                    Text(
+                        text = "ID: ${product.id.takeLast(6).uppercase()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MiraTextPrimary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Row {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(28.dp),
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            Icons.Outlined.Edit,
+                            null,
+                            tint = MiraTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(28.dp),
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            null,
+                            tint = MiraCoral,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+
             Text(
-                if (product.stockQuantity > 0) "${product.stockQuantity} IN STOCK" else "OUT OF STOCK",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (product.stockQuantity > 0) MiraGreen else MiraCoral,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                "$${product.discountedPrice}",
-                style = MaterialTheme.typography.titleLarge,
+                text = product.name,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+            Text(
+                text = product.category.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MiraTextSecondary,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (product.stockQuantity > 0) "${product.stockQuantity} IN STOCK" else "OUT OF STOCK",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (product.stockQuantity > 0) MiraGreen else MiraCoral,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "$${product.discountedPrice}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
         }
     }
 }

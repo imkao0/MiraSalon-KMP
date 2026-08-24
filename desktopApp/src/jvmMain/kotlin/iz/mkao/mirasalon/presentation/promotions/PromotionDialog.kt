@@ -1,44 +1,34 @@
-package iz.mkao.mirasalon.presentation.promotions
-
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
+import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.domain.model.AdminDiscountType
 import iz.mkao.mirasalon.core.domain.model.AdminPromoStatus
 import iz.mkao.mirasalon.core.domain.model.AdminPromotion
 import iz.mkao.mirasalon.core.domain.model.ProductCategory
 import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.ServiceCategory
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -52,6 +42,9 @@ fun PromotionDialog(
     services: List<Service> = emptyList(),
     productCategories: List<ProductCategory> = emptyList(),
     serviceCategories: List<ServiceCategory> = emptyList(),
+    uploadProgress: Float,
+    onUploadImage: suspend (ByteArray, String, (String?) -> Unit) -> Unit,
+    onResetUpload: () -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (AdminPromotion) -> Unit
 ) {
@@ -76,7 +69,9 @@ fun PromotionDialog(
     var minSpend by remember { mutableStateOf(promotion?.minOrderValue?.toString() ?: "0") }
     var status by remember { mutableStateOf(promotion?.status ?: AdminPromoStatus.Active) }
 
-    var selectedFile by remember { mutableStateOf<File?>(null) }
+    var imageUrl by remember { mutableStateOf(promotion?.imageUrl ?: "") }
+    var isUploading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -208,7 +203,47 @@ fun PromotionDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Applicable Services", style = MaterialTheme.typography.labelMedium)
+                Text("Applicable Product Categories", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    productCategories.forEach { category ->
+                        val isSelected = category.name in selectedCategories
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                selectedCategories = if (isSelected) {
+                                    selectedCategories.filter { it != category.name }
+                                } else {
+                                    selectedCategories + category.name
+                                }
+                            },
+                            label = { Text(category.name) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Applicable Service Categories", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    serviceCategories.forEach { category ->
+                        val isSelected = category.name in selectedCategories
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                selectedCategories = if (isSelected) {
+                                    selectedCategories.filter { it != category.name }
+                                } else {
+                                    selectedCategories + category.name
+                                }
+                            },
+                            label = { Text(category.name) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Individual Services (Optional)", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     services.forEach { service ->
@@ -228,51 +263,72 @@ fun PromotionDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Applicable Categories", style = MaterialTheme.typography.labelMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val allCats = (productCategories.map { it.name } + serviceCategories.map { it.name }).distinct()
-                    allCats.forEach { category ->
-                        val isSelected = category in selectedCategories
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                selectedCategories = if (isSelected) {
-                                    selectedCategories.filter { it != category }
-                                } else {
-                                    selectedCategories + category
-                                }
-                            },
-                            label = { Text(category) }
-                        )
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = {
-                            val chooser = JFileChooser().apply {
-                                fileFilter = FileNameExtensionFilter("Images", "jpg", "jpeg", "png", "webp")
-                                dialogTitle = "Select Promotion Image"
-                            }
-                            val result = chooser.showOpenDialog(null)
-                            if (result == JFileChooser.APPROVE_OPTION) {
-                                selectedFile = chooser.selectedFile
-                            }
-                        },
-                        shape = RoundedCornerShape(2.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Surface(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .border(1.dp, MiraBorder, RoundedCornerShape(4.dp)),
+                        color = Color(0xFFF9F9F9)
                     ) {
-                        Text(if (selectedFile == null && (promotion?.imageUrl?.isBlank() != false)) "Select Image" else "Change Image")
+                        Box(contentAlignment = Alignment.Center) {
+                            if (imageUrl.isNotEmpty() && !isUploading) {
+                                AsyncImage(
+                                    model = ApiEndpoints.resolveImageUrl(imageUrl),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else if (!isUploading) {
+                                Icon(Icons.Outlined.Image, null, modifier = Modifier.size(32.dp), tint = Color.Gray.copy(alpha = 0.5f))
+                            }
+
+                            if (isUploading) {
+                                ShimmerLoading(modifier = Modifier.size(40.dp))
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        selectedFile?.name ?: if (promotion?.imageUrl?.isNotBlank() == true) "Existing Image" else "No image selected",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (selectedFile == null && (promotion?.imageUrl?.isBlank() != false)) Color.Gray else MaterialTheme.colorScheme.primary
-                    )
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Promotion Image", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    val chooser = JFileChooser().apply {
+                                        fileFilter = FileNameExtensionFilter("Images", "jpg", "jpeg", "png", "webp")
+                                        dialogTitle = "Select Promotion Image"
+                                    }
+                                    val result = chooser.showOpenDialog(null)
+                                    if (result == JFileChooser.APPROVE_OPTION) {
+                                        val file = chooser.selectedFile
+                                        scope.launch {
+                                            isUploading = true
+                                            onResetUpload()
+                                            onUploadImage(file.readBytes(), file.name) { newUrl ->
+                                                isUploading = false
+                                                if (newUrl != null) imageUrl = newUrl
+                                            }
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(2.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                enabled = !isUploading
+                            ) {
+                                Icon(Icons.Outlined.CameraAlt, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Upload Image")
+                            }
+
+                            if (imageUrl.isNotEmpty()) {
+                                TextButton(onClick = { imageUrl = "" }) {
+                                    Text("Remove", color = Color.Red)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -303,11 +359,12 @@ fun PromotionDialog(
                                 applicableServices = selectedServices,
                                 applicableCategories = selectedCategories,
                                 status = status,
-                                imageUrl = promotion?.imageUrl
+                                imageUrl = imageUrl
                             )
                         )
                     }
                 },
+                enabled = !isUploading && code.isNotBlank() && (discountValue.toDoubleOrNull() ?: 0.0) > 0,
                 colors = ButtonDefaults.buttonColors(containerColor = MiraCoral)
             ) {
                 Text(if (promotion == null) "Create Offer" else "Save Changes")

@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.presentation.promotions
 
+import PromotionDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,9 +68,9 @@ import com.slack.circuit.runtime.ui.ui
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
-import iz.mkao.mirasalon.core.designsystem.theme.VelvetaSlateBlue
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
+import iz.mkao.mirasalon.core.designsystem.theme.VelvetaSlateBlue
 import iz.mkao.mirasalon.core.domain.model.AdminDiscountType
 import iz.mkao.mirasalon.core.domain.model.AdminPromoStatus
 import iz.mkao.mirasalon.core.domain.model.AdminPromotion
@@ -80,7 +81,6 @@ import iz.mkao.mirasalon.presentation.LocalProfileClick
 import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
 import iz.mkao.mirasalon.presentation.LocalToggleSidebar
 import iz.mkao.mirasalon.presentation.components.DesktopLoadingState
-import iz.mkao.mirasalon.presentation.dashboard.components.DashboardHeader
 import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -108,6 +108,13 @@ fun PromotionsScreenUi(
             services = state.services,
             productCategories = state.productCategories,
             serviceCategories = state.serviceCategories,
+            uploadProgress = state.uploadProgress,
+            onUploadImage = { bytes: ByteArray, name: String, onResult: (String?) -> Unit ->
+                state.eventSink(PromotionsEvent.UploadImage(bytes, name, onResult))
+            },
+            onResetUpload = {
+                state.eventSink(PromotionsEvent.ResetUploadProgress)
+            },
             onDismiss = {
                 showAddDialog = false
                 editingPromotion = null
@@ -302,10 +309,13 @@ fun PromotionsScreenUi(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(promotions) { promo ->
+                    items(promotions.distinctBy { it.id }, key = { it.id }) { promo ->
                         PromotionListItem(
                             promotion = promo,
-                            onToggleActive = { /* state.eventSink(PromotionsEvent.UpdatePromotion(promo.copy(...))) */ },
+                            onToggleActive = {
+                                val nextStatus = if (promo.status == AdminPromoStatus.Active) AdminPromoStatus.Draft else AdminPromoStatus.Active
+                                state.eventSink(PromotionsEvent.UpdatePromotion(promo.copy(status = nextStatus)))
+                            },
                             onEdit = { editingPromotion = promo },
                             onDelete = { state.eventSink(PromotionsEvent.DeletePromotion(promo.id)) }
                         )

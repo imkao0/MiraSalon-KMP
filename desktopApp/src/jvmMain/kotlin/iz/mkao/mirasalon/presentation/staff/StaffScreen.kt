@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,6 +60,7 @@ import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.screen.Screen
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.util.ChatUtils
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSuccess
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
@@ -95,8 +97,11 @@ fun StaffScreenUi(
     if (showAddDialog) {
         StaffDialog(
             allServices = state.allServices,
+            onUploadImage = { bytes, name, onResult ->
+                state.eventSink(StaffEvent.UploadImage(bytes, name, onResult))
+            },
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, role, years, services ->
+            onConfirm = { name, role, years, services, imageUrl ->
                 state.eventSink(
                     StaffEvent.CreateStaff(
                         AdminSpecialist(
@@ -105,7 +110,8 @@ fun StaffScreenUi(
                             name = name,
                             role = role,
                             yearsOfExperience = years,
-                            services = services
+                            services = services,
+                            imageUrl = imageUrl
                         )
                     )
                 )
@@ -124,8 +130,8 @@ fun StaffScreenUi(
             onUpdateShifts = { shifts ->
                 state.eventSink(StaffEvent.UpdateShifts(staff.id, shifts))
             },
-            onUploadImage = { bytes, name ->
-                state.eventSink(StaffEvent.UploadImage(bytes, name) { })
+            onUploadImage = { bytes, name, onResult ->
+                state.eventSink(StaffEvent.UploadImage(bytes, name, onResult))
             },
             onUpdateInfo = { updatedStaff ->
                 state.eventSink(StaffEvent.UpdateStaff(updatedStaff))
@@ -214,7 +220,7 @@ fun StaffScreenUi(
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(staffMembers, key = { it.id }) { staff ->
+                    items(staffMembers.distinctBy { it.id }, key = { it.id }) { staff ->
                         StaffCard(
                             staff = staff,
                             onStatusChange = { isAvailable ->
@@ -276,28 +282,36 @@ fun StaffCard(
         Column(modifier = Modifier.padding(24.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF5F5F5)),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.size(80.dp)
                 ) {
-                    if (!staff.imageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = staff.imageUrl,
-                            contentDescription = staff.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(Icons.Outlined.Person, null, modifier = Modifier.size(40.dp), tint = Color.Gray)
-                    }
-
-                    // Status indicator
+                    // Image container
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF5F5F5))
+                    ) {
+                        if (!staff.imageUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = staff.imageUrl,
+                                contentDescription = staff.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onError = {
+                                    Napier.e(it.result.throwable) { "Coil failed to load staff card image: ${staff.imageUrl}" }
+                                }
+                            )
+                        } else {
+                            Icon(Icons.Outlined.Person, null, modifier = Modifier.size(40.dp), tint = Color.Gray)
+                        }
+                    }
+
+                    // Status indicator - offset to cut half image and be partially out of the card area
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
                             .align(Alignment.BottomEnd)
+                            .offset(x = 10.dp, y = 10.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .padding(2.dp)

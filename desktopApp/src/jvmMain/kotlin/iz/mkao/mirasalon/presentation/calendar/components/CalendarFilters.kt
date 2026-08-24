@@ -39,7 +39,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.AdminAppointmentStatus
 
 @Composable
@@ -228,7 +228,7 @@ fun AnimatedTabSwitch(
             .width(260.dp)
             .height(44.dp),
         color = Color(0xFFF5F5F5),
-        shape = RoundedCornerShape(RadiusMedium)
+        shape = RoundedCornerShape(RadiusSmall)
     ) {
         Row(
             modifier = Modifier.padding(4.dp),
@@ -247,7 +247,7 @@ fun AnimatedTabSwitch(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(RadiusMedium))
+                        .clip(RoundedCornerShape(RadiusSmall))
                         .background(if (isSelected) MiraCoral else Color.Transparent)
                         .clickable { onTabChange(index) },
                     contentAlignment = Alignment.Center

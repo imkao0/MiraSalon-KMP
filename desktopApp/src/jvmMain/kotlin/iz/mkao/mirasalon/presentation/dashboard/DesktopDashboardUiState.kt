@@ -14,6 +14,7 @@ data class DesktopDashboardUiState(
     val userAvatar: String? = null,
     val salesTrend: SalesTrend? = null,
     val appointmentStats: AdminAppointmentStats? = null,
+    val upcomingStats: AdminAppointmentStats? = null,
     val specialistPerformance: List<SpecialistPerformance> = emptyList(),
     val servicePopularity: List<ServicePopularity> = emptyList(),
     val recentActivity: List<ActivityEvent> = emptyList(),

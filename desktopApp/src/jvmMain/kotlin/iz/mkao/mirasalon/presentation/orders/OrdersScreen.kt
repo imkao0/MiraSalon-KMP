@@ -61,7 +61,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSuccess
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.AdminOrder
 import iz.mkao.mirasalon.core.domain.model.AdminOrderStatus
 import iz.mkao.mirasalon.presentation.DesktopScreen
@@ -172,7 +172,7 @@ fun OrdersScreenUi(
                 contentPadding = PaddingValues(bottom = 24.dp, top = 8.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(orders, key = { it.orderNumber }) { order ->
+                items(orders.distinctBy { it.orderNumber }, key = { it.orderNumber }) { order ->
                     OrderCard(
                         order = order,
                         onStatusChange = { newStatus ->
@@ -270,7 +270,7 @@ private fun FilterChip(
                     modifier = Modifier
                         .background(
                             if (selected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(RadiusMedium)
+                            RoundedCornerShape(RadiusSmall)
                         )
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
@@ -283,7 +283,7 @@ private fun FilterChip(
                 }
             }
         },
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         border = null,
         colors = FilterChipDefaults.filterChipColors(
             containerColor = Color(0xFFF5F5F5),

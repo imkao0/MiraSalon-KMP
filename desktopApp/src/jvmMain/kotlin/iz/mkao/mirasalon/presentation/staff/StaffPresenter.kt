@@ -212,7 +212,8 @@ class StaffPresenter(
                     is StaffEvent.UploadImage -> {
                         scope.launch {
                             uploadProgress = 0.1f
-                            val result = uploadRepository.uploadImage(event.bytes, event.name).toNetworkResult()
+                            val result = uploadRepository.uploadImage(event.bytes, event.name, "image/jpeg").toNetworkResult()
+                            Napier.d { "[StaffPresenter] Image upload result: $result" }
                             val url = (result as? NetworkResult.Success)?.data
                             uploadProgress = if (url != null) 1.0f else 0f
                             event.onResult(url)

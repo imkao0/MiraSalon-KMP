@@ -84,7 +84,7 @@ fun StaffDetailDialog(
     uploadProgress: Float,
     onDismiss: () -> Unit,
     onUpdateShifts: (List<AdminSpecialistShift>) -> Unit,
-    onUploadImage: suspend (ByteArray, String) -> Unit,
+    onUploadImage: suspend (ByteArray, String, (String?) -> Unit) -> Unit,
     onUpdateInfo: (AdminSpecialist) -> Unit = { },
     readOnly: Boolean = false
 ) {
@@ -95,6 +95,8 @@ fun StaffDetailDialog(
     var editedRole by remember { mutableStateOf(staff.role) }
     var editedBio by remember { mutableStateOf(staff.bio) }
     var editedYears by remember { mutableStateOf(staff.yearsOfExperience.toString()) }
+    var editedImageUrl by remember { mutableStateOf(staff.imageUrl) }
+    var isUploading by remember { mutableStateOf(false) }
     val editedServices = remember { mutableStateListOf<Service>().apply { addAll(staff.services) } }
 
     var isEditing by remember { mutableStateOf(false) }
@@ -118,7 +120,7 @@ fun StaffDetailDialog(
                                 modifier = Modifier.size(80.dp).clip(CircleShape).background(Color.White).border(1.dp, MiraBorder, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val imageUrl = staff.imageUrl
+                                val imageUrl = editedImageUrl
                                 if (imageUrl != null) {
                                     val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
                                     AsyncImage(
@@ -147,7 +149,13 @@ fun StaffDetailDialog(
                                                 if (result == JFileChooser.APPROVE_OPTION) {
                                                     val file = chooser.selectedFile
                                                     scope.launch {
-                                                        onUploadImage(file.readBytes(), file.name)
+                                                        isUploading = true
+                                                        onUploadImage(file.readBytes(), file.name) { newUrl ->
+                                                            isUploading = false
+                                                            if (newUrl != null) {
+                                                                editedImageUrl = newUrl
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             },
@@ -214,12 +222,15 @@ fun StaffDetailDialog(
                                                 staff.copy(
                                                     name = editedName,
                                                     role = editedRole,
+                                                    bio = editedBio,
+                                                    imageUrl = editedImageUrl,
                                                     yearsOfExperience = editedYears.toIntOrNull() ?: 0,
                                                     services = editedServices.toList()
                                                 )
                                             )
                                             isEditing = false
                                         },
+                                        enabled = !isUploading,
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                                         shape = RoundedCornerShape(2.dp)
                                     ) {

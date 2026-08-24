@@ -78,7 +78,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraGreen
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraYellow
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.AdminOrder
 import iz.mkao.mirasalon.core.domain.model.AdminOrderStatus
 import iz.mkao.mirasalon.core.domain.model.AdminReview
@@ -254,7 +254,7 @@ fun CustomersScreenUi(
                     )
                 }
             } else {
-                items(state.customers, key = { it.id }) { customer ->
+                items(state.customers.distinctBy { it.id }, key = { it.id }) { customer ->
                     CustomerListItem(
                         customer = customer,
                         onClick = { state.eventSink(CustomersEvent.SelectCustomer(customer.id)) },
@@ -376,7 +376,7 @@ fun CustomerListItem(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         color = Color.White,
         border = BorderStroke(1.dp, MiraBorder)
     ) {

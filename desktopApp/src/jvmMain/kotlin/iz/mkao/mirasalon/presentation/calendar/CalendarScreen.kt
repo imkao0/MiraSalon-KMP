@@ -76,7 +76,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.AdminAppointment
 import iz.mkao.mirasalon.core.domain.model.AdminAppointmentStatus
 import iz.mkao.mirasalon.core.domain.model.Specialist
@@ -871,7 +871,7 @@ fun AppointmentDetailsSheet(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.width(400.dp).padding(16.dp),
-            shape = RoundedCornerShape(RadiusMedium),
+            shape = RoundedCornerShape(RadiusSmall),
             color = Color.White,
             shadowElevation = 8.dp
         ) {
@@ -898,7 +898,7 @@ fun AppointmentDetailsSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(bgColor, RoundedCornerShape(RadiusMedium))
+                        .background(bgColor, RoundedCornerShape(RadiusSmall))
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -906,7 +906,7 @@ fun AppointmentDetailsSheet(
                         modifier = Modifier
                             .width(4.dp)
                             .height(40.dp)
-                            .background(borderColor, RoundedCornerShape(RadiusMedium))
+                            .background(borderColor, RoundedCornerShape(RadiusSmall))
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
@@ -1016,7 +1016,7 @@ fun CalendarPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.width(350.dp).padding(16.dp),
-            shape = RoundedCornerShape(RadiusMedium),
+            shape = RoundedCornerShape(RadiusSmall),
             color = Color.White,
             shadowElevation = 8.dp
         ) {

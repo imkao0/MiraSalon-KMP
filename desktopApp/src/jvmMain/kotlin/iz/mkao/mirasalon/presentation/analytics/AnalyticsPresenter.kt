@@ -44,7 +44,7 @@ class AnalyticsPresenter(
                 isLoading = true
                 try {
                     coroutineScope {
-                        val stats = async { repository.getStats(selectedDays) }
+                        val stats = async { repository.getOverviewStats(selectedDays) }
                         val trend = async { repository.getSalesTrend(selectedDays) }
                         val activity = async { repository.getRecentActivity() }
                         val performance = async { repository.getSpecialistPerformance(selectedDays) }

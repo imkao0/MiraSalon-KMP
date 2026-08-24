@@ -44,7 +44,7 @@ class KtorServiceRepository(
         }
     }
 
-    override suspend fun submitReview(serviceId: String, rating: Int, comment: String): Outcome<Unit> {
+    override suspend fun submitReview(serviceId: String, rating: Int, comment: String, userId: String?): Outcome<Unit> {
         return Outcome.Error(Failure.Unknown)
     }
 }

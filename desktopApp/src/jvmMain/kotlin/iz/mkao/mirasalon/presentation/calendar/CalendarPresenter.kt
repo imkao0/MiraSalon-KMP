@@ -197,7 +197,13 @@ class CalendarPresenter(
                     
                     statusCounts = relevantForCounts.groupBy { it.status }.mapValues { it.value.size }
 
-                    specialists = cachedSpecialists
+                    specialists = if (selectedService == "All Services") {
+                        cachedSpecialists
+                    } else {
+                        cachedSpecialists.filter { specialist ->
+                            specialist.services.any { it.name == selectedService }
+                        }
+                    }
                     customers = cachedCustomers
                     services = cachedServices
                     appointments = filterLocally(cachedMonthlyBookings, selectedDate, selectedService, selectedEmployment, selectedStatus, searchQuery, activeTab)
