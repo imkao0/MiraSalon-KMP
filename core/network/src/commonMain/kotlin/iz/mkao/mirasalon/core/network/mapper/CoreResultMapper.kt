@@ -14,9 +14,9 @@ fun NetworkError.toFailure(): Failure = when (this) {
         401, 403 -> Failure.SessionExpired
         in 400..499 -> Failure.ClientError(code, message)
         in 500..599 -> Failure.ServerError(code, message)
-        else -> Failure.Unknown
+        else -> Failure.ServerError(code, message)
     }
-    is NetworkError.Unknown -> Failure.Unknown
+    is NetworkError.Unknown -> Failure.ServerError(500, message)
 }
 
 /**

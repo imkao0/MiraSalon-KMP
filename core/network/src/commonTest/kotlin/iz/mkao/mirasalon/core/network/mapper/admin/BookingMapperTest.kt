@@ -6,7 +6,7 @@ import iz.mkao.mirasalon.core.network.model.dto.AppointmentDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import io.kotest.assertions.shouldBe
 import io.kotest.core.spec.style.StringSpec
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 class BookingMapperTest : StringSpec({
     "should map AppointmentDto to AdminAppointment correctly" {

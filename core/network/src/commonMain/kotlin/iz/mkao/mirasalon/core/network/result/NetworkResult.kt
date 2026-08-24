@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.core.network.result
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.RedirectResponseException
@@ -24,9 +25,17 @@ sealed class NetworkError(val message: String) {
 suspend inline fun <reified T> safeApiCall(crossinline block: suspend () -> HttpResponse): NetworkResult<T> {
     return try {
         val response = block()
+        
+        // Handle Unit type first, but still check if the request was successful
         if (T::class == Unit::class) {
-            return NetworkResult.Success(Unit as T)
+            return if (response.status.value in 200..299) {
+                NetworkResult.Success(Unit as T)
+            } else {
+                val errorBody = runCatching { response.body<ApiResponse<Unit>>() }.getOrNull()
+                NetworkResult.Error(NetworkError.HttpError(response.status.value, errorBody?.error ?: "Request failed"))
+            }
         }
+
         val apiResponse = response.body<ApiResponse<T>>()
         if (apiResponse.success) {
             val data = apiResponse.data
@@ -38,10 +47,12 @@ suspend inline fun <reified T> safeApiCall(crossinline block: suspend () -> Http
                 NetworkResult.Error(NetworkError.Unknown("API returned success but data was null for non-nullable type"))
             }
         } else {
-            NetworkResult.Error(NetworkError.Unknown(apiResponse.error ?: "API returned failure without error message"))
+            NetworkResult.Error(NetworkError.HttpError(response.status.value, apiResponse.error ?: "API returned failure without error message"))
         }
     } catch (e: Exception) {
         if (e is CancellationException) throw e
+        // Log the actual exception for debugging
+        Napier.e(tag = "safeApiCall", throwable = e) { "Network call failed" }
         NetworkResult.Error(e.toNetworkError())
     }
 }

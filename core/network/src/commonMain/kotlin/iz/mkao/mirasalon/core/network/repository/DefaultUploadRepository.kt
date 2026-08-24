@@ -16,7 +16,7 @@ import iz.mkao.mirasalon.core.network.result.apiCall
 class DefaultUploadRepository(private val client: HttpClient) : UploadRepository {
     override suspend fun uploadImage(bytes: ByteArray, fileName: String): Outcome<String> {
         return apiCall<AvatarUploadResponse> {
-            client.post("/v1/api/auth/profile/avatar") {
+            client.post("/v1/api/profile/avatar") {
                 setBody(MultiPartFormDataContent(
                     formData {
                         append("avatar", bytes, Headers.build {

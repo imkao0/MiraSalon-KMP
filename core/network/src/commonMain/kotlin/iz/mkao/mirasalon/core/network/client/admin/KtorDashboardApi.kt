@@ -6,6 +6,7 @@ import io.ktor.client.request.parameter
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.dto.ActivityEventDto
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentStatsDto
+import iz.mkao.mirasalon.core.network.model.dto.ProductDto
 import iz.mkao.mirasalon.core.network.model.dto.ServicePopularityDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistPerformanceDto
 import iz.mkao.mirasalon.core.network.model.dto.SalesTrendDto
@@ -15,6 +16,12 @@ class KtorDashboardApi(private val httpClient: HttpClient) : DashboardApi {
 
     override suspend fun fetchAppointmentStats(days: Int): Outcome<AppointmentStatsDto> = apiCall {
         httpClient.get(Endpoints.APPOINTMENTS) {
+            parameter("days", days)
+        }
+    }
+
+    override suspend fun fetchOverviewStats(days: Int): Outcome<AppointmentStatsDto> = apiCall {
+        httpClient.get(Endpoints.OVERVIEW) {
             parameter("days", days)
         }
     }
@@ -41,12 +48,20 @@ class KtorDashboardApi(private val httpClient: HttpClient) : DashboardApi {
         }
     }
 
+    override suspend fun fetchLowStockProducts(threshold: Int): Outcome<List<ProductDto>> = apiCall {
+        httpClient.get(Endpoints.LOW_STOCK) {
+            parameter("threshold", threshold)
+        }
+    }
+
     private object Endpoints {
         const val BASE = "/v1/api/analytics"
         const val APPOINTMENTS = "$BASE/appointments"
+        const val OVERVIEW = "$BASE/overview"
         const val SALES = "$BASE/sales"
         const val ACTIVITY = "$BASE/activity"
         const val SPECIALISTS = "$BASE/specialists"
         const val SERVICES = "$BASE/services"
+        const val LOW_STOCK = "$BASE/low-stock"
     }
 }

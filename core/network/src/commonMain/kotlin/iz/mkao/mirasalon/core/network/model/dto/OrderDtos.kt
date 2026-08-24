@@ -47,6 +47,9 @@ data class OrderItemDto(
 data class CreateOrderRequest(
     val items: List<OrderItemRequest>,
     val promoCode: String? = null,
+    val subtotalAmount: Double = 0.0,
+    val discountAmount: Double = 0.0,
+    val shippingFees: Double = 0.0,
     val totalAmount: Double = 0.0,
     val salonId: String? = null,
     val shippingAddress: String? = null,
