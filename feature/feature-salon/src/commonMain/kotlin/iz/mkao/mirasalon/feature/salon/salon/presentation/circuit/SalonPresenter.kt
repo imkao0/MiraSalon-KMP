@@ -23,6 +23,8 @@ import iz.mkao.mirasalon.core.domain.repository.SalonRepository
 import iz.mkao.mirasalon.core.domain.repository.ServiceFavouritesRepository
 import iz.mkao.mirasalon.core.domain.repository.ServiceRepository
 import iz.mkao.mirasalon.core.domain.repository.SpecialistRepository
+import iz.mkao.mirasalon.core.domain.repository.UnreadMessagesSource
+import iz.mkao.mirasalon.core.domain.repository.UpcomingAppointmentsSource
 import iz.mkao.mirasalon.core.navigation.BottomNavKey
 import iz.mkao.mirasalon.core.navigation.NotificationRoute
 import iz.mkao.mirasalon.core.navigation.ProfileRoute
@@ -45,7 +47,9 @@ class SalonPresenter(
     private val addressRepository: AddressRepository,
     private val promoRepository: PromoRepository? = null,
     private val notificationRepository: NotificationRepository? = null,
-    private val notificationPreferencesRepository: NotificationPreferencesRepository? = null
+    private val notificationPreferencesRepository: NotificationPreferencesRepository? = null,
+    private val unreadMessagesSource: UnreadMessagesSource? = null,
+    private val upcomingAppointmentsSource: UpcomingAppointmentsSource? = null
 ) : Presenter<SalonState> {
 
     @Composable
@@ -59,6 +63,8 @@ class SalonPresenter(
         val notifications by notificationRepository?.notifications?.collectAsState(initial = emptyList()) ?: remember { mutableStateOf(emptyList()) }
         val notificationPreferences by notificationPreferencesRepository?.observePreferences()?.collectAsState(initial = null) ?: remember { mutableStateOf(null) }
         val addresses by addressRepository.observeAddresses().collectAsState(initial = emptyList())
+        val unreadMessagesCount by unreadMessagesSource?.observeUnreadMessagesCount()?.collectAsState(initial = 0) ?: remember { mutableStateOf(0) }
+        val upcomingAppointmentsCount by upcomingAppointmentsSource?.observeUpcomingAppointmentsCount()?.collectAsState(initial = 0) ?: remember { mutableStateOf(0) }
 
         fun loadHome() {
             scope.launch {
@@ -98,6 +104,7 @@ class SalonPresenter(
 
         LaunchedEffect(Unit) {
             loadHome()
+            addressRepository.refresh()
 
             notificationRepository?.fetchNotifications()
 
@@ -135,8 +142,8 @@ class SalonPresenter(
         }
 
 
-        LaunchedEffect(notifications, notificationPreferences) {
-            val unreadCount = notifications.count { it.isUnread }
+        LaunchedEffect(notifications, notificationPreferences, unreadMessagesCount, upcomingAppointmentsCount) {
+            val unreadCount = notifications.count { it.isUnread } + unreadMessagesCount + upcomingAppointmentsCount
             val inAppEnabled = notificationPreferences?.inAppEnabled ?: true
             state = state.copy(
                 unreadNotificationCount = unreadCount,
@@ -198,7 +205,9 @@ class SalonManualPresenterFactory(
     private val specialistRepository: SpecialistRepository,
     private val promoRepository: PromoRepository? = null,
     private val notificationRepository: NotificationRepository? = null,
-    private val notificationPreferencesRepository: NotificationPreferencesRepository? = null
+    private val notificationPreferencesRepository: NotificationPreferencesRepository? = null,
+    private val unreadMessagesSource: UnreadMessagesSource? = null,
+    private val upcomingAppointmentsSource: UpcomingAppointmentsSource? = null
 ) : Presenter.Factory {
     override fun create(screen: Screen, navigator: Navigator, context: CircuitContext): Presenter<*>? {
         return when (screen) {
@@ -210,11 +219,14 @@ class SalonManualPresenterFactory(
                 addressRepository = addressRepository,
                 promoRepository = promoRepository,
                 notificationRepository = notificationRepository,
-                notificationPreferencesRepository = notificationPreferencesRepository
+                notificationPreferencesRepository = notificationPreferencesRepository,
+                unreadMessagesSource = unreadMessagesSource,
+                upcomingAppointmentsSource = upcomingAppointmentsSource
             )
             is ServiceRoute.Services -> ServicesPresenter(
                 screen,
                 serviceRepository,
+                salonRepository,
                 promoRepository ?: throw IllegalStateException("PromoRepository not provided"),
                 navigator
             )

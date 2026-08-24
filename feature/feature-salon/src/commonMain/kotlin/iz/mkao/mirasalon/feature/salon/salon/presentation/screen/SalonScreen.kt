@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +30,8 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,8 +89,8 @@ import iz.mkao.mirasalon.core.designsystem.theme.OfferCardWidth
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusExtraLarge
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusFull
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusLarge
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusPromo
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
@@ -150,6 +151,7 @@ fun SalonScreenCircuitContent(
     SalonScreenWrapper(
         state = state,
         snackbarHostState = snackbarHostState,
+        modifier = modifier,
         onNotificationClick = { state.eventSink(SalonEvent.NotificationClicked) },
         onFavoriteClick = { state.eventSink(SalonEvent.FavoriteClicked) },
         onCategoryClick = { state.eventSink(SalonEvent.CategorySelected(it)) },
@@ -157,7 +159,6 @@ fun SalonScreenCircuitContent(
         onSpecialistClick = { state.eventSink(SalonEvent.SpecialistSelected(it)) },
         onViewAllSpecialists = { state.eventSink(SalonEvent.ViewAllSpecialists) },
         onPromotionClick = { state.eventSink(SalonEvent.PromotionClicked(it)) },
-        onRetry = { state.eventSink(SalonEvent.Retry) }
     )
 }
 
@@ -184,11 +185,12 @@ fun SalonScreenWrapper(
     onSpecialistClick: (String) -> Unit,
     onViewAllSpecialists: () -> Unit,
     onPromotionClick: (String) -> Unit,
-    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier,
         topBar = {
             MiraTopAppBar(
                 title = {
@@ -197,7 +199,7 @@ fun SalonScreenWrapper(
                         Box(
                             modifier = Modifier
                                 .size(AvatarSize)
-                                .clip(RoundedCornerShape(RadiusMedium))
+                                .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
@@ -249,28 +251,27 @@ fun SalonScreenWrapper(
                 },
                 actions = {
                     IconButton(onClick = onNotificationClick) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Outlined.NotificationsNone,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-
-                            if (state.inAppNotificationsEnabled && state.unreadNotificationCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-4).dp)
-                                ) {
-                                    Text(
-                                        text = if (state.unreadNotificationCount > 5) "5+" else state.unreadNotificationCount.toString(),
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 10.sp
-                                    )
+                        BadgedBox(
+                            badge = {
+                                if (state.inAppNotificationsEnabled && state.unreadNotificationCount > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ) {
+                                        Text(
+                                            text = if (state.unreadNotificationCount > 5) "5+" else state.unreadNotificationCount.toString(),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
                                 }
                             }
+                        ) {
+                            Icon(
+                                Icons.Outlined.NotificationsNone,
+                                contentDescription = "Notifications",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                     IconButton(onClick = onFavoriteClick) {
@@ -343,7 +344,7 @@ private fun SalonContent(
             modifier = Modifier.padding(top = SpacingSmall)
         )
 
-        Spacer(modifier = Modifier.height(SpacingLarge))
+        Spacer(modifier = Modifier.height(SpacingMedium))
 
         OfferCarousel(
             promotions = state.promotions,
@@ -351,7 +352,7 @@ private fun SalonContent(
             onPromotionClick = onPromotionClick
         )
 
-        Spacer(modifier = Modifier.height(SpacingLarge))
+        Spacer(modifier = Modifier.height(SpacingSmall))
 
         SectionHeader(
             title = "Specialists",
@@ -386,7 +387,7 @@ private fun SalonSearchBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (query.isEmpty()) "Search by Salons" else query,
+                text = query.ifEmpty { "Search by Salons" },
                 color = if (query.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
@@ -421,7 +422,7 @@ private fun OfferCarousel(
                         page = pagerState.currentPage + 1,
                         animationSpec = tween(durationMillis = 800)
                     )
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     yield()
                 }
             }
@@ -429,7 +430,7 @@ private fun OfferCarousel(
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = SpacingMedium),
+        modifier = Modifier.fillMaxWidth().padding(vertical = SpacingSmall),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         HorizontalPager(
@@ -438,7 +439,11 @@ private fun OfferCarousel(
             contentPadding = PaddingValues(horizontal = SpacingLarge),
             pageSpacing = SpacingMedium,
             verticalAlignment = Alignment.Top,
-            beyondViewportPageCount = 1
+            beyondViewportPageCount = 1,
+            key = { page ->
+                val actualIndex = page % promotions.size
+                "${promotions[actualIndex].id ?: actualIndex}_$page"
+            }
         ) { page ->
             val actualIndex = page % promotions.size
             val promo = promotions[actualIndex]
@@ -446,16 +451,16 @@ private fun OfferCarousel(
                 promotion = promo,
                 isUsed = promo.id in usedPromotionIds,
                 onClick = { onPromotionClick(promo.id ?: "") },
-                modifier = Modifier.width(380.dp)
+                modifier = Modifier.width(OfferCardWidth)
             )
         }
 
         if (promotions.size > 1) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(SpacingTiny))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(24.dp),
+                    .height(16.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -523,14 +528,15 @@ private fun OfferCard(
 @Composable
 private fun SectionHeader(
     title: String,
+    modifier: Modifier = Modifier,
     viewAllText: String = "View All",
     showViewAll: Boolean = true,
     onViewAllClicked: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = SpacingLarge, vertical = SpacingMedium),
+            .padding(horizontal = SpacingLarge, vertical = SpacingSmall),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -581,7 +587,7 @@ private fun SpecialistCard(
         modifier = Modifier
             .width(CardWidthLarge)
             .aspectRatio(0.7f)
-            .clip(RoundedCornerShape(RadiusMedium))
+            .clip(RoundedCornerShape(RadiusSmall))
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
     ) {
@@ -636,7 +642,7 @@ private fun SpecialistCard(
         ) {
             Column {
                 Text(
-                    text = specialist.role ?: "Specialist",
+                    text = specialist.role,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

@@ -34,7 +34,8 @@ fun ServiceDto.toDomainService(): Service = Service(
     durationMinutes = durationMinutes,
     price = price,
     discountPercent = discountPercent,
-    categoryId = categoryId ?: ""
+    categoryId = categoryId ?: "",
+    imageUrl = ApiEndpoints.resolveImageUrl(imageUrl) ?: ApiEndpoints.getServicePlaceholder(name)
 )
 
 fun ServiceEntity.toDomainService(): Service = Service(
@@ -45,7 +46,7 @@ fun ServiceEntity.toDomainService(): Service = Service(
     price = price,
     discountPercent = discountPercent,
     categoryId = categoryId,
-    imageUrl = imageUrl
+    imageUrl = imageUrl ?: ApiEndpoints.getServicePlaceholder(name)
 )
 
 fun SpecialistReviewDto.toDomain(): SpecialistReview = SpecialistReview(

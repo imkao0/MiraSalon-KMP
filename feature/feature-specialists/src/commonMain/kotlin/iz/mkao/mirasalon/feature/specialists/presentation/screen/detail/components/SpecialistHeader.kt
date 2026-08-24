@@ -1,8 +1,20 @@
 package iz.mkao.mirasalon.feature.specialists.presentation.screen.detail.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -10,14 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import iz.mkao.mirasalon.core.common.util.formatRating
+import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
+import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
+import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.domain.model.Specialist
-import iz.mkao.mirasalon.core.designsystem.theme.*
-import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 
 @Composable
 fun SpecialistHeader(specialist: Specialist) {
@@ -29,16 +41,26 @@ fun SpecialistHeader(specialist: Specialist) {
     ) {
         Box(
             modifier = Modifier
-                .size(IconSizeExtraLarge + SpacingLarge) // ~88dp
+                .size(110.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = ApiEndpoints.resolveImageUrl(specialist.imageUrl),
-                contentDescription = specialist.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
+            if (!specialist.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = specialist.imageUrl,
+                    contentDescription = specialist.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(IconSizeLarge),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(SpacingMedium))

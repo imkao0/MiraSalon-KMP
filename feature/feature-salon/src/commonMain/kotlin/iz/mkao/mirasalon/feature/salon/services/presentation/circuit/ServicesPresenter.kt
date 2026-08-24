@@ -6,9 +6,11 @@ import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import iz.mkao.mirasalon.core.common.di.AppScope
 import iz.mkao.mirasalon.core.domain.model.Promotion
+import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.ServiceFilter
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.domain.repository.PromoRepository
+import iz.mkao.mirasalon.core.domain.repository.SalonRepository
 import iz.mkao.mirasalon.core.domain.repository.ServiceRepository
 import iz.mkao.mirasalon.core.navigation.ServiceRoute
 
@@ -16,6 +18,7 @@ import iz.mkao.mirasalon.core.navigation.ServiceRoute
 class ServicesPresenter(
     private val screen: ServiceRoute.Services,
     private val repository: ServiceRepository,
+    private val salonRepository: SalonRepository,
     private val promoRepository: PromoRepository,
     private val navigator: Navigator
 ) : Presenter<ServicesState> {
@@ -23,9 +26,11 @@ class ServicesPresenter(
     @Composable
     override fun present(): ServicesState {
         var isLoading by remember { mutableStateOf(false) }
-        var services by remember { mutableStateOf(emptyList<iz.mkao.mirasalon.core.domain.model.Service>()) }
+        var services by remember { mutableStateOf(emptyList<Service>()) }
+        var subCategories by remember { mutableStateOf(emptyList<String>()) }
         var promotions by remember { mutableStateOf(emptyList<Promotion>()) }
         var selectedCategoryId by remember { mutableStateOf(screen.categoryId) }
+        var selectedSubCategory by remember { mutableStateOf<String?>(null) }
         var searchQuery by remember { mutableStateOf("") }
         var sortOrder by remember { mutableStateOf(SortOrder.ASCENDING) }
         var error by remember { mutableStateOf<String?>(null) }
@@ -59,6 +64,7 @@ class ServicesPresenter(
                         } else {
                             result.data.sortedByDescending { it.name }
                         }
+                        subCategories = result.data.mapNotNull { it.subCategory }.distinct()
                     }
                     is Outcome.Error -> {
                         isLoading = false
@@ -69,19 +75,31 @@ class ServicesPresenter(
             }
         }
 
+        val filteredServices = if (selectedSubCategory != null) {
+            services.filter { it.subCategory == selectedSubCategory }
+        } else {
+            services
+        }
+
         return ServicesState(
             isLoading = isLoading,
-            services = services,
+            services = filteredServices,
+            subCategories = subCategories,
             promotions = promotions,
             categories = categories,
             selectedCategoryId = selectedCategoryId,
+            selectedSubCategory = selectedSubCategory,
             isCategoryFixed = screen.categoryId != null,
             searchQuery = searchQuery,
             sortOrder = sortOrder,
             error = error,
             eventSink = { event ->
                 when (event) {
-                    is ServicesEvent.CategorySelected -> selectedCategoryId = event.categoryId
+                    is ServicesEvent.CategorySelected -> {
+                        selectedCategoryId = event.categoryId
+                        selectedSubCategory = null
+                    }
+                    is ServicesEvent.SubCategorySelected -> selectedSubCategory = event.subCategory
                     is ServicesEvent.SearchQueryChanged -> searchQuery = event.query
                     is ServicesEvent.ServiceClicked -> {
                         navigator.goTo(ServiceRoute.ServiceDetail(serviceId = event.serviceId))

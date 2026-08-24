@@ -1,19 +1,21 @@
 package iz.mkao.mirasalon.feature.specialists.presentation.screen.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Person
@@ -34,8 +36,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import iz.mkao.mirasalon.core.common.util.formatRating
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeSmall
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
@@ -59,13 +62,13 @@ fun SpecialistItem(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(0.68f)
-            .clip(RoundedCornerShape(RadiusMedium))
+            .clip(RoundedCornerShape(RadiusSmall))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick),
     ) {
 
         val imageUrl = ApiEndpoints.resolveImageUrl(specialist.imageUrl)
-        
+
         AsyncImage(
             model = imageUrl,
             contentDescription = specialist.name,
@@ -84,7 +87,7 @@ fun SpecialistItem(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = specialist.rating.toString(),
+                text = specialist.rating.formatRating(),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black

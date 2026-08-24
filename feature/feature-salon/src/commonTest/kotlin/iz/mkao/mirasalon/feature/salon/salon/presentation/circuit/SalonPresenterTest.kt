@@ -123,6 +123,7 @@ class SalonPresenterTest {
 
     private class FakeAddressRepository : AddressRepository {
         override fun observeAddresses(): Flow<List<Address>> = flowOf(emptyList())
+        override suspend fun refresh() {}
         override suspend fun addAddress(address: Address): Outcome<Address> = Outcome.Error(Failure.Unknown)
         override suspend fun updateAddress(address: Address): Outcome<Address> = Outcome.Error(
             Failure.Unknown)

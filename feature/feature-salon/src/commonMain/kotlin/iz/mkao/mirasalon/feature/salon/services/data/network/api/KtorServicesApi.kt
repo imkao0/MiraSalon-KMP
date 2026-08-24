@@ -35,14 +35,7 @@ class KtorServicesApi(private val httpClient: HttpClient) : ServicesApi {
     override suspend fun submitReview(serviceId: String, request: SubmitReviewRequest): NetworkResult<ReviewDto> = safeApiCall {
         httpClient.post("/v1/api/reviews") {
             contentType(ContentType.Application.Json)
-            setBody(
-                mapOf(
-                    "targetId" to serviceId,
-                    "targetType" to "SERVICE",
-                    "rating" to request.rating,
-                    "comment" to request.comment
-                )
-            )
+            setBody(request.copy(targetId = serviceId, targetType = "SERVICE"))
         }
     }
 }

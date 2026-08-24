@@ -114,7 +114,8 @@ class SpecialistRepositoryImpl(
     override suspend fun submitReview(
         specialistId: String,
         rating: Int,
-        comment: String
+        comment: String,
+        userId: String?
     ): Outcome<Unit> {
         val result = api.submitReview(specialistId, rating, comment)
         if (result is Outcome.Success) {

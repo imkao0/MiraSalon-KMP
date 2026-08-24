@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.di.AppScope
 import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.ServiceFilter
@@ -124,9 +125,11 @@ class ServiceDetailPresenter(
             error = error,
             unreadNotificationCount = unreadNotificationCount,
             onReviewSubmit = { rating, comment ->
+                Napier.d(tag = "ServiceDetailPresenter") { "onReviewSubmit: rating=$rating, comment=$comment" }
                 val result = repository.submitReview(screen.serviceId, rating, comment)
                 when (result) {
                     is Outcome.Success -> {
+                        Napier.d(tag = "ServiceDetailPresenter") { "Review submitted successfully" }
                         loadService()
                         Result.success(Unit)
                     }
@@ -137,9 +140,13 @@ class ServiceDetailPresenter(
                             is Failure.NetworkConnection -> failure.message
                             else -> failure.toString()
                         }
+                        Napier.e(tag = "ServiceDetailPresenter") { "Review submission failed: $message" }
                         Result.failure(Exception(message))
                     }
-                    else -> Result.failure(Exception("Unknown error"))
+                    else -> {
+                        Napier.e(tag = "ServiceDetailPresenter") { "Review submission failed: Unknown error" }
+                        Result.failure(Exception("Unknown error"))
+                    }
                 }
             },
             eventSink = { event ->

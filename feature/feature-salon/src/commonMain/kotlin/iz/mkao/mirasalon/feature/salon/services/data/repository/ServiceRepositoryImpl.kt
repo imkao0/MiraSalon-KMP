@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.feature.salon.services.data.repository
 
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.database.dao.ServiceCategoryDao
 import iz.mkao.mirasalon.core.database.dao.ServiceDao
 import iz.mkao.mirasalon.core.domain.model.Service
@@ -83,7 +84,8 @@ class ServiceRepositoryImpl(
         }
     }
 
-    override suspend fun submitReview(serviceId: String, rating: Int, comment: String): Outcome<Unit> = withContext(Dispatchers.Default) {
+    override suspend fun submitReview(serviceId: String, rating: Int, comment: String, userId: String?): Outcome<Unit> = withContext(Dispatchers.Default) {
+        Napier.d(tag = "ServiceRepositoryImpl") { "submitReview: serviceId=$serviceId, rating=$rating" }
         try {
             val response = api.submitReview(
                 serviceId, 
@@ -91,11 +93,16 @@ class ServiceRepositoryImpl(
                     rating = rating, 
                     comment = comment,
                     targetId = serviceId,
-                    targetType = "service"
+                    targetType = "SERVICE"
                 )
             )
-            response.toOutcome { Unit }
+            val result = response.toOutcome { Unit }
+            if (result is Outcome.Error) {
+                Napier.e(tag = "ServiceRepositoryImpl") { "submitReview error: ${result.failure}" }
+            }
+            result
         } catch (e: Exception) {
+            Napier.e(tag = "ServiceRepositoryImpl", throwable = e) { "submitReview exception" }
             Outcome.Error(Failure.Unknown)
         }
     }

@@ -14,9 +14,11 @@ enum class SortOrder {
 data class ServicesState(
     val isLoading: Boolean = false,
     val services: List<Service> = emptyList(),
+    val subCategories: List<String> = emptyList(),
     val promotions: List<Promotion> = emptyList(),
     val categories: List<ServiceCategory> = emptyList(),
     val selectedCategoryId: String? = null,
+    val selectedSubCategory: String? = null,
     val isCategoryFixed: Boolean = false,
     val searchQuery: String = "",
     val sortOrder: SortOrder = SortOrder.ASCENDING,
@@ -26,6 +28,7 @@ data class ServicesState(
 
 sealed interface ServicesEvent : CircuitUiEvent {
     data class CategorySelected(val categoryId: String?) : ServicesEvent
+    data class SubCategorySelected(val subCategory: String?) : ServicesEvent
     data class SearchQueryChanged(val query: String) : ServicesEvent
     data class ServiceClicked(val serviceId: String) : ServicesEvent
     data object BackClicked : ServicesEvent

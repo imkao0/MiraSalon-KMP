@@ -60,7 +60,9 @@ val salonModule = module {
             specialistRepository = get(),
             promoRepository = get(),
             notificationRepository = get(),
-            notificationPreferencesRepository = get()
+            notificationPreferencesRepository = get(),
+            unreadMessagesSource = get(),
+            upcomingAppointmentsSource = get()
         )
     } bind Presenter.Factory::class
     single { SalonManualUiFactory() } bind Ui.Factory::class
