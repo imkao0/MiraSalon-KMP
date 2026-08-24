@@ -9,7 +9,7 @@ import iz.mkao.mirasalon.core.network.model.dto.CreateAppointmentRequest
 import iz.mkao.mirasalon.core.network.result.NetworkError
 import iz.mkao.mirasalon.core.network.result.NetworkResult
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

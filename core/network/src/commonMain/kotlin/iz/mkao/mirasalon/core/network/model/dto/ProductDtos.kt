@@ -17,7 +17,7 @@ data class ProductDto(
     val category: String,
     val subCategory: String? = null,
     val description: String,
-    val imageUrl: String,
+    val imageUrl: String? = null,
     val price: Double,
     val discountPercent: Int = 0,
     val stockQuantity: Int,
