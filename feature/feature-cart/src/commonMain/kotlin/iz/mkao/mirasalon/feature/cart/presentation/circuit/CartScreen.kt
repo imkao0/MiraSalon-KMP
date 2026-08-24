@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,7 +74,7 @@ fun CartContent(
     modifier: Modifier = Modifier
 ) {
     val groupedItems = remember(state.cart.items) {
-        state.cart.items.groupBy { it.product.providerName }
+        state.cart.items.groupBy { it.product.category }
     }
 
     Scaffold(
@@ -124,7 +125,7 @@ fun CartContent(
                     )
                 }
 
-                items(items, key = { it.product.id }) { item ->
+                items(items.distinctBy { it.product.id }, key = { it.product.id }) { item ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
                             if (value != SwipeToDismissBoxValue.Settled) {
@@ -179,7 +180,7 @@ fun CartContent(
                     )
                 }
 
-                items(state.expiredCartItems, key = { "cart_${it.product.id}" }) { item ->
+                items(state.expiredCartItems.distinctBy { it.product.id }, key = { "cart_${it.product.id}" }) { item ->
                     CartItemRow(
                         item = item,
                         isSelected = false,
@@ -199,7 +200,7 @@ fun CartContent(
                     )
                 }
 
-                items(state.expiredOrders, key = { it.id }) { order ->
+                items(state.expiredOrders.distinctBy { it.id }, key = { it.id }) { order ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
                             if (value != SwipeToDismissBoxValue.Settled) {
@@ -339,13 +340,24 @@ private fun CartItemRow(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.product.discountedPrice.toPriceString(),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (isExpired) Color.Gray else MaterialTheme.colorScheme.primary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (item.product.discountPercent > 0) {
+                            Text(
+                                text = item.product.price.toPriceString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                textDecoration = TextDecoration.LineThrough
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = item.product.discountedPrice.toPriceString(),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isExpired) Color.Gray else MaterialTheme.colorScheme.primary
+                            )
                         )
-                    )
+                    }
                     
                     if (isExpired) {
                         Surface(
@@ -355,6 +367,21 @@ private fun CartItemRow(
                         ) {
                             Text(
                                 text = "EXPIRED",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            )
+                        }
+                    } else if (item.quantity > item.product.stockQuantity) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(
+                                text = "OUT OF STOCK",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
@@ -402,7 +429,7 @@ private fun ExpiredOrderCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = order.items.firstOrNull()?.product?.providerName ?: "Mira Store",
+                    text = order.items.firstOrNull()?.product?.category ?: "Products",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color.Gray
@@ -460,13 +487,24 @@ private fun ExpiredOrderCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text(
-                                    text = item.product.discountedPrice.toPriceString(),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Gray
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (item.product.discountPercent > 0) {
+                                        Text(
+                                            text = item.product.price.toPriceString(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.Gray.copy(alpha = 0.5f),
+                                            textDecoration = TextDecoration.LineThrough
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    Text(
+                                        text = item.product.discountedPrice.toPriceString(),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Gray
+                                        )
                                     )
-                                )
+                                }
                                 Text(
                                     text = "Qty: ${item.quantity}",
                                     style = MaterialTheme.typography.bodySmall,
@@ -474,20 +512,13 @@ private fun ExpiredOrderCard(
                                 )
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                            ) {
-                                Text(
-                                    text = "EXPIRED",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
+                            Text(
+                                text = "EXPIRED",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Gray
                                 )
-                            }
+                            )
                         }
                     }
                 }
@@ -629,8 +660,8 @@ private fun CartBottomBar(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Discount", style = MaterialTheme.typography.bodyMedium, color = Color.Green)
-                    Text("- ${state.cart.discountAmount.toPriceString("US $")}", style = MaterialTheme.typography.bodyMedium, color = Color.Green)
+                    Text("Discount", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("- ${state.cart.discountAmount.toPriceString("US $")}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -654,10 +685,14 @@ private fun CartBottomBar(
 
                 Button(
                     onClick = onCheckout,
+                    enabled = !state.hasOutOfStockItems,
                     modifier = Modifier
                         .height(50.dp)
                         .width(180.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = Color.Gray
+                    ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

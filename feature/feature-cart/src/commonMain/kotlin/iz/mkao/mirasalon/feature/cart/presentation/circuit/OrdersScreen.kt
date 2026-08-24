@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,7 +62,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSuccess
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.OrderStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,7 +108,7 @@ fun OrdersContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(state.orders, key = { it.order.id }) { orderUi ->
+                items(state.orders.distinctBy { it.order.id }, key = { it.order.id }) { orderUi ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
                             if (value != SwipeToDismissBoxValue.Settled) {
@@ -125,7 +126,7 @@ fun OrdersContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .clip(RoundedCornerShape(RadiusMedium))
+                                    .clip(RoundedCornerShape(RadiusSmall))
                                     .background(Color.Red.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.CenterEnd
                             ) {
@@ -233,12 +234,23 @@ private fun OrderCard(orderUi: OrderUiModel, onClick: () -> Unit) {
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                            Text(
-                                text = (item.product.price * item.quantity).toPriceString(),
-                                fontSize = 13.sp,
-                                color = MiraTextPrimary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (item.product.discountPercent > 0) {
+                                    Text(
+                                        text = (item.product.price * item.quantity).toPriceString(),
+                                        fontSize = 11.sp,
+                                        color = MiraTextSecondary,
+                                        textDecoration = TextDecoration.LineThrough,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                }
+                                Text(
+                                    text = (item.product.discountedPrice * item.quantity).toPriceString(),
+                                    fontSize = 13.sp,
+                                    color = MiraTextPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                     if (order.items.size > 3) {

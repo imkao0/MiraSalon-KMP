@@ -10,6 +10,7 @@ data class CartState(
     val expiredCartItems: List<CartItem> = emptyList(),
     val expiredOrders: List<Order> = emptyList(),
     val selectedItemIds: Set<String> = emptySet(),
+    val hasOutOfStockItems: Boolean = false,
     val promoCode: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,

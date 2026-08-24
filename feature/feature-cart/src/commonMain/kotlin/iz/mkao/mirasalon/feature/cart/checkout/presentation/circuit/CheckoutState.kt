@@ -37,6 +37,7 @@ data class CheckoutState(
     val selectedPaymentMethodId: String? = null,
     val billingSameAsShipping: Boolean = true,
     val selectedPaymentMethod: String? = null,
+    val hasOutOfStockItems: Boolean = false,
     val isLoading: Boolean = false,
     val isPlacingOrder: Boolean = false,
     val error: String? = null,

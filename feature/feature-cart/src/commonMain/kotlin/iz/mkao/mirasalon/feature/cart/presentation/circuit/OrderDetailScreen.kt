@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import iz.mkao.mirasalon.core.common.util.toPriceString
 import iz.mkao.mirasalon.core.designsystem.components.MiraButton
@@ -138,10 +139,22 @@ private fun OrderDetailBody(
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("${item.product.name} x${item.quantity}", modifier = Modifier.weight(1f))
-                            Text((item.product.discountedPrice * item.quantity).toPriceString())
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (item.product.discountPercent > 0) {
+                                    Text(
+                                        text = (item.product.price * item.quantity).toPriceString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textDecoration = TextDecoration.LineThrough,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                }
+                                Text((item.product.discountedPrice * item.quantity).toPriceString())
+                            }
                         }
                         Text("SKU: ${item.product.id.takeLast(4).uppercase()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

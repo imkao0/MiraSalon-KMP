@@ -250,8 +250,9 @@ class ProductRepositoryImpl(
         productId: String,
         rating: Int,
         comment: String,
+        userId: String?
     ): Outcome<Review> =
-        api.submitReview(productId, SubmitReviewRequest(rating, comment)).let { result ->
+        api.submitReview(productId, SubmitReviewRequest(rating, comment, targetId = productId, targetType = "PRODUCT")).let { result ->
             when (result) {
                 is Outcome.Success -> Outcome.Success(result.data.toDomain())
                 is Outcome.Error -> Outcome.Error(result.failure)

@@ -23,6 +23,7 @@ import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
 import iz.mkao.mirasalon.feature.cart.checkout.presentation.circuit.CheckoutPresenter
 import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 class CartPresenter(
     private val repository: CartRepository,
@@ -44,10 +45,14 @@ class CartPresenter(
         }
         
         val expiredOrders = remember(ordersOutcome) {
-            val now = kotlin.time.Clock.System.now().epochSeconds
+            val now = Clock.System.now().epochSeconds
             (ordersOutcome as? Outcome.Success)?.data?.filter { 
                 it.status == OrderStatus.CANCELLED || (it.expiresAt != null && it.expiresAt!! < now)
             } ?: emptyList()
+        }
+
+        val hasOutOfStockItems = remember(cart.items) {
+            cart.items.any { it.quantity > it.product.stockQuantity }
         }
 
         var selectedItemIds by remember { mutableStateOf(emptySet<String>()) }
@@ -75,6 +80,7 @@ class CartPresenter(
             expiredCartItems = expiredCartItems,
             expiredOrders = expiredOrders,
             selectedItemIds = selectedItemIds,
+            hasOutOfStockItems = hasOutOfStockItems,
             promoCode = promoCode,
             error = error,
             eventSink = { event ->

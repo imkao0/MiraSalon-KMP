@@ -13,6 +13,7 @@ import com.slack.circuit.runtime.presenter.Presenter
 import iz.mkao.mirasalon.core.domain.model.Address
 import iz.mkao.mirasalon.core.domain.model.Cart
 import iz.mkao.mirasalon.core.domain.model.Order
+import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.domain.repository.CartRepository
 import iz.mkao.mirasalon.core.domain.repository.OrderRepository
@@ -20,6 +21,9 @@ import iz.mkao.mirasalon.core.navigation.CartRoute
 import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
 import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class CheckoutPresenter(
     private val cartRepository: CartRepository,
@@ -46,6 +50,10 @@ class CheckoutPresenter(
         var isPlacingOrder by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
 
+        val hasOutOfStockItems = remember(cart.items) {
+            cart.items.any { it.quantity > it.product.stockQuantity }
+        }
+
         var cardDetails by remember { 
             mutableStateOf(
                 CardDetails(
@@ -67,6 +75,7 @@ class CheckoutPresenter(
             if (!email.isNullOrBlank()) {
                 customerEmail = email
             }
+            addressRepository.refresh()
         }
 
         val profileAddresses by addressRepository.observeAddresses().collectAsState(initial = emptyList())
@@ -103,6 +112,7 @@ class CheckoutPresenter(
             showAddCardSheet = showAddCardSheet,
             showAddressForm = showAddressForm,
             isPlacingOrder = isPlacingOrder,
+            hasOutOfStockItems = hasOutOfStockItems,
             error = error,
             customerName = customerName,
             deliveryFee = deliveryFee,
@@ -189,12 +199,16 @@ class CheckoutPresenter(
                             val month = formatted.substring(0, 2).toIntOrNull() ?: 0
                             val year = formatted.substring(3, 5).toIntOrNull() ?: 0
                             
-                            val isExpired = year < 26 || (year == 26 && month < 8)
+                            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                            val currentYearShort = now.year % 100
+                            val currentMonth = now.monthNumber
+                            
+                            val isExpired = year < currentYearShort || (year == currentYearShort && month < currentMonth)
                             val isInvalidMonth = month !in 1..12
                             
                             error = when {
                                 isInvalidMonth -> "Invalid month"
-                                isExpired -> "Card has expired"
+                                isExpired -> "Expired"
                                 else -> null
                             }
                         } else {
@@ -218,7 +232,11 @@ class CheckoutPresenter(
                                     userName = customerName,
                                     userEmail = customerEmail,
                                     items = cart.items,
-                                    total = cart.total,
+                                    subtotal = cart.subtotal,
+                                    tax = 0.0,
+                                    shippingFees = deliveryFee,
+                                    discount = cart.discountAmount,
+                                    total = cart.total + deliveryFee,
                                     placedAtEpochSeconds = 0L,
                                     promoCode = cart.couponCode,
                                     shippingAddress = selectedAddress?.let { addr ->
@@ -235,7 +253,13 @@ class CheckoutPresenter(
                                         navigator.goTo(CartRoute.PaymentSuccess(result.data))
                                     }
                                     is Outcome.Error -> {
-                                        error = "Failed to place order"
+                                        error = when (val failure = result.failure) {
+                                            is Failure.ServerError -> failure.message
+                                            is Failure.ClientError -> failure.message
+                                            is Failure.NetworkConnection -> failure.message
+                                            is Failure.SessionExpired -> "Session expired. Please log in again."
+                                            else -> "Failed to place order"
+                                        }
                                     }
                                     is Outcome.Loading -> {}
                                 }

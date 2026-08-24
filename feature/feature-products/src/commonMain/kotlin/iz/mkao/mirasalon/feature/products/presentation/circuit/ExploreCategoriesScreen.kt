@@ -115,7 +115,7 @@ fun ExploreCategoriesContent(
                     contentPadding = PaddingValues(bottom = 12.dp),
                     modifier = Modifier.weight(1f),
                 ) {
-                    items(items = state.products, key = { it.id }) { product ->
+                    items(items = state.products.distinctBy { it.id }, key = { it.id }) { product ->
                         val isSale = state.promotions.any { promo ->
                             val isTargeted = !promo.applicableServices.isNullOrEmpty() || !promo.applicableCategories.isNullOrEmpty()
                             if (!isTargeted) return@any true

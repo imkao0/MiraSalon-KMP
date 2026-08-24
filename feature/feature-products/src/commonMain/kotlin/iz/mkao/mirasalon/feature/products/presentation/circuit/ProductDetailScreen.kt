@@ -61,7 +61,7 @@ import iz.mkao.mirasalon.core.designsystem.components.ReviewBottomSheet
 import iz.mkao.mirasalon.core.designsystem.components.ReviewItem
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeSmall
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusPromo
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
@@ -421,7 +421,7 @@ private fun RatingChipsRow(
 private fun RatingChip(text: String? = null, content: @Composable (() -> Unit)? = null) {
     Box(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(RadiusMedium))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(RadiusSmall))
             .padding(horizontal = SpacingDefault, vertical = SpacingTiny + 2.dp)
     ) {
         if (content != null) {
