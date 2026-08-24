@@ -62,7 +62,16 @@ struct PaymentSuccessView: View {
 
                             VStack(spacing: 16) {
                                 MiraDetailRow(label: "Time", value: MiraDateFormat.dotTime(epochMillis: b.dateTime))
+
+                                MiraDetailRow(label: "Subtotal", value: b.subtotalAmount.miraPrice())
+                                if b.discountAmount > 0 {
+                                    MiraDetailRow(label: "Discount", value: "-\(b.discountAmount.miraPrice())")
+                                }
+                                if b.taxAmount > 0 {
+                                    MiraDetailRow(label: "Taxes", value: b.taxAmount.miraPrice())
+                                }
                                 MiraDetailRow(label: "Amount Paid", value: b.totalAmount.miraPrice())
+
                                 MiraDetailRow(label: "Payment Method", value: "Visa ****4325")
                                 MiraDetailRow(label: "Name", value: b.customerName)
                                 MiraDetailRow(label: "Email", value: b.customerEmail)

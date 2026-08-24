@@ -38,7 +38,7 @@ private struct HomeTopBar: View {
                     )
                 }
                 .frame(width: MiraTheme.avatarSize, height: MiraTheme.avatarSize)
-                .cornerRadius(MiraTheme.radiusMedium)
+                .clipShape(Circle())
                 .clipped()
                 
                 VStack(alignment: .leading, spacing: MiraTheme.spacingTiny) {
@@ -74,9 +74,13 @@ private struct HomeTopBar: View {
 
                         if state.inAppNotificationsEnabled && state.unreadNotificationCount > 0 {
                             Text(state.unreadNotificationCount > 5 ? "5+" : "\(state.unreadNotificationCount)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(MiraTheme.error)
-                                .offset(x: 4, y: -4)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(MiraTheme.error)
+                                .clipShape(Capsule())
+                                .offset(x: 10, y: -8)
                                 .accessibilityLabel("\(state.unreadNotificationCount) unread notifications")
                         }
                     }
@@ -106,7 +110,7 @@ private struct HomeContent: View {
             if state.isLoading {
                 HomeShimmerView()
             } else {
-                VStack(alignment: .leading, spacing: MiraTheme.spacingLarge) {
+                VStack(alignment: .leading, spacing: MiraTheme.spacingMedium) {
                     // Search Bar
                     MiraSearchBar(
                         query: state.searchQuery,
@@ -236,7 +240,7 @@ struct HomeShimmerView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: MiraTheme.spacingMedium) {
                         ForEach(0..<3, id: \.self) { _ in
-                            MiraShimmerBlock(width: 160, height: 160 / 0.7, cornerRadius: MiraTheme.radiusMedium)
+                            MiraShimmerBlock(width: 160, height: 160 / 0.7, cornerRadius: MiraTheme.radiusSmall)
                         }
                     }
                     .padding(.horizontal, MiraTheme.spacingLarge)
@@ -391,15 +395,14 @@ struct BannerCarousel: View {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: MiraTheme.spacingMedium) {
-                            ForEach(0..<banners.count, id: \.self) { index in
-                                let promo = banners[index]
+                            ForEach(banners, id: \.id) { promo in
                                 OfferCard(
                                     promotion: promo,
                                     isUsed: promo.id != nil && usedPromotionIds.contains(promo.id!)
                                 ) {
                                     onBannerClick(promo.id ?? "")
                                 }
-                                .id(index)
+                                .id(promo.id)
                             }
                         }
                         .padding(.horizontal, MiraTheme.spacingLarge)
@@ -434,7 +437,9 @@ struct BannerCarousel: View {
             if banners.count > 1 {
                 withAnimation(.easeInOut(duration: 0.8)) {
                     currentIndex = (currentIndex + 1) % banners.count
-                    proxy.scrollTo(currentIndex, anchor: .center)
+                    if let id = banners[currentIndex].id {
+                        proxy.scrollTo(id, anchor: .center)
+                    }
                 }
             }
         }

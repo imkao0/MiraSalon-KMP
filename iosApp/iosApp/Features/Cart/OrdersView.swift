@@ -99,13 +99,13 @@ private struct OrderCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(MiraTheme.primary.opacity(0.1))
-                    .cornerRadius(MiraTheme.radiusMedium)
+                    .cornerRadius(MiraTheme.radiusSmall)
             }
             .buttonStyle(.plain)
         }
         .padding(16)
         .background(MiraTheme.surface)
-        .cornerRadius(MiraTheme.radiusMedium)
+        .cornerRadius(MiraTheme.radiusSmall)
     }
 }
 
@@ -121,7 +121,7 @@ private struct OrderItemPreviewRow: View {
                 MiraTheme.surfaceVariant
             }
             .frame(width: 60, height: 60)
-            .cornerRadius(MiraTheme.radiusMedium)
+            .cornerRadius(MiraTheme.radiusSmall)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.product.name)
@@ -142,7 +142,7 @@ private struct OrderItemPreviewRow: View {
         }
         .padding(8)
         .background(MiraTheme.surfaceVariant.opacity(0.3))
-        .cornerRadius(MiraTheme.radiusMedium)
+        .cornerRadius(MiraTheme.radiusSmall)
     }
 }
 

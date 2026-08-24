@@ -189,7 +189,7 @@ extension View {
         )
     }
 
-    func miraOutlineBorder(cornerRadius: CGFloat = MiraTheme.radiusMedium,
+    func miraOutlineBorder(cornerRadius: CGFloat = MiraTheme.radiusSmall,
                            color: SwiftUI.Color = MiraTheme.outlineVariant,
                            lineWidth: CGFloat = MiraTheme.strokeThin) -> some View {
         overlay(

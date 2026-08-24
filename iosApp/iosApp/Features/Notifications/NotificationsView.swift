@@ -173,10 +173,10 @@ private struct NotificationRowView: View {
                         image.resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        RoundedRectangle(cornerRadius: MiraTheme.radiusMedium).fill(MiraTheme.surfaceVariant)
+                        RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).fill(MiraTheme.surfaceVariant)
                     }
                     .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
-                    .cornerRadius(MiraTheme.radiusMedium)
+                    .cornerRadius(MiraTheme.radiusSmall)
                 }
             }
             .padding(.horizontal, MiraTheme.spacingMedium)

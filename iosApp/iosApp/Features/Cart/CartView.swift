@@ -24,15 +24,15 @@ struct CartView: View {
                                 icon: "cart"
                             )
                         } else {
-                            // Active Cart Items grouped by store
-                            let grouped = Dictionary(grouping: state.cart.items, by: { $0.product.providerName })
-                            let storeNames = grouped.keys.sorted()
+                            // Active Cart Items grouped by category
+                            let grouped = Dictionary(grouping: state.cart.items, by: { $0.product.category })
+                            let categories = grouped.keys.sorted()
 
-                            ForEach(storeNames, id: \.self) { storeName in
-                                let items = grouped[storeName] ?? []
+                            ForEach(categories, id: \.self) { category in
+                                let items = grouped[category] ?? []
                                 if !items.isEmpty {
                                     VStack(spacing: 0) {
-                                        StoreHeaderView(storeName: storeName, items: items, selectedIds: state.selectedItemIds, eventSink: state.eventSink)
+                                        StoreHeaderView(storeName: category, items: items, selectedIds: state.selectedItemIds, eventSink: state.eventSink)
                                         ForEach(items, id: \.product.id) { item in
                                             CartItemCardView(
                                                 item: item,
@@ -213,6 +213,20 @@ private struct CartItemCardView: View {
                                     RoundedRectangle(cornerRadius: 4)
                                         .stroke(Color.red, lineWidth: 1)
                                 )
+                            } else if Int(item.quantity) > Int(item.product.stockQuantity) {
+                                HStack(spacing: 4) {
+                                    Text("OUT OF STOCK")
+                                        .font(.system(size: 10, weight: .bold))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .foregroundColor(.red)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.red, lineWidth: 1)
+                                )
                             } else {
                                 QuantityControlView(
                                     quantity: Int(item.quantity),
@@ -241,7 +255,7 @@ private struct ExpiredOrderCardView: View {
             HStack(spacing: 12) {
                 CircularCheckboxView(checked: true, activeColor: MiraTheme.primary) {}
                 Image(systemName: "house.fill")
-                Text(order.items.first?.product.providerName ?? "Mira Store")
+                Text(order.items.first?.product.category ?? "Products")
                     .font(.headline)
                     .bold()
                 Spacer()
@@ -292,19 +306,9 @@ private struct ExpiredOrderCardView: View {
 
                             Spacer()
 
-                            HStack(spacing: 4) {
-                                Text("EXPIRED")
-                                    .font(.system(size: 10, weight: .bold))
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .foregroundColor(.red)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.red, lineWidth: 1)
-                            )
+                            Text("EXPIRED")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.gray)
 
                             Button(action: onDelete) {
                                 Image(systemName: "trash")
@@ -316,7 +320,7 @@ private struct ExpiredOrderCardView: View {
             }
         }
         .padding(12)
-        .background(Color.white.opacity(0.8))
+        .background(Color.white.opacity(0.6))
         .cornerRadius(16)
         .padding(.horizontal, 16)
         .padding(.vertical, 4)
@@ -440,11 +444,11 @@ private struct CartBottomBarView: View {
                     HStack {
                         Text("Discount")
                             .font(.subheadline)
-                            .foregroundColor(.green)
+                            .foregroundColor(MiraTheme.primary)
                         Spacer()
                         Text("- US $\(String(format: "%.2f", state.cart.discountAmount))")
                             .font(.subheadline)
-                            .foregroundColor(.green)
+                            .foregroundColor(MiraTheme.primary)
                     }
                 }
 
@@ -470,9 +474,10 @@ private struct CartBottomBarView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 24)
                         .frame(height: 50)
-                        .background(MiraTheme.primary)
+                        .background(state.hasOutOfStockItems ? Color.gray : MiraTheme.primary)
                         .cornerRadius(8)
                     }
+                    .disabled(state.hasOutOfStockItems)
                 }
             }
             .padding(.horizontal, 16)
@@ -514,27 +519,67 @@ struct CartCheckoutView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: MiraTheme.spacingLarge) {
-                        // Minimal placeholder for now
                         Text("Order Summary")
                             .font(MiraType.titleMedium.weight(.bold))
 
-                        ForEach(state.cart.items, id: \.product.id) { item in
-                            HStack {
-                                Text(item.product.name)
-                                Spacer()
-                                Text("\(item.quantity) x \(Double(item.product.price).miraPrice())")
+                        VStack(spacing: 12) {
+                            ForEach(state.cart.items, id: \.product.id) { item in
+                                HStack {
+                                    Text("\(item.product.name) x\(item.quantity)")
+                                        .font(MiraType.bodyMedium)
+                                        .foregroundColor(MiraTheme.onSurfaceVariant)
+                                    Spacer()
+                                    Text((Double(item.product.discountedPrice) * Double(item.quantity)).miraPrice())
+                                        .font(MiraType.bodyMedium)
+                                }
                             }
                         }
 
                         Divider()
 
-                        HStack {
-                            Text("Total")
-                                .bold()
-                            Spacer()
-                            Text(Double(state.cart.total).miraPrice())
-                                .bold()
-                                .foregroundColor(MiraTheme.primary)
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("Subtotal")
+                                    .font(MiraType.bodyMedium)
+                                    .foregroundColor(MiraTheme.onSurfaceVariant)
+                                Spacer()
+                                Text(Double(state.cart.subtotal).miraPrice())
+                                    .font(MiraType.bodyMedium)
+                            }
+
+                            if state.cart.discountAmount > 0 {
+                                HStack {
+                                    Text("Discount")
+                                        .font(MiraType.bodyMedium)
+                                        .foregroundColor(MiraTheme.onSurfaceVariant)
+                                    Spacer()
+                                    Text("-\(Double(state.cart.discountAmount).miraPrice())")
+                                        .font(MiraType.bodyMedium)
+                                        .foregroundColor(MiraTheme.primary)
+                                }
+                            }
+
+                            HStack {
+                                Text("Delivery")
+                                    .font(MiraType.bodyMedium)
+                                    .foregroundColor(MiraTheme.onSurfaceVariant)
+                                Spacer()
+                                Text(Double(state.deliveryFee).miraPrice())
+                                    .font(MiraType.bodyMedium)
+                            }
+
+                            Divider()
+                                .padding(.vertical, 4)
+
+                            HStack {
+                                Text("Total")
+                                    .font(MiraType.titleMedium.weight(.bold))
+                                Spacer()
+                                let finalTotal = Double(state.cart.total) + Double(state.deliveryFee)
+                                Text(finalTotal.miraPrice())
+                                    .font(MiraType.titleMedium.weight(.bold))
+                                    .foregroundColor(MiraTheme.primary)
+                            }
                         }
                     }
                     .padding()
@@ -551,6 +596,7 @@ struct CartCheckoutView: View {
                             state.eventSink(CheckoutEventProceedToReview())
                         }
                     },
+                    enabled: !state.isPlacingOrder && !state.hasOutOfStockItems,
                     isLoading: state.isPlacingOrder
                 )
                 .padding()

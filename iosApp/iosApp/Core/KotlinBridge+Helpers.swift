@@ -8,10 +8,7 @@ import ComposeApp
 extension KotlinByteArray {
     /// Build a Kotlin ByteArray from Foundation Data.
     static func from(data: Data) -> KotlinByteArray {
-        let bytes = KotlinByteArray(size: Int32(data.count))
-        data.enumerated().forEach { index, byte in
-            bytes.set(index: Int32(index), value: Int8(bitPattern: byte))
-        }
-        return bytes
+        // Use the efficient native helper instead of the per-byte loop
+        return NSDataUtilsKt.toByteArray(data)
     }
 }

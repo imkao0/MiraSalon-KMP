@@ -123,7 +123,7 @@ struct SpecialistDetailHeader: View {
     
     var body: some View {
         HStack(spacing: MiraTheme.spacingMedium) {
-            MiraAvatar(url: specialist.imageUrl, size: MiraTheme.iconSizeExtraLarge + MiraTheme.spacingLarge)
+            MiraAvatar(url: specialist.imageUrl, size: 112)
             
             VStack(alignment: .leading, spacing: MiraTheme.spacingSmall) {
                 Text(specialist.name)
@@ -203,29 +203,93 @@ struct ServiceRowView: View {
     let onBook: () -> Void
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: MiraTheme.spacingTiny) {
-                Text(service.name)
-                    .font(MiraType.bodyLarge)
-                    .bold()
-                Text(Double(service.price).miraPrice())
-                    .font(MiraType.bodyMedium)
-                    .foregroundColor(MiraTheme.primary)
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: MiraTheme.spacingMedium) {
+                // Service Image
+                if let imageUrl = service.imageUrl, let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color(MiraTheme.surfaceVariant)
+                    }
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Color(MiraTheme.surfaceVariant)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(service.name)
+                        .font(MiraType.bodyLarge)
+                        .bold()
+                        .lineLimit(1)
+
+                    if !service.description_.isEmpty {
+                        Text(service.description_)
+                            .font(MiraType.bodySmall)
+                            .foregroundColor(MiraTheme.onSurfaceVariant)
+                            .lineLimit(2)
+                    }
+
+                    HStack(spacing: 12) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "timer")
+                                .font(.system(size: 12))
+                            Text("\(service.durationMinutes) min")
+                                .font(MiraType.labelSmall)
+                        }
+                        .foregroundColor(MiraTheme.onSurfaceVariant)
+
+                        if service.rating > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.orange)
+                                Text(String(format: "%.1f", service.rating))
+                                    .font(MiraType.labelSmall)
+                                    .bold()
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 8) {
+                    Text(Double(service.price).miraPrice())
+                        .font(MiraType.bodyLarge)
+                        .fontWeight(.heavy)
+                        .foregroundColor(MiraTheme.primary)
+
+                    Button {
+                        onBook()
+                    } label: {
+                        Text("Book")
+                            .font(MiraType.labelLarge)
+                            .bold()
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(MiraTheme.primary)
+                            .foregroundColor(MiraTheme.onPrimary)
+                            .cornerRadius(8)
+                    }
+                }
             }
-            Spacer()
-            Button("Book") {
-                onBook()
-            }
-            .font(MiraType.labelLarge)
-            .bold()
+            .padding(MiraTheme.spacingMedium)
+            .background(Color(MiraTheme.surface))
+            .cornerRadius(MiraTheme.radiusSmall)
+            .overlay(
+                RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
+                    .stroke(MiraTheme.outlineVariant.opacity(0.3), lineWidth: 1)
+            )
             .padding(.horizontal, MiraTheme.spacingMedium)
             .padding(.vertical, 6)
-            .background(MiraTheme.primary)
-            .foregroundColor(MiraTheme.onPrimary)
-            .cornerRadius(MiraTheme.radiusMedium)
         }
-        .padding(MiraTheme.spacingMedium)
-        Divider().padding(.horizontal, MiraTheme.spacingMedium)
     }
 }
 

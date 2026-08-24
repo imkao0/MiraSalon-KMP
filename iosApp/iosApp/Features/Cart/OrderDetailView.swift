@@ -138,7 +138,7 @@ struct OrderDetailSection<Content: View>: View {
         }
         .padding(16)
         .background(MiraTheme.surfaceVariant.opacity(0.3))
-        .cornerRadius(MiraTheme.radiusMedium)
+        .cornerRadius(MiraTheme.radiusSmall)
     }
 }
 

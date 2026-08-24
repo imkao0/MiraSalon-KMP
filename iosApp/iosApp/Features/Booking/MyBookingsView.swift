@@ -151,7 +151,7 @@ private struct BookingCard: View {
                     MiraTheme.surfaceVariant
                 }
                 .frame(width: 64, height: 64)
-                .cornerRadius(MiraTheme.radiusCard)
+                .cornerRadius(2)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(booking.services.first?.name ?? "Service")
@@ -199,9 +199,9 @@ private struct BookingCard: View {
         .padding(16)
         .frame(maxWidth: .infinity)
         .background(MiraTheme.surface)
-        .cornerRadius(MiraTheme.radiusCard)
+        .cornerRadius(2)
         .overlay(
-            RoundedRectangle(cornerRadius: MiraTheme.radiusCard)
+            RoundedRectangle(cornerRadius: 2)
                 .stroke(MiraTheme.onSurface.opacity(0.1), lineWidth: 1)
         )
     }
@@ -219,7 +219,7 @@ private struct BookingFilledButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(isEnabled ? MiraTheme.primary : MiraTheme.surfaceVariant)
-                .cornerRadius(MiraTheme.radiusCard)
+                .cornerRadius(2)
         }
         .disabled(!isEnabled)
     }
@@ -237,7 +237,7 @@ private struct BookingOutlineButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(
-                    RoundedRectangle(cornerRadius: MiraTheme.radiusCard)
+                    RoundedRectangle(cornerRadius: 2)
                         .stroke(isEnabled ? MiraTheme.primary : MiraTheme.onSurfaceVariant.opacity(0.3), lineWidth: 1)
                 )
         }
