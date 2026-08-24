@@ -80,7 +80,7 @@ fun PaymentMethodsScreenContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.methods, key = { it.id }) { method ->
+                items(state.methods.distinctBy { it.id }, key = { it.id }) { method ->
                     PaymentMethodCard(
                         method = method,
                         onSetDefault = { state.eventSink(PaymentMethodsEvent.SetDefault(method.id)) },

@@ -1,12 +1,14 @@
 package iz.mkao.mirasalon.feature.profile.presentation.circuit
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import iz.mkao.mirasalon.core.navigation.ProfileRoute
 import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
-import iz.mkao.mirasalon.feature.profile.presentation.circuit.AddressListEvent
-import iz.mkao.mirasalon.feature.profile.presentation.circuit.AddressListState
 import kotlinx.coroutines.launch
 
 class AddressListPresenter(
@@ -18,6 +20,10 @@ class AddressListPresenter(
     override fun present(): AddressListState {
         val addresses by addressRepository.observeAddresses().collectAsState(emptyList())
         val scope = rememberCoroutineScope()
+
+        LaunchedEffect(Unit) {
+            addressRepository.refresh()
+        }
 
         return AddressListState(
             addresses = addresses,

@@ -15,27 +15,12 @@ import iz.mkao.mirasalon.feature.profile.domain.repository.AppSettingsRepository
 import iz.mkao.mirasalon.feature.profile.domain.repository.NotificationPreferencesRepository
 import iz.mkao.mirasalon.feature.profile.domain.repository.ProfileRepository
 import iz.mkao.mirasalon.feature.profile.domain.repository.SessionController
-import iz.mkao.mirasalon.feature.profile.domain.repository.UnreadMessagesSource
-import iz.mkao.mirasalon.feature.profile.domain.repository.UpcomingAppointmentsSource
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileManualPresenterFactory
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileManualUiFactory
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val profileModule = module {
-    single<UnreadMessagesSource> {
-        object : UnreadMessagesSource {
-            override fun observeUnreadMessagesCount(): Flow<Int> = flowOf(0)
-        }
-    }
-    single<UpcomingAppointmentsSource> {
-        object : UpcomingAppointmentsSource {
-            override fun observeUpcomingAppointmentsCount(): Flow<Int> = flowOf(0)
-        }
-    }
-
     single { ProfileApi(get()) }
 
     single<ProfileRepository> { ProfileRepositoryImpl(get(), get(), get(), get()) }

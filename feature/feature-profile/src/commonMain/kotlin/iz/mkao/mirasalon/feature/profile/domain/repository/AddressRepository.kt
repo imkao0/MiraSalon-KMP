@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AddressRepository {
     fun observeAddresses(): Flow<List<Address>>
+    suspend fun refresh()
     suspend fun addAddress(address: Address): Outcome<Address>
     suspend fun updateAddress(address: Address): Outcome<Address>
     suspend fun deleteAddress(id: String): Outcome<Unit>

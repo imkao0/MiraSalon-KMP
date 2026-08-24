@@ -25,4 +25,5 @@ sealed interface AuthEvent : CircuitUiEvent {
     data object Back : AuthEvent
     data object ContinueAsGuest : AuthEvent
     data object ForgotPassword : AuthEvent
+    data class UpdateBaseUrl(val url: String) : AuthEvent
 }

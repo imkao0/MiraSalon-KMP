@@ -2,15 +2,13 @@ package iz.mkao.mirasalon.feature.profile.data.repository
 
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.result.NetworkResult
-import iz.mkao.mirasalon.feature.profile.domain.model.Address
-import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
 import iz.mkao.mirasalon.feature.profile.data.mapper.toDomain
 import iz.mkao.mirasalon.feature.profile.data.mapper.toDto
 import iz.mkao.mirasalon.feature.profile.data.mapper.toFailure
 import iz.mkao.mirasalon.feature.profile.data.remote.ProfileApi
+import iz.mkao.mirasalon.feature.profile.domain.model.Address
+import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +23,7 @@ class AddressRepositoryImpl(
     private val addresses: StateFlow<List<Address>> = _addresses.asStateFlow()
 
     init {
-        refresh()
+        scope.launch { refresh() }
     }
 
     override fun observeAddresses(): StateFlow<List<Address>> = addresses
@@ -66,12 +64,10 @@ class AddressRepositoryImpl(
             is NetworkResult.Error -> Outcome.Error(result.error.toFailure())
         }
 
-    private fun refresh() {
-        scope.launch {
-            when (val result = api.fetchAddresses()) {
-                is NetworkResult.Success -> _addresses.value = result.data.map { it.toDomain() }
-                is NetworkResult.Error -> Unit
-            }
+    override suspend fun refresh() {
+        when (val result = api.fetchAddresses()) {
+            is NetworkResult.Success -> _addresses.value = result.data.map { it.toDomain() }
+            is NetworkResult.Error -> Unit
         }
     }
 }

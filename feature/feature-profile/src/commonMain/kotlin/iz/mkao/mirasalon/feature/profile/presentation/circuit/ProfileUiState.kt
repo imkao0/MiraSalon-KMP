@@ -22,6 +22,7 @@ sealed interface ProfileEvent : CircuitUiEvent {
     data object EditProfile : ProfileEvent
     data object SavedAddresses : ProfileEvent
     data object MyOrders : ProfileEvent
+    data object MyAppointments : ProfileEvent
     data object Favourites : ProfileEvent
     data object PaymentMethods : ProfileEvent
     data object Notifications : ProfileEvent
