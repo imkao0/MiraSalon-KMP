@@ -73,6 +73,8 @@ fun Route.chatWebSocket(
                                 notificationService?.sendChatNotification(
                                     userId = "admin", 
                                     senderName = senderUser?.name ?: "Client",
+                                    senderAvatarUrl = senderUser?.avatarUrl,
+                                    messageText = event.text,
                                     conversationId = chatId
                                 )
 

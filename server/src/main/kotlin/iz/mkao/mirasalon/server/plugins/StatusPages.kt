@@ -9,6 +9,7 @@ import io.ktor.server.response.respond
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.server.error.DomainException
 import iz.mkao.mirasalon.server.error.ValidationException
+import iz.mkao.mirasalon.server.util.ServerEnvironment
 import kotlinx.serialization.SerializationException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -53,9 +54,21 @@ fun Application.configureStatusPages() {
 
             log.error("Unhandled exception [callId=$callId] on ${call.request.local.method} ${call.request.local.uri}", cause)
 
+            // Always show more info in development or if explicitly enabled
+            val isDev = ServerEnvironment.environment() == "development"
+            val errorMsg = if (isDev) {
+                "Internal server error: ${cause.message ?: cause.toString()}"
+            } else {
+                "Internal server error"
+            }
+
+            if (isDev) {
+                cause.printStackTrace()
+            }
+
             call.respond(
                 HttpStatusCode.InternalServerError,
-                ApiResponse<Unit>(success = false, error = "Internal server error")
+                ApiResponse<Unit>(success = false, error = errorMsg)
             )
         }
     }

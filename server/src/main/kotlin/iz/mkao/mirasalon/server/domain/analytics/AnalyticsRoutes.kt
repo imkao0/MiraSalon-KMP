@@ -10,10 +10,8 @@ import io.micrometer.core.instrument.Timer
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.dto.ActivityEventDto
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentDailyPoint
-import iz.mkao.mirasalon.core.network.model.dto.AppointmentDto
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentStatsDto
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentStatusDto
-import iz.mkao.mirasalon.core.network.model.dto.OrderDto
 import iz.mkao.mirasalon.core.network.model.dto.OrderStatusDto
 import iz.mkao.mirasalon.core.network.model.dto.PaymentStatsDto
 import iz.mkao.mirasalon.core.network.model.dto.SalesTrendDto
@@ -23,10 +21,12 @@ import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.AppointmentStatus
 import iz.mkao.mirasalon.server.data.repository.OrderRepoStatus
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
+import iz.mkao.mirasalon.server.data.repository.ProductRepository
 import iz.mkao.mirasalon.server.data.repository.ServiceRepository
 import iz.mkao.mirasalon.server.data.repository.SpecialistRepository
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import org.slf4j.LoggerFactory
+import java.util.Calendar
 import kotlin.math.abs
 
 private val log = LoggerFactory.getLogger("AnalyticsRoutes")
@@ -36,6 +36,7 @@ fun Route.analyticsRoutes(
     orderRepository: OrderRepository,
     specialistRepository: SpecialistRepository,
     serviceRepository: ServiceRepository,
+    productRepository: ProductRepository,
     meterRegistry: MeterRegistry
 ) {
 
@@ -46,13 +47,40 @@ fun Route.analyticsRoutes(
             val timer = Timer.start(meterRegistry)
             val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
             try {
-                val stats = calculateAppointmentStats(appointmentRepository, orderRepository, days)
+                val stats = calculateUpcomingAppointments(appointmentRepository, days)
                 timer.stop(meterRegistry.timer("analytics_query_duration", "type", "appointments"))
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = stats))
             } catch (e: Exception) {
                 log.error("Error calculating appointment stats", e)
                 timer.stop(meterRegistry.timer("analytics_query_duration", "type", "appointments"))
                 call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate appointment stats"))
+            }
+        }
+
+        get("/overview") {
+            call.ensureAdmin()
+            val timer = Timer.start(meterRegistry)
+            val days = call.request.queryParameters["days"]?.toIntOrNull() ?: 7
+            try {
+                val stats = calculateDashboardOverview(appointmentRepository, orderRepository, days)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "overview"))
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = stats))
+            } catch (e: Exception) {
+                log.error("Error calculating dashboard overview", e)
+                timer.stop(meterRegistry.timer("analytics_query_duration", "type", "overview"))
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to calculate dashboard overview"))
+            }
+        }
+
+        get("/low-stock") {
+            call.ensureAdmin()
+            try {
+                val threshold = call.request.queryParameters["threshold"]?.toIntOrNull() ?: 10
+                val products = productRepository.findLowStock(threshold)
+                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = products))
+            } catch (e: Exception) {
+                log.error("Error fetching low stock products", e)
+                call.respond(HttpStatusCode.InternalServerError, ApiResponse<Unit>(success = false, error = "Failed to fetch low stock products"))
             }
         }
 
@@ -180,21 +208,121 @@ fun Route.analyticsRoutes(
     }
 }
 
-private suspend fun calculateAppointmentStats(
+private suspend fun calculateUpcomingAppointments(
+    appRepo: AppointmentRepository,
+    days: Int
+): AppointmentStatsDto {
+    val now = System.currentTimeMillis()
+    
+    // For "Upcoming" stats, we look FORWARD from now
+    val start = getDayStart(now)
+    val end = start + (days.toLong() * 24 * 60 * 60 * 1000)
+    
+    // For growth calculation, we compare to the PREVIOUS period (last 'days' days)
+    val prevStart = start - (days.toLong() * 24 * 60 * 60 * 1000)
+    val prevEnd = start
+
+    val appointments = appRepo.findByDateRange(start, end)
+    val prevApps = appRepo.findByDateRange(prevStart, prevEnd)
+
+    // "Upcoming" card only cares about volume, but we'll include revenue for completeness
+    val appointmentRevenue = appointments.filter {
+        it.status == AppointmentStatusDto.CONFIRMED ||
+        it.status == AppointmentStatusDto.COMPLETED
+    }.sumOf { it.totalAmount }
+
+    val prevRevenue = prevApps.filter {
+        it.status == AppointmentStatusDto.CONFIRMED ||
+        it.status == AppointmentStatusDto.COMPLETED
+    }.sumOf { it.totalAmount }
+
+    val revenueGrowth = calculateGrowth(appointmentRevenue, prevRevenue)
+
+    // Group by date
+    val points = mutableListOf<AppointmentDailyPoint>()
+    val calendar = Calendar.getInstance()
+
+    for (i in 0 until days) {
+        val currentDayMillis = start + (i.toLong() * 24 * 60 * 60 * 1000)
+        calendar.timeInMillis = currentDayMillis
+        val dateStr = "${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH) + 1}"
+
+        val dayStart = getDayStart(currentDayMillis)
+        val dayEnd = dayStart + (24 * 60 * 60 * 1000)
+
+        val dayApps = appointments.filter {
+            val time = it.dateTime
+            time in dayStart until dayEnd
+        }
+
+        val confirmed = dayApps.count {
+            it.status == AppointmentStatusDto.CONFIRMED ||
+            it.status == AppointmentStatusDto.COMPLETED
+        }
+
+        val cancelled = dayApps.count { it.status == AppointmentStatusDto.CANCELLED }
+
+        // Logic for New vs Returning
+        var newCount = 0
+        var returningCount = 0
+
+        val uniqueUsers = dayApps.mapNotNull { it.userId }.distinct()
+
+        for (userId in uniqueUsers) {
+            val isReturning = appRepo.hasAppointmentBefore(userId, dayStart)
+            if (isReturning) returningCount++ else newCount++
+        }
+
+        points.add(AppointmentDailyPoint(
+            date = dateStr,
+            confirmed = confirmed,
+            cancelled = cancelled,
+            newClients = newCount,
+            returningClients = returningCount
+        ))
+    }
+
+    val totalConfirmedCount = appointments.count { 
+        it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED 
+    }
+
+    val totalCancelledCount = appointments.count { it.status == AppointmentStatusDto.CANCELLED }
+
+    return AppointmentStatsDto(
+        days = days,
+        points = points,
+        totalConfirmed = totalConfirmedCount,
+        totalCancelled = totalCancelledCount,
+        revenue = appointmentRevenue,
+        appointmentRevenue = appointmentRevenue,
+        productRevenue = 0.0,
+        revenueGrowth = revenueGrowth
+    )
+}
+
+private suspend fun calculateDashboardOverview(
     appRepo: AppointmentRepository,
     orderRepo: OrderRepository,
     days: Int
 ): AppointmentStatsDto {
-    val end = System.currentTimeMillis()
-    val periodMillis = days.toLong() * 24 * 60 * 60 * 1000
-    val start = end - periodMillis
+    val now = System.currentTimeMillis()
+    
+    // Align to full days, including Today
+    val end = getDayStart(now) + (24 * 60 * 60 * 1000)
+    val start = getDayStart(now - (days.toLong() - 1) * 24 * 60 * 60 * 1000)
+    val periodMillis = end - start
+    
     val prevStart = start - periodMillis
+    val prevEnd = start
 
-    val appointments = appRepo.findByDateRange(start, end)
+    val appointments = appRepo.findByCreatedAtRange(start, end)
     val orders = orderRepo.findByDateRange(start, end)
     
-    val prevApps = appRepo.findByDateRange(prevStart, start)
-    val prevOrders = orderRepo.findByDateRange(prevStart, start)
+    val prevApps = appRepo.findByCreatedAtRange(prevStart, prevEnd)
+    val prevOrders = orderRepo.findByDateRange(prevStart, prevEnd)
+
+    log.info("Dashboard Overview: Found ${appointments.size} appointments and ${orders.size} orders in range $start to $end")
+    appointments.forEach { log.info("App Detail: id=${it.id}, status=${it.status}, amount=${it.totalAmount}, user=${it.userName}, created=${it.createdAt}") }
 
     val appointmentRevenue = appointments.filter {
         it.status == AppointmentStatusDto.CONFIRMED ||
@@ -225,7 +353,7 @@ private suspend fun calculateAppointmentStats(
     val calendar = java.util.Calendar.getInstance()
 
     for (i in 0 until days) {
-        val currentDayMillis = end - ((days - 1 - i).toLong() * 24 * 60 * 60 * 1000)
+        val currentDayMillis = start + (i.toLong() * 24 * 60 * 60 * 1000)
         calendar.timeInMillis = currentDayMillis
         val dateStr = "${calendar.get(java.util.Calendar.DAY_OF_MONTH)}/${calendar.get(java.util.Calendar.MONTH) + 1}"
 
@@ -239,28 +367,22 @@ private suspend fun calculateAppointmentStats(
 
         val dayOrders = orders.filter { it.createdAt in dayStart until dayEnd }
 
+        // Counts should ONLY reflect appointments for the "Confirmed" label in the UI
         val confirmed = dayApps.count {
             it.status == AppointmentStatusDto.CONFIRMED ||
             it.status == AppointmentStatusDto.COMPLETED
-        } + dayOrders.count {
-            it.status == OrderStatusDto.PENDING ||
-            it.status == OrderStatusDto.SHIPPED ||
-            it.status == OrderStatusDto.DELIVERED
         }
 
-        val cancelled = dayApps.count { it.status == AppointmentStatusDto.CANCELLED } +
-                        dayOrders.count { it.status == OrderStatusDto.CANCELLED }
+        val cancelled = dayApps.count { it.status == AppointmentStatusDto.CANCELLED }
 
         // Logic for New vs Returning
         var newCount = 0
         var returningCount = 0
 
-        val appUsers = dayApps.mapNotNull { it.userId }
-        val orderUsers = dayOrders.map { it.userId }
-        val uniqueUsers = (appUsers + orderUsers).distinct()
+        val uniqueUsers = (dayApps.mapNotNull { it.userId } + dayOrders.map { it.userId }).distinct()
 
         for (userId in uniqueUsers) {
-            val isReturning = appRepo.hasAppointmentBefore(userId, dayStart)
+            val isReturning = appRepo.hasAppointmentBefore(userId, dayStart) || orderRepo.hasOrderBefore(userId, dayStart)
             if (isReturning) returningCount++ else newCount++
         }
 
@@ -273,11 +395,18 @@ private suspend fun calculateAppointmentStats(
         ))
     }
 
+    // Summary counts also reflect ONLY appointments
+    val totalConfirmedCount = appointments.count { 
+        it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED 
+    }
+
+    val totalCancelledCount = appointments.count { it.status == AppointmentStatusDto.CANCELLED }
+
     return AppointmentStatsDto(
         days = days,
         points = points,
-        totalConfirmed = appointments.count { it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED },
-        totalCancelled = appointments.count { it.status == AppointmentStatusDto.CANCELLED },
+        totalConfirmed = totalConfirmedCount,
+        totalCancelled = totalCancelledCount,
         revenue = currentRevenue,
         appointmentRevenue = appointmentRevenue,
         productRevenue = productRevenue,
@@ -356,16 +485,21 @@ private suspend fun calculateSalesTrend(
     orderRepo: OrderRepository,
     days: Int
 ): SalesTrendDto {
-    val end = System.currentTimeMillis()
-    val periodMillis = days.toLong() * 24 * 60 * 60 * 1000
-    val start = end - periodMillis
-    val prevStart = start - periodMillis
-
-    val appointments = appRepo.findByDateRange(start, end)
-    val orders = orderRepo.findByDateRange(start, end)
+    val now = System.currentTimeMillis()
     
-    val prevApps = appRepo.findByDateRange(prevStart, start)
-    val prevOrders = orderRepo.findByDateRange(prevStart, start)
+    // Align to full days, including Today
+    val end = getDayStart(now) + (24 * 60 * 60 * 1000)
+    val start = getDayStart(now - (days.toLong() - 1) * 24 * 60 * 60 * 1000)
+    val periodMillis = end - start
+    
+    val prevStart = start - periodMillis
+    val prevEnd = start
+
+    val prevApps = appRepo.findByCreatedAtRange(prevStart, prevEnd)
+    val prevOrders = orderRepo.findByDateRange(prevStart, prevEnd)
+
+    val appointments = appRepo.findByCreatedAtRange(start, end)
+    val orders = orderRepo.findByDateRange(start, end)
 
     val appRevenue = appointments.filter {
         it.status == AppointmentStatusDto.CONFIRMED ||
@@ -395,7 +529,8 @@ private suspend fun calculateSalesTrend(
     val calendar = java.util.Calendar.getInstance()
 
     for (i in 0 until days) {
-        val currentDayMillis = end - ((days - 1 - i).toLong() * 24 * 60 * 60 * 1000)
+        // Points should go from start to end (past to now)
+        val currentDayMillis = start + (i.toLong() * 24 * 60 * 60 * 1000)
         calendar.timeInMillis = currentDayMillis
         val dateStr = "${calendar.get(java.util.Calendar.DAY_OF_MONTH)}/${calendar.get(java.util.Calendar.MONTH) + 1}"
 
@@ -403,7 +538,7 @@ private suspend fun calculateSalesTrend(
         val dayEnd = dayStart + (24 * 60 * 60 * 1000)
 
         val dayApps = appointments.filter {
-            val time = it.dateTime
+            val time = it.createdAt
             time in dayStart until dayEnd
         }
         val dayOrders = orders.filter { it.createdAt in dayStart until dayEnd }
@@ -419,10 +554,15 @@ private suspend fun calculateSalesTrend(
             it.status == OrderStatusDto.DELIVERED
         }.sumOf { it.totalAmount }
 
+        // The trend point for "appointments" should only reflect actual appointments, not orders
+        val confirmedAppointments = dayApps.count { 
+            it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED 
+        }
+
         points.add(SalesTrendPoint(
             date = dateStr,
             sales = appSales + orderSales,
-            appointments = dayApps.count { it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED }
+            appointments = confirmedAppointments
         ))
     }
 

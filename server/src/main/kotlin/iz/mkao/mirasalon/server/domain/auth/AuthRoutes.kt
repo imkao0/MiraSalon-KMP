@@ -48,6 +48,7 @@ fun Route.authRoutes(
 
     // ---- Registration ----
     post("/register") {
+        log.info("Registration request received")
         val request = call.receive<RegisterRequest>()
         validate {
             requireNotBlank("name", request.name)
@@ -60,8 +61,7 @@ fun Route.authRoutes(
             requireOneOf("role", request.role.name, listOf("USER", "ADMIN", "SPECIALIST"))
         }
 
-        // VULNERABILITY FIX: Ignore requested role for public registration.
-        // Always register as USER. Admin/Specialist accounts must be created by an Admin.
+      // Always register as USER. Admin/Specialist accounts must be created by an Admin.
         val safeRequest = request.copy(role = UserRole.USER)
 
         val result = userRepository.register(safeRequest)

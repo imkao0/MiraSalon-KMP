@@ -146,17 +146,25 @@ private fun ResultRow.toNotificationDto(): NotificationDto {
 
     val senderName = when (event) {
         is DomainEvent.ChatMessageReceived -> event.senderId
+        is DomainEvent.NotificationReceived -> event.senderName ?: "Mira Salon"
+        is DomainEvent.AppointmentReminder -> event.specialistName ?: "Mira Salon"
         else -> "Mira Salon"
+    }
+
+    val senderAvatarUrl = when (event) {
+        is DomainEvent.NotificationReceived -> event.senderAvatarUrl
+        is DomainEvent.AppointmentReminder -> event.specialistAvatarUrl
+        else -> null
     }
 
     return NotificationDto(
         id = eventId,
         senderName = senderName,
-        senderAvatarUrl = null,
+        senderAvatarUrl = senderAvatarUrl,
         message = message,
         timestamp = createdAt,
         isUnread = !dispatched,
         type = type,
-        thumbnail = null
+        thumbnail = senderAvatarUrl
     )
 }
