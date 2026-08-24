@@ -1,5 +1,7 @@
 package iz.mkao.mirasalon.core.domain.model
+
 import kotlin.time.Clock
+
 enum class AdminAppointmentStatus {
     Confirmed,
     Completed,

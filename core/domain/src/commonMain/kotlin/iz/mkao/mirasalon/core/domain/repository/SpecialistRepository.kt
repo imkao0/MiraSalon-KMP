@@ -10,5 +10,5 @@ interface SpecialistRepository {
     suspend fun getSpecialists(): Outcome<List<Specialist>>
     suspend fun getSpecialist(id: String): Outcome<Specialist>
     suspend fun refresh()
-    suspend fun submitReview(specialistId: String, rating: Int, comment: String): Outcome<Unit>
+    suspend fun submitReview(specialistId: String, rating: Int, comment: String, userId: String? = null): Outcome<Unit>
 }

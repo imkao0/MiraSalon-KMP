@@ -31,7 +31,7 @@ interface ProductRepository {
 
     suspend fun getReviews(productId: String): Outcome<List<Review>>
 
-    suspend fun submitReview(productId: String, rating: Int, comment: String): Outcome<Review>
+    suspend fun submitReview(productId: String, rating: Int, comment: String, userId: String? = null): Outcome<Review>
 
     suspend fun getProduct(id: String): Outcome<Product>
 
