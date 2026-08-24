@@ -92,7 +92,7 @@ object DesignSystemBridge {
     val radiusExtraSmall: Double = RadiusExtraSmall.value.toDouble()
     val radiusSmall: Double = RadiusSmall.value.toDouble()
     val radiusDefault: Double = RadiusDefault.value.toDouble()
-    val radiusMedium: Double = RadiusMedium.value.toDouble()
+    val radiusMedium: Double = RadiusSmall.value.toDouble()
     val radiusLarge: Double = RadiusLarge.value.toDouble()
     val radiusExtraLarge: Double = RadiusExtraLarge.value.toDouble()
     val radiusProfileCard: Double = RadiusProfileCard.value.toDouble()

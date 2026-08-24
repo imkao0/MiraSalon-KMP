@@ -14,17 +14,20 @@ actual fun rememberPermissionHandler(
         }
 
         override fun hasRecordAudioPermission(): Boolean = true
+        override fun shouldShowRecordAudioRationale(): Boolean = false
 
         override fun requestGalleryPermission() {
             onPermissionGranted()
         }
 
         override fun hasGalleryPermission(): Boolean = true
+        override fun shouldShowGalleryRationale(): Boolean = false
 
         override fun requestCameraPermission() {
             onPermissionGranted()
         }
 
         override fun hasCameraPermission(): Boolean = true
+        override fun shouldShowCameraRationale(): Boolean = false
     }
 }

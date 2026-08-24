@@ -27,7 +27,7 @@ fun MiraButton(
         onClick = onClick,
         modifier = modifier.height(ButtonHeight),
         enabled = enabled,
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -63,7 +63,7 @@ fun MiraOutlinedButton(
         onClick = onClick,
         modifier = modifier.height(ButtonHeight),
         enabled = enabled,
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         colors =
             ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.primary,

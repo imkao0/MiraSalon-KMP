@@ -39,6 +39,9 @@ actual fun rememberPermissionHandler(
                 else -> false // undetermined: not yet granted
             }
 
+        override fun shouldShowRecordAudioRationale(): Boolean =
+            session.recordPermission == AVAudioSessionRecordPermissionDenied
+
         override fun requestGalleryPermission() {
             PHPhotoLibrary.requestAuthorization { status ->
                 if (status == PHAuthorizationStatusAuthorized || status == PHAuthorizationStatusLimited) {
@@ -56,6 +59,9 @@ actual fun rememberPermissionHandler(
                 else -> false
             }
 
+        override fun shouldShowGalleryRationale(): Boolean =
+            PHPhotoLibrary.authorizationStatus() == PHAuthorizationStatusDenied
+
         override fun requestCameraPermission() {
             AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { granted ->
                 if (granted) onPermissionGranted() else onPermissionDenied()
@@ -68,5 +74,8 @@ actual fun rememberPermissionHandler(
                 AVAuthorizationStatusDenied, AVAuthorizationStatusRestricted -> false
                 else -> false
             }
+
+        override fun shouldShowCameraRationale(): Boolean =
+            AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo) == AVAuthorizationStatusDenied
     }
 }

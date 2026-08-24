@@ -46,7 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSalonTheme
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusLarge
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
@@ -169,7 +169,7 @@ fun ReviewBottomSheet(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isSubmitEnabled,
-                        shape = RoundedCornerShape(RadiusMedium),
+                        shape = RoundedCornerShape(RadiusSmall),
                     ) {
                         if (state is SubmissionState.Submitting) {
                             ShimmerLoading(
