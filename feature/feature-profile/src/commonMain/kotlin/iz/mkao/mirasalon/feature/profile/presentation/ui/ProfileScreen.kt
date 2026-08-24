@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,11 +54,12 @@ import coil3.request.crossfade
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.RectangularSwitch
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeMedium
 import iz.mkao.mirasalon.core.designsystem.theme.ProfileAvatarSize
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusProfileCard
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
@@ -64,7 +67,6 @@ import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingTiny
-import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.feature.profile.domain.model.AppTheme
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileEvent
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileState
@@ -134,8 +136,15 @@ fun ProfileScreen(
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(horizontal = SpacingMedium), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                                 ProfileMenuRow(
+                                    icon = Icons.Outlined.Schedule,
+                                    label = "Appointments",
+                                    badgeCount = state.upcomingRemindersCount,
+                                    onClick = { state.eventSink(ProfileEvent.MyAppointments) }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = SpacingMedium), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ProfileMenuRow(
                                     icon = Icons.Outlined.Description,
-                                    label = "Orders & History",
+                                    label = "Orders",
                                     onClick = { state.eventSink(ProfileEvent.MyOrders) }
                                 )
                             }
@@ -151,7 +160,6 @@ fun ProfileScreen(
                                 ProfileMenuRow(
                                     icon = Icons.Outlined.Notifications,
                                     label = "In-app Notifications",
-                                    badgeCount = state.unreadMessagesCount + state.upcomingRemindersCount,
                                     onClick = { },
                                     trailingContent = {
                                         RectangularSwitch(
@@ -243,13 +251,12 @@ private fun ProfileHeader(name: String, email: String, avatarUrl: String?, onEdi
         Box(
             modifier = Modifier
                 .size(ProfileAvatarSize)
-                .clip(RoundedCornerShape(RadiusMedium))
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             val resolvedUrl = ApiEndpoints.resolveImageUrl(avatarUrl)
-            
-            Napier.d(tag = "ProfileScreen") { "avatarUrl: $avatarUrl, resolvedUrl: $resolvedUrl" }
+            Napier.d(tag = "ProfileScreen") { "avatarUrl: $avatarUrl, resolved: $resolvedUrl" }
             if (resolvedUrl != null) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalPlatformContext.current)

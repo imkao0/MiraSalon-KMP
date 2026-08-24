@@ -29,7 +29,7 @@ import iz.mkao.mirasalon.core.designsystem.login
 import iz.mkao.mirasalon.core.designsystem.register
 import iz.mkao.mirasalon.core.designsystem.slogan
 import iz.mkao.mirasalon.core.designsystem.theme.ButtonHeight
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
@@ -68,7 +68,7 @@ fun WelcomeScreen(state: AuthState, modifier: Modifier = Modifier) {
             Button(
                 onClick = { state.eventSink(AuthEvent.NavigateToLogin) },
                 modifier = Modifier.fillMaxWidth().height(ButtonHeight),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -80,7 +80,7 @@ fun WelcomeScreen(state: AuthState, modifier: Modifier = Modifier) {
             OutlinedButton(
                 onClick = { state.eventSink(AuthEvent.NavigateToRegister) },
                 modifier = Modifier.fillMaxWidth().height(ButtonHeight),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 border = androidx.compose.foundation.BorderStroke(StrokeThin, MaterialTheme.colorScheme.primary)
             ) {
                 Text(stringResource(Res.string.register), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)

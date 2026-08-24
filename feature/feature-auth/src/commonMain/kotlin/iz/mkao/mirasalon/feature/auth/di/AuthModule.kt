@@ -6,9 +6,10 @@ import iz.mkao.mirasalon.feature.auth.data.network.api.AuthApi
 import iz.mkao.mirasalon.feature.auth.data.network.api.KtorAuthApi
 import iz.mkao.mirasalon.feature.auth.data.repository.AuthRepository
 import iz.mkao.mirasalon.feature.auth.data.repository.DefaultAuthRepository
-import iz.mkao.mirasalon.feature.auth.presentation.circuit.*
-import org.koin.dsl.module
+import iz.mkao.mirasalon.feature.auth.presentation.circuit.AuthManualPresenterFactory
+import iz.mkao.mirasalon.feature.auth.presentation.circuit.AuthManualUiFactory
 import org.koin.dsl.bind
+import org.koin.dsl.module
 
 val authModule = module {
     single<AuthApi> { KtorAuthApi(get()) }

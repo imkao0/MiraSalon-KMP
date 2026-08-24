@@ -9,11 +9,11 @@ import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerFilter
+import platform.PhotosUI.PHPickerResult
 import platform.PhotosUI.PHPickerViewController
-import platform.UIKit.UIImage
-import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
+import platform.posix.memcpy
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol as PHPickerViewControllerDelegate
@@ -21,6 +21,7 @@ import platform.PhotosUI.PHPickerViewControllerDelegateProtocol as PHPickerViewC
 @OptIn(ExperimentalForeignApi::class)
 class IosImagePicker : ImagePicker {
     private var viewController: UIViewController? = null
+    private var currentDelegate: PHPickerViewControllerDelegate? = null
     
     fun setViewController(vc: UIViewController) {
         viewController = vc
@@ -44,32 +45,27 @@ class IosImagePicker : ImagePicker {
                 didFinishPicking: List<*>
             ) {
                 picker.dismissViewControllerAnimated(true) {
-                    val results = didFinishPicking as? List<platform.PhotosUI.PHPickerResult>
+                    currentDelegate = null
+                    val results = didFinishPicking as? List<PHPickerResult>
                     val result = results?.firstOrNull()
                     
                     if (result != null) {
                         val itemProvider = result.itemProvider
                         if (itemProvider.hasItemConformingToTypeIdentifier("public.image")) {
-                            itemProvider.loadItemForTypeIdentifier("public.image", null) { data, error ->
+                            itemProvider.loadDataRepresentationForTypeIdentifier("public.image") { data, error ->
                                 if (error != null) {
                                     continuation.resumeWithException(Exception(error.localizedDescription))
-                                    return@loadItemForTypeIdentifier
+                                    return@loadDataRepresentationForTypeIdentifier
                                 }
                                 
-                                val uiImage = data as? UIImage
-                                if (uiImage != null) {
-                                    val imageData = UIImageJPEGRepresentation(uiImage, 0.8)
-                                    val bytes = imageData?.let { nsData ->
-                                        ByteArray(nsData.length.toInt()).apply {
-                                            usePinned { pinned ->
-                                                platform.posix.memcpy(pinned.addressOf(0), nsData.bytes, nsData.length)
-                                            }
+                                val bytes = data?.let { nsData ->
+                                    ByteArray(nsData.length.toInt()).apply {
+                                        usePinned { pinned ->
+                                            memcpy(pinned.addressOf(0), nsData.bytes, nsData.length)
                                         }
                                     }
-                                    continuation.resume(bytes)
-                                } else {
-                                    continuation.resume(null)
                                 }
+                                continuation.resume(bytes)
                             }
                         } else {
                             continuation.resume(null)
@@ -81,10 +77,13 @@ class IosImagePicker : ImagePicker {
             }
         }
         
+        currentDelegate = delegate
         picker.delegate = delegate
         
         continuation.invokeOnCancellation {
-            picker.dismissViewControllerAnimated(true) {}
+            picker.dismissViewControllerAnimated(true) {
+                currentDelegate = null
+            }
         }
         
         vc.presentViewController(picker, true) {}

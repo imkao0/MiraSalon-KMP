@@ -4,14 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -32,10 +30,30 @@ open class AndroidImagePicker(private val context: Context) : ImagePicker {
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
                 
+                if (bitmap == null) {
+                    cont?.resume(null)
+                    return
+                }
+
+                // Resize if too large
+                val maxWidth = 1024
+                val maxHeight = 1024
+                val ratio = Math.min(maxWidth.toFloat() / bitmap.width, maxHeight.toFloat() / bitmap.height)
+                val resizedBitmap = if (ratio < 1f) {
+                    Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
+                } else {
+                    bitmap
+                }
+                
                 val outputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
                 val bytes = outputStream.toByteArray()
                 outputStream.close()
+                
+                if (resizedBitmap != bitmap) {
+                    resizedBitmap.recycle()
+                }
+                bitmap.recycle()
                 
                 cont?.resume(bytes)
             } catch (e: Exception) {
@@ -59,11 +77,8 @@ open class AndroidImagePicker(private val context: Context) : ImagePicker {
         }
     }
     
-    fun launchPicker(launcher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>) {
-        val intent = android.content.Intent(android.content.Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
-            type = "image/*"
-        }
-        launcher.launch(intent)
+    fun launchPicker(launcher: ActivityResultLauncher<PickVisualMediaRequest>) {
+        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 }
 
@@ -73,13 +88,9 @@ actual fun rememberImagePicker(): ImagePicker {
     val imagePicker = remember { AndroidImagePicker(context) }
     
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            imagePicker.onImageSelected(result.data?.data)
-        } else {
-            imagePicker.onImageCancelled()
-        }
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        imagePicker.onImageSelected(uri)
     }
     
     return remember {

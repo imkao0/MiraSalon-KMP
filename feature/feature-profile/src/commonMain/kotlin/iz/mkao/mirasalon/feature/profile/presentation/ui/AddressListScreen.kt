@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.components.MiraEmptyState
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.feature.profile.domain.model.Address
@@ -71,7 +71,7 @@ fun AddressListScreenContent(
                     )
                 }
             } else {
-                items(state.addresses, key = { it.id }) { address ->
+                items(state.addresses.distinctBy { it.id }, key = { it.id }) { address ->
                     AddressItem(
                         address = address,
                         isSelected = address.isDefault,

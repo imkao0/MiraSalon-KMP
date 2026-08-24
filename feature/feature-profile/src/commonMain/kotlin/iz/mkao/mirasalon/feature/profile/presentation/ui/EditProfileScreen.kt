@@ -33,7 +33,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +52,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
+import iz.mkao.mirasalon.core.designsystem.components.PermissionRationaleDialog
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.designsystem.utils.rememberPermissionHandler
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
@@ -65,6 +70,7 @@ fun EditProfileScreenContent(
 ) {
     val imagePicker = rememberImagePicker()
     val scope = rememberCoroutineScope()
+    var showPermissionRationale by remember { mutableStateOf(false) }
 
     val permissionHandler = rememberPermissionHandler(
         onPermissionGranted = {
@@ -83,6 +89,21 @@ fun EditProfileScreenContent(
             // Permission denied - in a real app, show a dialog explaining why we need it
         }
     )
+
+    if (showPermissionRationale) {
+        PermissionRationaleDialog(
+            title = "Gallery Permission Required",
+            text = "We need access to your gallery to let you update your profile picture. Please grant the permission to continue.",
+            confirmButtonText = "Grant Permission",
+            onConfirm = {
+                showPermissionRationale = false
+                permissionHandler.requestGalleryPermission()
+            },
+            onDismiss = {
+                showPermissionRationale = false
+            }
+        )
+    }
 
     Scaffold(
         modifier = modifier,
@@ -158,19 +179,25 @@ fun EditProfileScreenContent(
 
                     Button(
                         onClick = {
-                            if (permissionHandler.hasGalleryPermission()) {
-                                scope.launch {
-                                    try {
-                                        val bytes = imagePicker.pickImage()
-                                        if (bytes != null) {
-                                            state.eventSink(EditProfileEvent.ImageSelected(bytes))
+                            when {
+                                permissionHandler.hasGalleryPermission() -> {
+                                    scope.launch {
+                                        try {
+                                            val bytes = imagePicker.pickImage()
+                                            if (bytes != null) {
+                                                state.eventSink(EditProfileEvent.ImageSelected(bytes))
+                                            }
+                                        } catch (e: Exception) {
+                                            // Handle error
                                         }
-                                    } catch (e: Exception) {
-                                        // Handle error
                                     }
                                 }
-                            } else {
-                                permissionHandler.requestGalleryPermission()
+                                permissionHandler.shouldShowGalleryRationale() -> {
+                                    showPermissionRationale = true
+                                }
+                                else -> {
+                                    permissionHandler.requestGalleryPermission()
+                                }
                             }
                         },
                         enabled = !state.isUploadingImage,

@@ -45,7 +45,7 @@ import iz.mkao.mirasalon.core.designsystem.apple_icon
 import iz.mkao.mirasalon.core.designsystem.back
 import iz.mkao.mirasalon.core.designsystem.google_icon
 import iz.mkao.mirasalon.core.designsystem.sms_icon
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -56,7 +56,7 @@ internal fun AuthBackButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .size(41.dp)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(RadiusMedium))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(RadiusSmall))
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowBackIos,
@@ -85,7 +85,7 @@ internal fun AuthTextField(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(RoundedCornerShape(RadiusMedium)),
+            .clip(RoundedCornerShape(RadiusSmall)),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -239,7 +239,7 @@ private fun SocialIconButton(
         onClick = onClick,
         modifier = Modifier.size(72.dp),
         color = Color.Transparent,
-        shape = RoundedCornerShape(RadiusMedium)
+        shape = RoundedCornerShape(RadiusSmall)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Image(
