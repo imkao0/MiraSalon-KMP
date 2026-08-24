@@ -34,16 +34,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import iz.mkao.mirasalon.core.designsystem.theme.*
+import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingState
+import kotlin.time.Clock
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 
 @Composable
 fun CalendarSection(
     state: BookingState,
     onDateSelected: (LocalDate) -> Unit,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         val selected = state.selectedDate
@@ -52,9 +55,9 @@ fun CalendarSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (selected != null) {
+            selected?.let { date ->
                 Text(
-                    text = selected.month.name.lowercase().replaceFirstChar { it.uppercase() },
+                    text = date.month.name.lowercase().replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Light,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
@@ -121,7 +124,7 @@ private fun ExpandedCalendarGrid(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             displayedDays.chunked(7).forEachIndexed { index, rowDays ->
-                val shouldFade = index >= 1 && !expanded
+                val shouldFade = (index >= 1) && !expanded
 
                 Box {
                     Row(
@@ -132,10 +135,9 @@ private fun ExpandedCalendarGrid(
                             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                                 DateCell(
                                     date = date,
-                                    isSelected = date == selectedDate,
-                                    hasBookings = date.toString() in datesWithBookings,
-                                    onClick = { onDateSelected(date) }
-                                )
+                                    isSelected = (date == selectedDate),
+                                    hasBookings = (date.toString() in datesWithBookings),
+                                ) { onDateSelected(date) }
                             }
                         }
                         repeat(7 - rowDays.size) {
@@ -171,11 +173,21 @@ private fun DateCell(
     hasBookings: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (isSelected) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.surface
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-    else MaterialTheme.colorScheme.onSurface
-    val border = if (isSelected) null
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val isSunday = date.dayOfWeek == DayOfWeek.SUNDAY
+    val isPast = date < today
+
+    val bg = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        isSunday || isPast -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val contentColor = when {
+        isSelected -> MaterialTheme.colorScheme.onPrimary
+        isSunday || isPast -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val border = if (isSelected || isSunday || isPast) null
     else BorderStroke(1.dp, MiraBorder)
 
     Column(
@@ -185,7 +197,7 @@ private fun DateCell(
         Card(
             modifier = Modifier
                 .size(44.dp)
-                .clickable(onClick = onClick),
+                .clickable(enabled = !isSunday && !isPast, onClick = onClick),
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
                 containerColor = bg,
@@ -200,7 +212,7 @@ private fun DateCell(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = date.dayOfMonth.toString(),
+                        text = date.day.toString(),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = contentColor

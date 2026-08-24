@@ -7,6 +7,7 @@ import iz.mkao.mirasalon.feature.appointments.domain.model.Appointment
 data class AppointmentsState(
     val isLoading: Boolean = true,
     val groupedAppointments: Map<String, List<Appointment>> = emptyMap(),
+    val currentTimeMillis: Long = 0L,
     val error: String? = null,
     val eventSink: (AppointmentsEvent) -> Unit = {},
 ) : CircuitUiState

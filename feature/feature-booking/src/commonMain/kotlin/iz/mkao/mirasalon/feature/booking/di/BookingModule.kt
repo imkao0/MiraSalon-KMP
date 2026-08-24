@@ -3,10 +3,12 @@ package iz.mkao.mirasalon.feature.booking.di
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.ui.Ui
 import iz.mkao.mirasalon.core.database.MiraDatabase
+import iz.mkao.mirasalon.core.domain.repository.UpcomingAppointmentsSource
 import iz.mkao.mirasalon.feature.booking.data.network.api.BookingApi
 import iz.mkao.mirasalon.feature.booking.data.network.api.KtorBookingApi
 import iz.mkao.mirasalon.feature.booking.data.repository.BookingRepository
 import iz.mkao.mirasalon.feature.booking.data.repository.BookingRepositoryImpl
+import iz.mkao.mirasalon.feature.booking.data.repository.UpcomingAppointmentsSourceImpl
 import iz.mkao.mirasalon.feature.booking.domain.usecase.BookingUseCase
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingManualPresenterFactory
 import iz.mkao.mirasalon.feature.booking.presentation.ui.BookingManualUiFactory
@@ -24,10 +26,12 @@ val bookingModule = module {
             api = get(), 
             bookingDao = db.bookingDao(),
             profileRepository = get(),
+            tokenProvider = get(),
             realtimeGateway = get(),
             repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         ) 
     }
+    single<UpcomingAppointmentsSource> { UpcomingAppointmentsSourceImpl(get()) }
     single { BookingUseCase(get()) }
 
 

@@ -35,7 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -45,7 +45,7 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import iz.mkao.mirasalon.core.common.util.toPriceString
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.EReceiptEvent
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.EReceiptState
 
@@ -112,7 +112,7 @@ fun EReceiptUi(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
-                            shape = RoundedCornerShape(RadiusMedium)
+                            shape = RoundedCornerShape(RadiusSmall)
                         ) {
                             Text("Done", style = MaterialTheme.typography.titleSmall)
                         }

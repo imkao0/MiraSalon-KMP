@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +43,7 @@ import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingState
 @Composable
 fun SpecialistSection(
     state: BookingState,
-    onSpecialistSelected: (String) -> Unit
+    onSpecialistSelected: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -62,13 +61,13 @@ fun SpecialistSection(
                 ) {
                     repeat(4) {
                         Column(
-                            modifier = Modifier.width(64.dp),
+                            modifier = Modifier.width(72.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(56.dp)
+                                    .size(64.dp)
                                     .clip(CircleShape)
                             ) {
                                 ShimmerLoading()
@@ -87,13 +86,13 @@ fun SpecialistSection(
             else -> {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     items(state.specialists.distinctBy { it.id }, key = { it.id }) { specialist ->
                         SpecialistAvatar(
                             specialist = specialist,
-                            isSelected = specialist.id == state.selectedSpecialistId,
-                            onClick = { onSpecialistSelected(specialist.id) }
+                            isSelected = (specialist.id == state.selectedSpecialistId),
+                            onClick = { onSpecialistSelected(specialist.id) },
                         )
                     }
                 }
@@ -106,17 +105,17 @@ fun SpecialistSection(
 private fun SpecialistAvatar(
     specialist: BookingSpecialist,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(64.dp)
+            .width(72.dp)
             .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(64.dp)
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
                     color = if (isSelected) MaterialTheme.colorScheme.primary else MiraBorder,
@@ -129,7 +128,7 @@ private fun SpecialistAvatar(
             AsyncImage(
                 model = ImageRequest.Builder(LocalPlatformContext.current)
                     .data(specialist.imageUrl)
-                    .crossfade(true)
+                    .crossfade(enable = true)
                     .build(),
                 contentDescription = specialist.name,
                 modifier = Modifier.fillMaxSize(),

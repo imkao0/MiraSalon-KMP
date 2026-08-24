@@ -58,6 +58,7 @@ fun AppointmentsContent(
                         items(items) { appointment ->
                             AppointmentItem(
                                 appointment = appointment,
+                                currentTimeMillis = state.currentTimeMillis,
                                 onClick = { state.eventSink(AppointmentsEvent.AppointmentClicked(appointment.id)) },
                                 onSpecialistClick = { state.eventSink(AppointmentsEvent.SpecialistClicked(it)) }
                             )

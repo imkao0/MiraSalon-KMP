@@ -7,7 +7,8 @@ import iz.mkao.mirasalon.core.network.model.dto.*
 interface BookingApi {
     suspend fun fetchAvailability(
         specialistId: String,
-        date: String
+        date: String,
+        duration: Int? = null
     ): Outcome<SpecialistAvailabilityDto>
 
     suspend fun fetchSpecialists(): Outcome<List<SpecialistDto>>
@@ -16,6 +17,8 @@ interface BookingApi {
         categoryId: String?,
         query: String?
     ): Outcome<List<ServiceDto>>
+
+    suspend fun fetchServicesCategories(): Outcome<List<ServiceCategoryDto>>
 
     suspend fun fetchSalons(): Outcome<PagedResponse<SalonDto>>
 

@@ -43,7 +43,8 @@ interface BookingRepository {
      */
     suspend fun getTimeSlots(
         specialistId: String,
-        date: String
+        date: String,
+        duration: Int? = null
     ): List<BookingTimeSlot>
 
     /** Optimistically lock a slot for a short duration. */
@@ -80,7 +81,7 @@ interface BookingRepository {
         enabled: Boolean
     )
 
-    fun getBookingById(id: String): ConfirmedBooking?
+    suspend fun getBookingById(id: String): ConfirmedBooking?
 
     suspend fun submitReview(bookingId: String, rating: Int, comment: String): Result<Unit>
 

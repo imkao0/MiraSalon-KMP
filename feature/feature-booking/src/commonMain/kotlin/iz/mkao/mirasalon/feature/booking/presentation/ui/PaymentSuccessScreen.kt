@@ -42,7 +42,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.ButtonHeight
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeExtraLarge
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusLarge
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
@@ -51,6 +51,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSection
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.designsystem.theme.StarSize
+import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.feature.booking.domain.model.ConfirmedBooking
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.PaymentSuccessEvent
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.PaymentSuccessState
@@ -130,17 +131,22 @@ fun PaymentSuccessUi(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            val instant = Instant.fromEpochMilliseconds(booking.dateTime)
-            val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-            val dateLabel = "${localDateTime.dayOfWeek.name.lowercase().take(3).replaceFirstChar { it.uppercase() }}, " +
-                    "${localDateTime.dayOfMonth} ${localDateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${localDateTime.year}"
-
             Text(
-                text = dateLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = DateUtils.formatUpcomingDate(booking.dateTime, state.currentTimeMillis),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = SpacingSmall)
             )
+
+            if (booking.createdAt > 0) {
+                Text(
+                    text = DateUtils.formatBookedDate(booking.createdAt, state.currentTimeMillis),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(SpacingExtraLarge))
 
@@ -159,7 +165,9 @@ fun PaymentSuccessUi(
 
             Spacer(modifier = Modifier.height(SpacingMedium))
 
-            BookingDetailsSection(booking, localDateTime)
+            val localDateTime = Instant.fromEpochMilliseconds(booking.dateTime)
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+            BookingDetailsSection(booking, localDateTime, state.currentTimeMillis)
 
             Spacer(modifier = Modifier.height(SpacingExtraLarge))
         }
@@ -251,7 +259,8 @@ private fun BookingSummaryCard(booking: ConfirmedBooking) {
 @Composable
 private fun BookingDetailsSection(
     booking: ConfirmedBooking,
-    dateTime: LocalDateTime
+    dateTime: LocalDateTime,
+    currentTimeMillis: Long
 ) {
     Column(
         modifier = Modifier
@@ -262,6 +271,9 @@ private fun BookingDetailsSection(
         val timeLabel = "${dateTime.hour.toString().padStart(2, '0')}.${dateTime.minute.toString().padStart(2, '0')}"
         
         DetailRow("Time", timeLabel)
+        if (booking.createdAt > 0) {
+            DetailRow("Booked on", DateUtils.formatBookedDate(booking.createdAt, currentTimeMillis))
+        }
         DetailRow("Amount Paid", booking.totalAmount.toPriceString())
         DetailRow("Payment Method", "Visa ****4325")
         DetailRow("Name", booking.customerName)

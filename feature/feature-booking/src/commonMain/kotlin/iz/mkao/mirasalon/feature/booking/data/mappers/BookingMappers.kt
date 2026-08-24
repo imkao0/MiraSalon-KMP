@@ -42,7 +42,8 @@ fun ServiceDto.toDomain(): Service = Service(
     durationMinutes = durationMinutes,
     price = price,
     discountPercent = discountPercent,
-    categoryId = categoryId ?: ""
+    categoryId = categoryId ?: "",
+    imageUrl = ApiEndpoints.resolveImageUrl(imageUrl) ?: ApiEndpoints.getServicePlaceholder(name)
 )
 
 fun ServiceItemDto.toDomainService(): Service = Service(
@@ -51,7 +52,7 @@ fun ServiceItemDto.toDomainService(): Service = Service(
     durationMinutes = durationMinutes,
     price = price,
     discountPercent = discountPercent,
-    imageUrl = null
+    imageUrl = ApiEndpoints.getServicePlaceholder(name)
 )
 
 fun AppointmentStatusDto.toBookingStatus(): BookingStatus = when (this) {

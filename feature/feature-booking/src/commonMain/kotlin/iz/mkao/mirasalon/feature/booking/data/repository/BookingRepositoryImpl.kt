@@ -5,7 +5,9 @@ import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
+import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
 import iz.mkao.mirasalon.core.network.model.dto.CreateAppointmentRequest
+import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.realtime.RealtimeGateway
 import iz.mkao.mirasalon.feature.booking.data.mappers.toBookingSpecialist
@@ -24,6 +26,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,12 +36,16 @@ class BookingRepositoryImpl(
     private val api: BookingApi,
     private val bookingDao: BookingDao,
     private val profileRepository: ProfileRepository,
+    private val tokenProvider: SalonTokenProvider,
     private val realtimeGateway: RealtimeGateway,
     private val repositoryScope: CoroutineScope
 ) : BookingRepository {
 
     override val confirmedBookings: StateFlow<List<ConfirmedBooking>> =
-        bookingDao.getAllBookingsWithServices()
+        flow {
+            val userId = tokenProvider.userId() ?: ""
+            emitAll(bookingDao.getAllBookingsWithServices(userId))
+        }
             .map { list ->
                 val bookings = list.map { it.toDomain() }
 
@@ -96,19 +104,46 @@ class BookingRepositoryImpl(
     }
 
     override suspend fun getServices(serviceIds: List<String>): List<Service> {
-        val result = api.fetchServices(null, null)
-        if (result !is Outcome.Success) return emptyList()
-        return result.data.filter { it.id in serviceIds }.map { it.toDomain() }
+        // Fetch all categories first
+        val categoriesResult = api.fetchServicesCategories()
+        if (categoriesResult !is Outcome.Success) {
+            // Fallback to fetching without category filter
+            val result = api.fetchServices(null, null)
+            if (result !is Outcome.Success) return emptyList()
+            val services = result.data.filter { it.id in serviceIds }.map { it.toDomain() }
+            println("DEBUG: getServices - requestedIds=$serviceIds, loadedServices=${services.map { "${it.name}: price=${it.price}, discountedPrice=${it.discountedPrice}" }}")
+            return services
+        }
+
+        // Fetch services for each category
+        val allServices = mutableListOf<ServiceDto>()
+        for (category in categoriesResult.data) {
+            val result = api.fetchServices(category.id, null)
+            if (result is Outcome.Success) {
+                allServices.addAll(result.data)
+            }
+        }
+
+        val services = allServices.filter { it.id in serviceIds }.map { it.toDomain() }
+        println("DEBUG: getServices - requestedIds=$serviceIds, loadedServices=${services.map { "${it.name}: price=${it.price}, discountedPrice=${it.discountedPrice}" }}")
+        return services
     }
 
     override suspend fun getSpecialistsForService(serviceId: String): List<BookingSpecialist> {
         val result = api.fetchSpecialists()
         if (result !is Outcome.Success) return emptyList()
-        return result.data.map { it.toBookingSpecialist() }
+        val specialists = result.data
+        return if (serviceId.isEmpty()) {
+            specialists.map { it.toBookingSpecialist() }
+        } else {
+            specialists.filter { specialist ->
+                specialist.services.any { service -> service.id == serviceId }
+            }.map { it.toBookingSpecialist() }
+        }
     }
 
-    override suspend fun getTimeSlots(specialistId: String, date: String): List<BookingTimeSlot> {
-        return when (val result = api.fetchAvailability(specialistId, date)) {
+    override suspend fun getTimeSlots(specialistId: String, date: String, duration: Int?): List<BookingTimeSlot> {
+        return when (val result = api.fetchAvailability(specialistId, date, duration)) {
             is Outcome.Success -> result.data.availableSlots.map { it.toDomain() }
             else -> emptyList()
         }
@@ -191,8 +226,14 @@ class BookingRepositoryImpl(
         }
     }
 
-    override fun getBookingById(id: String): ConfirmedBooking? = 
-        confirmedBookings.value.find { it.id == id }
+    override suspend fun getBookingById(id: String): ConfirmedBooking? {
+        // Try reactive state first for speed
+        val current = confirmedBookings.value.find { it.id == id }
+        if (current != null) return current
+
+        // Fallback to direct DB query if flow haven't updated yet (avoids race condition)
+        return bookingDao.getBookingById(id)?.toDomain()
+    }
 
     override suspend fun submitReview(bookingId: String, rating: Int, comment: String): Result<Unit> {
         return when (val result = api.submitReview(

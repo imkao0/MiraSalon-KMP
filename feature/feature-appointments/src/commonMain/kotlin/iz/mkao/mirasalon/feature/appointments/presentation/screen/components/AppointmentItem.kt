@@ -15,18 +15,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import iz.mkao.mirasalon.core.designsystem.theme.Cancelled
 import iz.mkao.mirasalon.core.designsystem.theme.ElevationLow
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingTiny
 import iz.mkao.mirasalon.core.designsystem.theme.Success
+import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.feature.appointments.domain.model.Appointment
 import kotlinx.datetime.*
 
 @Composable
 fun AppointmentItem(
     appointment: Appointment,
+    currentTimeMillis: Long,
     onClick: () -> Unit,
     onSpecialistClick: (String) -> Unit
 ) {
@@ -35,7 +37,7 @@ fun AppointmentItem(
             .fillMaxWidth()
             .padding(vertical = SpacingSmall)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(RadiusMedium),
+        shape = RoundedCornerShape(RadiusSmall),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = ElevationLow)
     ) {
@@ -69,7 +71,7 @@ fun AppointmentItem(
                 )
                 Spacer(modifier = Modifier.height(SpacingTiny))
                 Text(
-                    text = formatDateTime(appointment.dateTime),
+                    text = DateUtils.formatUpcomingDate(appointment.dateTime, currentTimeMillis),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -91,7 +93,7 @@ private fun StatusChip(status: String) {
     
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(RadiusMedium))
+            .clip(RoundedCornerShape(RadiusSmall))
             .background(color.copy(alpha = 0.1f))
             .padding(horizontal = SpacingDefault, vertical = SpacingTiny)
     ) {
@@ -102,11 +104,4 @@ private fun StatusChip(status: String) {
             fontWeight = FontWeight.Bold
         )
     }
-}
-
-private fun formatDateTime(epochMillis: Long): String {
-    val localDateTime = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(TimeZone.currentSystemDefault())
-    val hour = localDateTime.hour.toString().padStart(2, '0')
-    val minute = localDateTime.minute.toString().padStart(2, '0')
-    return "${localDateTime.dayOfMonth} ${localDateTime.month.name.take(3)} at $hour:$minute"
 }

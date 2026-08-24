@@ -13,7 +13,9 @@ import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.PagedResponse
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentDto
 import iz.mkao.mirasalon.core.network.model.dto.CreateAppointmentRequest
+import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.SalonDto
+import iz.mkao.mirasalon.core.network.model.dto.ServiceCategoryDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistAvailabilityDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistDto
@@ -24,10 +26,12 @@ class KtorBookingApi(private val httpClient: HttpClient) : BookingApi {
 
     override suspend fun fetchAvailability(
         specialistId: String,
-        date: String
+        date: String,
+        duration: Int?
     ): Outcome<SpecialistAvailabilityDto> = apiCall {
         httpClient.get("/v1/api/specialists/$specialistId/available-slots") {
             parameter("date", date)
+            duration?.let { parameter("duration", it) }
         }
     }
 
@@ -44,6 +48,10 @@ class KtorBookingApi(private val httpClient: HttpClient) : BookingApi {
             parameter("categoryId", categoryId)
             parameter("query", query)
         }
+    }
+
+    override suspend fun fetchServicesCategories(): Outcome<List<ServiceCategoryDto>> = apiCall {
+        httpClient.get("/v1/api/services/categories")
     }
 
     override suspend fun fetchSalons(): Outcome<PagedResponse<SalonDto>> = apiCall {
@@ -68,7 +76,7 @@ class KtorBookingApi(private val httpClient: HttpClient) : BookingApi {
         httpClient.delete("/v1/api/bookings/$id")
     }
 
-    override suspend fun submitReview(bookingId: String, request: SubmitReviewRequest): Outcome<Unit> = apiCall<String?> {
+    override suspend fun submitReview(bookingId: String, request: SubmitReviewRequest): Outcome<Unit> = apiCall<ReviewDto> {
         httpClient.post("/v1/api/reviews") {
             contentType(ContentType.Application.Json)
             setBody(request)
