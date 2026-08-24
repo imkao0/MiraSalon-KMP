@@ -18,6 +18,8 @@ import iz.mkao.mirasalon.feature.profile.domain.repository.ProfileRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -31,7 +33,10 @@ class OrderRepositoryImpl(
 ) : OrderRepository {
 
     override fun observeOrders(): Flow<Outcome<List<Order>>> {
-        return orderDao.getAllOrdersWithItems()
+        return flow {
+            val userId = (profileRepository.getProfile() as? Outcome.Success<UserProfile>)?.data?.id ?: ""
+            emitAll(orderDao.getAllOrdersWithItems(userId))
+        }
             .map { list -> Outcome.Success(list.map { it.toDomain() }) }
             .onStart {
                 repositoryScope.launch { fetchOrders() }
@@ -86,6 +91,9 @@ class OrderRepositoryImpl(
         val request = CreateOrderRequest(
             items = order.items.map { it.toRequest() },
             promoCode = order.promoCode,
+            subtotalAmount = order.subtotal,
+            discountAmount = order.discount,
+            shippingFees = order.shippingFees,
             totalAmount = order.total,
             salonId = "main-salon",
             shippingAddress = order.shippingAddress ?: "Mock Address",

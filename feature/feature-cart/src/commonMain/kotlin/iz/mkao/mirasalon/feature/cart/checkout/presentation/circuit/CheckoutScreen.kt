@@ -94,7 +94,9 @@ fun CheckoutContent(
             CheckoutBottomBar(
                 buttonText = buttonText,
                 onClick = onBottomClick,
-                enabled = !state.isPlacingOrder && (state.currentStep != CheckoutStep.Shipping || isShippingReady)
+                enabled = !state.isPlacingOrder && 
+                          !state.hasOutOfStockItems &&
+                          (state.currentStep != CheckoutStep.Shipping || isShippingReady)
             )
         }
     ) { padding ->
@@ -473,6 +475,7 @@ private fun ReviewStep(state: CheckoutState) {
                 items = state.cart.items,
                 subtotal = state.cart.subtotal.toPriceString(),
                 delivery = state.deliveryFee.toPriceString(),
+                discount = if (state.cart.discountAmount > 0) state.cart.discountAmount.toPriceString() else null,
                 total = (state.cart.total + state.deliveryFee).toPriceString()
             )
         }

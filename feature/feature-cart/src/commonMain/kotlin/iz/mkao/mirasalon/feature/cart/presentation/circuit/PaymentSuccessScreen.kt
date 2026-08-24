@@ -253,9 +253,9 @@ private fun OrderSummaryCard(order: Order) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    val totalWithShipping = order.subtotal + order.tax + order.shippingFees - order.discount
+                    val total = if (order.total > 0) order.total else (order.subtotal + order.tax + order.shippingFees - order.discount)
                     Text(
-                        text = totalWithShipping.toPriceString(),
+                        text = total.toPriceString(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -268,7 +268,7 @@ private fun OrderSummaryCard(order: Order) {
 
 @Composable
 private fun OrderDetailsSection(order: Order) {
-    val totalWithShipping = order.subtotal + order.tax + order.shippingFees - order.discount
+    val total = if (order.total > 0) order.total else (order.subtotal + order.tax + order.shippingFees - order.discount)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -276,11 +276,18 @@ private fun OrderDetailsSection(order: Order) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DetailRow("Order ID", order.id.take(8).uppercase())
-        DetailRow("Amount Paid", totalWithShipping.toPriceString())
+        DetailRow("Subtotal", order.subtotal.toPriceString())
+        if (order.discount > 0) {
+            DetailRow("Discount", "-${order.discount.toPriceString()}")
+        }
+        if (order.shippingFees > 0) {
+            DetailRow("Delivery", order.shippingFees.toPriceString())
+        }
+        DetailRow("Amount Paid", total.toPriceString())
         DetailRow("Payment Method", order.paymentMethod ?: "Card")
         DetailRow("Name", order.userName ?: "Guest")
         DetailRow("Email", order.userEmail ?: "")
-        DetailRow("Status", "Success", valueColor = MaterialTheme.colorScheme.primary)
+        DetailRow("Status", "Success", valueColor = Color(0xFF4CAF50))
     }
 }
 

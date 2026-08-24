@@ -7,11 +7,15 @@ import iz.mkao.mirasalon.core.database.entity.ProductEntity
 import iz.mkao.mirasalon.core.domain.model.Cart
 import iz.mkao.mirasalon.core.domain.model.CartItem
 import iz.mkao.mirasalon.core.domain.model.Product
+import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.domain.repository.CartRepository
 import iz.mkao.mirasalon.core.domain.repository.PromoRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 
 class CartRepositoryImpl(
     private val localDataSource: CartLocalDataSource,
@@ -87,7 +91,14 @@ class CartRepositoryImpl(
                 }
             }
             is Outcome.Error -> {
-                Result.failure(Exception("Failed to validate coupon: ${result.failure}"))
+                val message = when (val failure = result.failure) {
+                    is Failure.ServerError -> failure.message
+                    is Failure.ClientError -> failure.message
+                    is Failure.NetworkConnection -> failure.message
+                    is Failure.SessionExpired -> "Session expired. Please log in again."
+                    else -> "Failed to validate coupon"
+                }
+                Result.failure(Exception(message))
             }
             is Outcome.Loading -> {
                 Result.failure(Exception("Validation in progress"))

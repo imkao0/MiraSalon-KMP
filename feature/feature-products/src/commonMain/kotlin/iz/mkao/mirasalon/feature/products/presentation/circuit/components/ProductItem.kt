@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.util.toPriceString
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.domain.model.Product
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 
@@ -51,7 +51,7 @@ fun ProductItem(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.75f) // Slightly wider than staff card for products
-            .clip(RoundedCornerShape(RadiusMedium))
+            .clip(RoundedCornerShape(RadiusSmall))
             .background(Color(0xFFF8F9FA))
             .clickable(onClick = onClick),
     ) {
@@ -87,7 +87,7 @@ fun ProductItem(
         if (isSale || product.discountPercent > 0) {
             Surface(
                 color = Color(0xFFEF4444),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.TopStart)

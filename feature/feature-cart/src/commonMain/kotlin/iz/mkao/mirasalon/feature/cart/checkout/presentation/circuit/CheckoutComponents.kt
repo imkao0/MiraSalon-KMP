@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter.State.Empty.painter
@@ -332,16 +333,26 @@ fun SummaryCardContainer(
 }
 
 @Composable
-fun OrderSummaryCard(items: List<CartItem>, subtotal: String, delivery: String, total: String) {
+fun OrderSummaryCard(
+    items: List<CartItem>,
+    subtotal: String,
+    delivery: String,
+    total: String,
+    discount: String? = null
+) {
     SummaryCardContainer(title = "Order Summary") {
         items.forEach { item ->
             SummaryLineRow(
                 label = "${item.product.name} x${item.quantity}",
-                value = (item.product.discountedPrice * item.quantity).toPriceString()
+                value = (item.product.discountedPrice * item.quantity).toPriceString(),
+                originalValue = (item.product.price * item.quantity).toPriceString()
             )
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
         SummaryLineRow(label = "Subtotal", value = subtotal)
+        if (discount != null) {
+            SummaryLineRow(label = "Discount", value = "-$discount")
+        }
         SummaryLineRow(label = "Delivery", value = delivery)
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
         SummaryLineRow(label = "Total", value = total, emphasized = true)
@@ -349,10 +360,16 @@ fun OrderSummaryCard(items: List<CartItem>, subtotal: String, delivery: String, 
 }
 
 @Composable
-fun SummaryLineRow(label: String, value: String, emphasized: Boolean = false) {
+fun SummaryLineRow(
+    label: String,
+    value: String,
+    originalValue: String? = null,
+    emphasized: Boolean = false
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
@@ -360,12 +377,23 @@ fun SummaryLineRow(label: String, value: String, emphasized: Boolean = false) {
             color = if (emphasized) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal
         )
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (originalValue != null && originalValue != value) {
+                Text(
+                    text = originalValue,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                    textDecoration = TextDecoration.LineThrough,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal
+            )
+        }
     }
 }
 
