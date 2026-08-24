@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface OrderDao {
     @Transaction
-    @Query("SELECT * FROM orders ORDER BY createdAt DESC")
-    fun getAllOrdersWithItems(): Flow<List<OrderWithItems>>
+    @Query("SELECT * FROM orders WHERE userId = :userId ORDER BY createdAt DESC")
+    fun getAllOrdersWithItems(userId: String): Flow<List<OrderWithItems>>
 
     @Transaction
     @Query("SELECT * FROM orders WHERE id = :id")

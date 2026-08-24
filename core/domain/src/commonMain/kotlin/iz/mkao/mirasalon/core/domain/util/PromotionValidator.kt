@@ -3,7 +3,6 @@ package iz.mkao.mirasalon.core.domain.util
 import iz.mkao.mirasalon.core.domain.model.DiscountType
 import iz.mkao.mirasalon.core.domain.model.PromoStatus
 import iz.mkao.mirasalon.core.domain.model.Promotion
-import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 data class PromotionValidationResult(
@@ -20,7 +19,7 @@ data class PromotionValidationResult(
 )
 
 object PromotionValidator {
-    @ExperimentalTime
+
     fun validate(
         promo: Promotion,
         cartTotal: Double,
@@ -50,7 +49,7 @@ object PromotionValidator {
             }
         }
         if (userUsageCount >= promo.usageLimit.perUserRedemptions) {
-            return PromotionValidationResult(isValid = false, errorMessage = "You have already used this promotion the maximum number of times", promoCode = promo.code ?: "")
+            return PromotionValidationResult(isValid = false, errorMessage = "You have already used this promo code", promoCode = promo.code ?: "")
         }
 
         // 4. Target User Check

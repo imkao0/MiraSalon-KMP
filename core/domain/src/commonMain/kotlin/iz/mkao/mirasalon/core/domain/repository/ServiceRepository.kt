@@ -14,5 +14,5 @@ interface ServiceRepository {
     suspend fun getServices(filter: ServiceFilter): Outcome<List<Service>>
     suspend fun getService(serviceId: String): Outcome<Service>
     
-    suspend fun submitReview(serviceId: String, rating: Int, comment: String): Outcome<Unit>
+    suspend fun submitReview(serviceId: String, rating: Int, comment: String, userId: String? = null): Outcome<Unit>
 }

@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BookingDao {
     @Transaction
-    @Query("SELECT * FROM bookings ORDER BY dateTime DESC")
-    fun getAllBookingsWithServices(): Flow<List<BookingWithServices>>
+    @Query("SELECT * FROM bookings WHERE userId = :userId ORDER BY dateTime DESC")
+    fun getAllBookingsWithServices(userId: String): Flow<List<BookingWithServices>>
 
     @Transaction
     @Query("SELECT * FROM bookings WHERE id = :id")

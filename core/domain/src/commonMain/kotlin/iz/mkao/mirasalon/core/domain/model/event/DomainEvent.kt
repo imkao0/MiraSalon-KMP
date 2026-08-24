@@ -15,56 +15,66 @@ sealed class DomainEvent {
         override val timestamp: Long,
         override val actorId: String? = null,
         override val message: String = "Connected"
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class OrderCreated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val orderId: String,
         val totalAmount: Double = 0.0
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class OrderUpdated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val orderId: String,
         val status: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class BookingCreated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val bookingId: String,
         val specialistId: String = "",
         val startTime: Long = 0L,
         val appointmentId: String = ""
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class BookingUpdated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val bookingId: String,
         val status: String,
         val appointmentId: String = ""
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class ReviewSubmitted(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val reviewId: String,
         val targetId: String = "",
@@ -72,78 +82,94 @@ sealed class DomainEvent {
         val rating: Int = 0,
         val userName: String? = null,
         val userAvatarUrl: String? = null
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class ProductChanged(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val productId: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class InventoryUpdated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val productId: String,
         val newStock: Int,
         val newStockQuantity: Int = 0 // Some places might use this name
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class SpecialistStatusChanged(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val specialistId: String,
         val isAvailable: Boolean,
         val status: String = ""
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class UserProfileUpdated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val userId: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class ServiceUpdated(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val serviceId: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class ChatMessageReceived(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val conversationId: String,
         val messageId: String,
         val senderId: String,
         val text: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class ChatSeen(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String = "Message seen",
         val conversationId: String,
         val userId: String
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class NotificationReceived(
@@ -152,8 +178,12 @@ sealed class DomainEvent {
         override val actorId: String? = null,
         override val message: String,
         val type: String,
-        val referenceId: String? = null
-    ) : DomainEvent()
+        val referenceId: String? = null,
+        val senderName: String? = null,
+        val senderAvatarUrl: String? = null
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class AppointmentReminder(
@@ -163,15 +193,21 @@ sealed class DomainEvent {
         override val message: String,
         val appointmentId: String,
         val appointmentTime: Long,
-        val reminderType: String // "30_MINUTES", "1_HOUR", "1_DAY", etc.
-    ) : DomainEvent()
+        val reminderType: String, // "30_MINUTES", "1_HOUR", "1_DAY", etc.
+        val specialistName: String? = null,
+        val specialistAvatarUrl: String? = null
+    ) : DomainEvent() {
+        companion object
+    }
 
     @Serializable
     data class PromotionChanged(
         override val eventId: String,
         override val timestamp: Long,
-        override val actorId: String,
+        override val actorId: String?,
         override val message: String,
         val promotionId: String? = null
-    ) : DomainEvent()
+    ) : DomainEvent() {
+        companion object
+    }
 }
