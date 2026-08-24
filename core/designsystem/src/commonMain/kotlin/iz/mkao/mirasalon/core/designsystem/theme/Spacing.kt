@@ -26,10 +26,10 @@ val IconSizeExtraLarge = 64.dp
 
 // MARK: - Component Metrics
 
-val AvatarSize = 40.dp
-val ProfileAvatarSize = 60.dp
+val AvatarSize = 56.dp
+val ProfileAvatarSize = 80.dp
 val ButtonHeight = 56.dp
-val CardWidthLarge = 160.dp
+val CardWidthLarge = 130.dp
 val CardImageHeight = 160.dp
 val OfferCardWidth = 320.dp
 val OfferCardHeight = 200.dp
@@ -50,8 +50,7 @@ val RadiusTiny = 2.dp
 val RadiusExtraSmall = 4.dp
 val RadiusSmall = 4.dp
 val RadiusDefault = 2.dp
-val RadiusMedium = 2.dp
-val RadiusLarge = 2.dp
+val RadiusLarge = 12.dp
 val RadiusExtraLarge = 16.dp
 val RadiusProfileCard = 20.dp
 val RadiusFull = 30.dp

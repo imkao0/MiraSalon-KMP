@@ -16,7 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 
 @Composable
 fun RectangularSwitch(
@@ -32,7 +32,7 @@ fun RectangularSwitch(
             modifier
                 .width(48.dp)
                 .height(24.dp)
-                .background(trackColor, RoundedCornerShape(RadiusMedium))
+                .background(trackColor, RoundedCornerShape(RadiusSmall))
                 .toggleable(
                     value = checked,
                     onValueChange = onCheckedChange,

@@ -11,10 +11,13 @@ expect fun rememberPermissionHandler(
 interface PermissionHandler {
     fun requestRecordAudio()
     fun hasRecordAudioPermission(): Boolean
+    fun shouldShowRecordAudioRationale(): Boolean
 
     fun requestGalleryPermission()
     fun hasGalleryPermission(): Boolean
+    fun shouldShowGalleryRationale(): Boolean
 
     fun requestCameraPermission()
     fun hasCameraPermission(): Boolean
+    fun shouldShowCameraRationale(): Boolean
 }
