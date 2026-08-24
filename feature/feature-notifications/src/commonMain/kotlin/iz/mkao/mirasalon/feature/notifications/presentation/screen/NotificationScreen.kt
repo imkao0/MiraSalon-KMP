@@ -53,7 +53,7 @@ import iz.mkao.mirasalon.core.designsystem.components.MiraCenterAlignedTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.MiraEmptyState
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
 import iz.mkao.mirasalon.core.designsystem.theme.ProfileAvatarSize
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
@@ -280,7 +280,7 @@ fun NotificationRow(item: NotificationItem) {
                 contentDescription = null,
                 modifier = Modifier
                     .size(ProfileAvatarSize)
-                    .clip(RoundedCornerShape(RadiusMedium)),
+                    .clip(RoundedCornerShape(RadiusSmall)),
                 contentScale = ContentScale.Crop
             )
         }

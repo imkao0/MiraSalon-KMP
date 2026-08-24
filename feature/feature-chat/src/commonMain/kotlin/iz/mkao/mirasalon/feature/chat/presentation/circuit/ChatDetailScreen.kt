@@ -59,7 +59,7 @@ import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeSmall
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
@@ -70,9 +70,9 @@ import iz.mkao.mirasalon.core.designsystem.utils.rememberPermissionHandler
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.feature.chat.domain.model.ChatMessage
 import iz.mkao.mirasalon.feature.chat.domain.model.MessageStatus
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,7 +134,7 @@ fun ChatDetailContent(
                     val dateStr = DateUtils.formatDateSeparator(messages.first().timestampEpochSeconds)
                     DateSeparator(dateStr)
                 }
-                items(messages, key = { it.id }) { message ->
+                items(messages.distinctBy { it.id }, key = { it.id }) { message ->
                     MessageItem(
                         message = message,
                         participantName = state.participantName ?: "Specialist",
@@ -221,10 +221,10 @@ private fun MessageItem(
                 Surface(
                     color = if (isMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(
-                        topStart = if (isMe) RadiusMedium else 0.dp,
-                        topEnd = if (isMe) 0.dp else RadiusMedium,
-                        bottomStart = RadiusMedium,
-                        bottomEnd = RadiusMedium
+                        topStart = if (isMe) RadiusSmall else 0.dp,
+                        topEnd = if (isMe) 0.dp else RadiusSmall,
+                        bottomStart = RadiusSmall,
+                        bottomEnd = RadiusSmall
                     ),
                     shadowElevation = 1.dp
                 ) {

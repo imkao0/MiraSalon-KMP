@@ -124,6 +124,9 @@ class ChatListPresenter(
                     ChatListEvent.DeleteHistory -> {
                         scope.launch { chatRepository.deleteHistory() }
                     }
+                    is ChatListEvent.DeleteChat -> {
+                        scope.launch { chatRepository.deleteChat(event.chatId) }
+                    }
                     ChatListEvent.Back -> navigator.pop()
                 }
             },
