@@ -40,7 +40,8 @@ import iz.mkao.mirasalon.core.designsystem.components.MiraEmptyState
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.RectangularSwitch
 import iz.mkao.mirasalon.core.designsystem.components.ReviewBottomSheet
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
+import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.feature.booking.domain.model.BookingStatus
 import iz.mkao.mirasalon.feature.booking.domain.model.ConfirmedBooking
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.MyBookingsEvent
@@ -93,7 +94,7 @@ fun MyBookingsUi(
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(bookings, key = { it.id }) { booking ->
+                items(bookings.distinctBy { it.id }, key = { it.id }) { booking ->
                     BookingCard(
                         booking = booking,
                         currentTimeMillis = state.currentTimeMillis,
@@ -180,8 +181,8 @@ private fun BookingCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(RadiusMedium))
-            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(RadiusMedium))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(2.dp))
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(2.dp))
             .padding(16.dp)
     ) {
         Row(
@@ -189,12 +190,21 @@ private fun BookingCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = formatBookingDateTime(booking.dateTime),
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column {
+                Text(
+                    text = DateUtils.formatUpcomingDate(booking.dateTime, currentTimeMillis),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (booking.createdAt > 0) {
+                    Text(
+                        text = DateUtils.formatBookedDate(booking.createdAt, currentTimeMillis),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    )
+                }
+            }
             if (booking.status == BookingStatus.Confirmed) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -219,7 +229,7 @@ private fun BookingCard(
                 contentDescription = booking.salonName,
                 modifier = Modifier
                     .size(64.dp)
-                    .clip(RoundedCornerShape(RadiusMedium))
+                    .clip(RoundedCornerShape(2.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
@@ -263,7 +273,7 @@ private fun BookingCard(
                     onClick = onSecondaryActionClicked,
                     enabled = canCancel,
                     modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(2.dp),
                     border = BorderStroke(
                         width = 1.dp,
                         color = if (canCancel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
@@ -277,7 +287,7 @@ private fun BookingCard(
                 Button(
                     onClick = onPrimaryActionClicked,
                     modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("E-Receipt", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
@@ -290,7 +300,7 @@ private fun BookingCard(
                 OutlinedButton(
                     onClick = onSecondaryActionClicked,
                     modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(2.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
@@ -299,7 +309,7 @@ private fun BookingCard(
                 Button(
                     onClick = onPrimaryActionClicked,
                     modifier = Modifier.weight(1f).height(44.dp),
-                    shape = RoundedCornerShape(RadiusMedium),
+                    shape = RoundedCornerShape(2.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (booking.isReviewed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
                         contentColor = if (booking.isReviewed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
@@ -316,26 +326,11 @@ private fun BookingCard(
             BookingStatus.Cancelled -> Button(
                 onClick = onPrimaryActionClicked,
                 modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Re - Book", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
-    }
-}
-
-private fun formatBookingDateTime(epochMillis: Long): String {
-    if (epochMillis <= 0L) return "-"
-    return try {
-        val local = Instant.fromEpochMilliseconds(epochMillis)
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-        val day = local.dayOfMonth
-        val month = local.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-        val year = local.year
-        val time = "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
-        "$day $month $year - $time"
-    } catch (e: Exception) {
-        "-"
     }
 }

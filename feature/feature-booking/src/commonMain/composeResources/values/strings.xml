@@ -5,4 +5,12 @@
     <string name="error_select_specialist">Select a specialist to continue</string>
     <string name="booking_failed">Booking failed</string>
     <string name="payment_failed">Payment failed. Please try again.</string>
+    <string name="rules_title">Rules</string>
+    <string name="rules_subtitle">Please adhere to the following salon rules for a pleasant experience:</string>
+    <string name="rule_smoking_title">No Smoking Policy</string>
+    <string name="rule_smoking_desc">Smoking is strictly prohibited within the salon premises.</string>
+    <string name="rule_serenity_title">Quiet Hours</string>
+    <string name="rule_serenity_desc">Maintain serenity between 9.00 am to 17pm</string>
+    <string name="rule_staff_title">Guest Behavior</string>
+    <string name="rule_staff_desc">Respect staff</string>
 </resources>

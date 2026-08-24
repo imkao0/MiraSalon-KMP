@@ -94,7 +94,7 @@ class BookingPresenterTest {
             return listOf(BookingSpecialist(id = "spec_1", name = "Specialist 1", role = "Barber", salonId = "salon_1"))
         }
 
-        override suspend fun getTimeSlots(specialistId: String, date: String): List<BookingTimeSlot> {
+        override suspend fun getTimeSlots(specialistId: String, date: String, duration: Int?): List<BookingTimeSlot> {
             return listOf(BookingTimeSlot(startTime = 0, endTime = 0, formattedTime = "10:00", isAvailable = true))
         }
 
@@ -103,7 +103,7 @@ class BookingPresenterTest {
         override suspend fun createBooking(specialistId: String, salonId: String, serviceIds: List<String>, dateTime: Long, reminderEnabled: Boolean): Result<ConfirmedBooking> = Result.failure(Exception("Not implemented"))
         override suspend fun cancelBooking(id: String): Result<Unit> = Result.success(Unit)
         override fun setReminder(bookingId: String, enabled: Boolean) {}
-        override fun getBookingById(id: String): ConfirmedBooking? = null
+        override suspend fun getBookingById(id: String): ConfirmedBooking? = null
         override suspend fun submitReview(bookingId: String, rating: Int, comment: String): Result<Unit> = Result.success(Unit)
         override suspend fun updateReminderEnabled(bookingId: String, enabled: Boolean): Result<Unit> = Result.success(Unit)
     }

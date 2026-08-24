@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.domain.model.PaymentMethodType
 import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.Specialist
@@ -56,7 +57,7 @@ class AppointmentCheckoutPresenter(
             }
         }
 
-        val totalAmount = services.sumOf { it.price }
+        val totalAmount = services.sumOf { it.discountedPrice }
         val discountedAmount = services.sumOf { it.discountedPrice }
 
         return AppointmentCheckoutState(
@@ -96,6 +97,7 @@ class AppointmentCheckoutPresenter(
                         selectedPaymentMethodId = event.id
                     }
                     AppointmentCheckoutEvent.Continue -> {
+                        Napier.d("AppointmentCheckoutPresenter: Continue clicked for services ${screen.serviceIds}")
                         scope.launch {
                             if (screen.serviceIds.isEmpty()) {
                                 error = "No services selected"

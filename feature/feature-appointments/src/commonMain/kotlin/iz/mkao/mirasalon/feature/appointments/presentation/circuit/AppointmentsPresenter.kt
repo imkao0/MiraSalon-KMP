@@ -15,6 +15,7 @@ import iz.mkao.mirasalon.core.navigation.SpecialistRoute
 import iz.mkao.mirasalon.feature.appointments.domain.model.Appointment
 import iz.mkao.mirasalon.feature.appointments.domain.repository.AppointmentRepository
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -29,6 +30,7 @@ class AppointmentsPresenter(
         var isLoading by remember { mutableStateOf(true) }
         var appointments by remember { mutableStateOf(emptyList<Appointment>()) }
         var error by remember { mutableStateOf<String?>(null) }
+        val currentTimeMillis = remember<Long> { Clock.System.now().toEpochMilliseconds() }
         val scope = rememberCoroutineScope()
 
         LaunchedEffect(Unit) {
@@ -60,6 +62,7 @@ class AppointmentsPresenter(
         return AppointmentsState(
             isLoading = isLoading,
             groupedAppointments = grouped,
+            currentTimeMillis = currentTimeMillis,
             error = error,
             eventSink = { event ->
                 when (event) {

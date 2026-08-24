@@ -22,9 +22,12 @@ import com.slack.circuit.runtime.ui.ui
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.navigation.BookingRoute
 import iz.mkao.mirasalon.core.navigation.BottomNavKey
-import iz.mkao.mirasalon.feature.booking.presentation.circuit.*
-import iz.mkao.mirasalon.feature.booking.presentation.ui.AppointmentCheckoutUi
-import iz.mkao.mirasalon.feature.booking.presentation.ui.PaymentSuccessUi
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.AppointmentCheckoutState
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingEvent
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingState
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.EReceiptState
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.MyBookingsState
+import iz.mkao.mirasalon.feature.booking.presentation.circuit.PaymentSuccessState
 import iz.mkao.mirasalon.feature.booking.presentation.ui.components.BookingDropdownSheet
 import iz.mkao.mirasalon.feature.booking.presentation.ui.components.CalendarSection
 import iz.mkao.mirasalon.feature.booking.presentation.ui.components.SpecialistSection
@@ -42,6 +45,14 @@ fun BookingUi(
         modifier = modifier,
         topBar = {
             MiraTopAppBar(title = "Book Appointment", onBackClick = { state.eventSink(BookingEvent.Back) })
+        },
+        bottomBar = {
+            SummaryAndBookBar(
+                state = state,
+                onBook = {
+                    state.eventSink(BookingEvent.Continue)
+                }
+            )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
@@ -82,15 +93,6 @@ fun BookingUi(
                 state = state,
                 onSlotSelected = {
                     state.eventSink(BookingEvent.SlotSelected(it))
-                }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            SummaryAndBookBar(
-                state = state,
-                onBook = {
-                    state.eventSink(BookingEvent.Continue)
                 }
             )
 

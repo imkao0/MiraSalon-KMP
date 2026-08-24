@@ -59,9 +59,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.core.common.util.toPriceString
-import iz.mkao.mirasalon.core.designsystem.Res
 import iz.mkao.mirasalon.core.designsystem.applepay
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
@@ -72,7 +72,7 @@ import iz.mkao.mirasalon.core.designsystem.theme.ButtonHeight
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeMedium
 import iz.mkao.mirasalon.core.designsystem.theme.MiraPrimaryDeep
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusExtraSmall
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusMedium
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
@@ -83,13 +83,25 @@ import iz.mkao.mirasalon.core.designsystem.theme.StrokeThin
 import iz.mkao.mirasalon.core.designsystem.visa
 import iz.mkao.mirasalon.core.domain.model.PaymentMethod
 import iz.mkao.mirasalon.core.domain.model.PaymentMethodType
+import iz.mkao.mirasalon.feature.booking.Res
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.AppointmentCheckoutEvent
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.AppointmentCheckoutState
+import iz.mkao.mirasalon.feature.booking.rule_serenity_desc
+import iz.mkao.mirasalon.feature.booking.rule_serenity_title
+import iz.mkao.mirasalon.feature.booking.rule_smoking_desc
+import iz.mkao.mirasalon.feature.booking.rule_smoking_title
+import iz.mkao.mirasalon.feature.booking.rule_staff_desc
+import iz.mkao.mirasalon.feature.booking.rule_staff_title
+import iz.mkao.mirasalon.feature.booking.rules_subtitle
+import iz.mkao.mirasalon.feature.booking.rules_title
+import kotlin.time.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import iz.mkao.mirasalon.core.designsystem.Res as DesignRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,7 +137,7 @@ fun AppointmentCheckoutUi(
                 ShimmerLoading()
             }
         } else {
-            val today = kotlin.time.Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
             val futureDate = today.plus(DatePeriod(days = 14))
 
             val dateRange = if (today.month == futureDate.month) {
@@ -174,7 +186,7 @@ private fun AppointmentSummarySection(state: AppointmentCheckoutState) {
             .fillMaxWidth()
             .border(
                 BorderStroke(StrokeThin, MaterialTheme.colorScheme.outlineVariant),
-                RoundedCornerShape(RadiusMedium)
+                RoundedCornerShape(RadiusSmall)
             )
             .padding(SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(SpacingMedium)
@@ -205,12 +217,23 @@ private fun AppointmentSummarySection(state: AppointmentCheckoutState) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    text = service.discountedPrice.toPriceString(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (service.discountPercent > 0) {
+                        Text(
+                            text = service.price.toPriceString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textDecoration = TextDecoration.LineThrough
+                        )
+                        Spacer(modifier = Modifier.width(SpacingSmall))
+                    }
+                    Text(
+                        text = service.discountedPrice.toPriceString(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
@@ -254,7 +277,7 @@ private fun PaymentMethodsSection(state: AppointmentCheckoutState) {
             .fillMaxWidth()
             .border(
                 BorderStroke(StrokeThin, MaterialTheme.colorScheme.outlineVariant),
-                RoundedCornerShape(RadiusMedium)
+                RoundedCornerShape(RadiusSmall)
             )
             .padding(SpacingMedium)
     ) {
@@ -274,7 +297,7 @@ private fun PaymentMethodsSection(state: AppointmentCheckoutState) {
         OutlinedButton(
             onClick = { state.eventSink(AppointmentCheckoutEvent.AddPaymentMethod) },
             modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(RadiusMedium),
+            shape = RoundedCornerShape(RadiusSmall),
             border = BorderStroke(StrokeThin, MaterialTheme.colorScheme.outline)
         ) {
             Text("Add Payment Method", color = MaterialTheme.colorScheme.onBackground)
@@ -306,10 +329,10 @@ private fun PaymentMethodRow(
                 contentAlignment = Alignment.Center
             ) {
                 val icon = when (method.type) {
-                    PaymentMethodType.VISA -> Res.drawable.visa
-                    PaymentMethodType.MASTER_CARD -> Res.drawable.mastercard
-                    PaymentMethodType.GOOGLE_PAY -> Res.drawable.gp
-                    PaymentMethodType.APPLE_PAY -> Res.drawable.applepay
+                    PaymentMethodType.VISA -> DesignRes.drawable.visa
+                    PaymentMethodType.MASTER_CARD -> DesignRes.drawable.mastercard
+                    PaymentMethodType.GOOGLE_PAY -> DesignRes.drawable.gp
+                    PaymentMethodType.APPLE_PAY -> DesignRes.drawable.applepay
                     else -> null
                 }
                 
@@ -368,7 +391,7 @@ private fun PolicySection(title: String, content: String) {
                 .fillMaxWidth()
                 .border(
                     BorderStroke(StrokeThin, MaterialTheme.colorScheme.outlineVariant),
-                    RoundedCornerShape(RadiusMedium)
+                    RoundedCornerShape(RadiusSmall)
                 )
                 .padding(SpacingMedium)
         ) {
@@ -386,7 +409,7 @@ private fun PolicySection(title: String, content: String) {
 private fun RulesSection() {
     Column(verticalArrangement = Arrangement.spacedBy(SpacingDefault)) {
         Text(
-            text = "Rules",
+            text = stringResource(Res.string.rules_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -395,20 +418,29 @@ private fun RulesSection() {
                 .fillMaxWidth()
                 .border(
                     BorderStroke(StrokeThin, MaterialTheme.colorScheme.outlineVariant),
-                    RoundedCornerShape(RadiusMedium)
+                    RoundedCornerShape(RadiusSmall)
                 )
                 .padding(SpacingMedium),
             verticalArrangement = Arrangement.spacedBy(SpacingSmall)
         ) {
             Text(
-                text = "Please adhere to the following salon rules for a pleasant experience:",
+                text = stringResource(Res.string.rules_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            RuleItem("No Smoking Policy", "Smoking is strictly prohibited...")
-            RuleItem("Quiet Hours", "Maintain peace between 8 AM and 7...")
-            RuleItem("Guest Behavior", "Respect staff and fellow guests at...")
+            RuleItem(
+                stringResource(Res.string.rule_smoking_title),
+                stringResource(Res.string.rule_smoking_desc)
+            )
+            RuleItem(
+                stringResource(Res.string.rule_serenity_title),
+                stringResource(Res.string.rule_serenity_desc)
+            )
+            RuleItem(
+                stringResource(Res.string.rule_staff_title),
+                stringResource(Res.string.rule_staff_desc)
+            )
         }
     }
 }
@@ -489,12 +521,15 @@ private fun CheckoutBottomBar(state: AppointmentCheckoutState) {
             }
 
             Button(
-                onClick = { state.eventSink(AppointmentCheckoutEvent.Continue) },
+                onClick = {
+                    Napier.d("AppointmentCheckoutScreen: Continue button clicked")
+                    state.eventSink(AppointmentCheckoutEvent.Continue)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(ButtonHeight),
                 enabled = !state.isBooking,
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -525,7 +560,7 @@ private fun AddPaymentBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = RadiusMedium, topEnd = RadiusMedium),
+        shape = RoundedCornerShape(topStart = RadiusSmall, topEnd = RadiusSmall),
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -562,7 +597,7 @@ private fun AddPaymentBottomSheet(
                         selected = cardType == type,
                         onClick = { cardType = type },
                         label = { Text(type) },
-                        shape = RoundedCornerShape(RadiusMedium)
+                        shape = RoundedCornerShape(RadiusSmall)
                     )
                 }
             }
@@ -611,7 +646,7 @@ private fun AddPaymentBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(ButtonHeight),
-                shape = RoundedCornerShape(RadiusMedium),
+                shape = RoundedCornerShape(RadiusSmall),
                 enabled = cardNumber.length >= 12 && expiry.length >= 4 && nameOnCard.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -649,7 +684,7 @@ private fun LocalCardField(
             placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.outline) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            shape = RoundedCornerShape(RadiusMedium),
+            shape = RoundedCornerShape(RadiusSmall),
             visualTransformation = visualTransformation,
             keyboardOptions = KeyboardOptions(
                 keyboardType = keyboardType,

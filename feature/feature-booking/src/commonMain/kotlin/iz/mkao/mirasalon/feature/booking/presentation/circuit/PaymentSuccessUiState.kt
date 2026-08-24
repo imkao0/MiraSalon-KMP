@@ -13,5 +13,6 @@ sealed interface PaymentSuccessEvent : CircuitUiEvent {
 data class PaymentSuccessState(
     val booking: ConfirmedBooking? = null,
     val isLoading: Boolean = false,
+    val currentTimeMillis: Long = 0L,
     val eventSink: (PaymentSuccessEvent) -> Unit = {}
 ) : CircuitUiState

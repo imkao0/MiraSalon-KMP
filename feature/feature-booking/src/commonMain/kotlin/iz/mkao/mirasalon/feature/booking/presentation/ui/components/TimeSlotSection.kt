@@ -1,7 +1,6 @@
 package iz.mkao.mirasalon.feature.booking.presentation.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,13 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
-import iz.mkao.mirasalon.core.designsystem.theme.*
 import iz.mkao.mirasalon.feature.booking.domain.model.BookingTimeSlot
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.BookingState
 import kotlinx.datetime.Instant
@@ -34,7 +31,7 @@ import kotlinx.datetime.toLocalDateTime
 @Composable
 fun TimeSlotSection(
     state: BookingState,
-    onSlotSelected: (BookingTimeSlot) -> Unit
+    onSlotSelected: (BookingTimeSlot) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -71,25 +68,49 @@ fun TimeSlotSection(
             }
             else -> {
                 val timeZone = TimeZone.UTC
-                val slotsWithHour = state.timeSlots.map { slot ->
+                val slotsWithHour = state.timeSlots.asSequence().map { slot ->
                     val hour = Instant.fromEpochMilliseconds(slot.startTime)
                         .toLocalDateTime(timeZone).hour
                     slot to hour
-                }
+                }.toList()
 
-                val morning = slotsWithHour.filter { it.second in 0..11 }.map { it.first }
-                val afternoon = slotsWithHour.filter { it.second in 12..16 }.map { it.first }
-                val evening = slotsWithHour.filter { it.second in 17..23 }.map { it.first }
+                val morning = slotsWithHour.asSequence()
+                    .filter { (_, hour) -> hour in 0..11 }
+                    .map { (slot, _) -> slot }
+                    .toList()
+                val afternoon = slotsWithHour.asSequence()
+                    .filter { (_, hour) -> hour in 12..16 }
+                    .map { (slot, _) -> slot }
+                    .toList()
+                val evening = slotsWithHour.asSequence()
+                    .filter { (_, hour) -> hour in 17..23 }
+                    .map { (slot, _) -> slot }
+                    .toList()
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (morning.isNotEmpty()) {
-                        SlotGroup(title = "Morning", slots = morning, selectedSlot = state.selectedSlot, onSlotSelected = onSlotSelected)
+                        SlotGroup(
+                            title = "Morning",
+                            slots = morning,
+                            selectedSlot = state.selectedSlot,
+                            onSlotSelected = onSlotSelected,
+                        )
                     }
                     if (afternoon.isNotEmpty()) {
-                        SlotGroup(title = "Afternoon", slots = afternoon, selectedSlot = state.selectedSlot, onSlotSelected = onSlotSelected)
+                        SlotGroup(
+                            title = "Afternoon",
+                            slots = afternoon,
+                            selectedSlot = state.selectedSlot,
+                            onSlotSelected = onSlotSelected,
+                        )
                     }
                     if (evening.isNotEmpty()) {
-                        SlotGroup(title = "Evening", slots = evening, selectedSlot = state.selectedSlot, onSlotSelected = onSlotSelected)
+                        SlotGroup(
+                            title = "Evening",
+                            slots = evening,
+                            selectedSlot = state.selectedSlot,
+                            onSlotSelected = onSlotSelected,
+                        )
                     }
                 }
             }

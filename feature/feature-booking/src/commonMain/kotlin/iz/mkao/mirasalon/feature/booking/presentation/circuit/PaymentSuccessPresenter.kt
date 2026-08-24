@@ -11,6 +11,8 @@ import com.slack.circuit.runtime.presenter.Presenter
 import iz.mkao.mirasalon.core.navigation.BookingRoute
 import iz.mkao.mirasalon.core.navigation.BottomNavKey
 import iz.mkao.mirasalon.feature.booking.data.repository.BookingRepository
+import iz.mkao.mirasalon.feature.booking.domain.model.ConfirmedBooking
+import kotlin.time.Clock
 
 class PaymentSuccessPresenter(
     private val screen: BookingRoute.PaymentSuccess,
@@ -20,20 +22,20 @@ class PaymentSuccessPresenter(
 
     @Composable
     override fun present(): PaymentSuccessState {
-        var booking by remember { mutableStateOf(repository.getBookingById(screen.appointmentId)) }
+        var booking by remember { mutableStateOf<ConfirmedBooking?>(null) }
         var isLoading by remember { mutableStateOf(false) }
+        val currentTimeMillis = remember<Long> { Clock.System.now().toEpochMilliseconds() }
 
         LaunchedEffect(screen.appointmentId) {
-            if (booking == null) {
-                isLoading = true
-                booking = repository.getBookingById(screen.appointmentId)
-                isLoading = false
-            }
+            isLoading = true
+            booking = repository.getBookingById(screen.appointmentId)
+            isLoading = false
         }
 
         return PaymentSuccessState(
             booking = booking,
             isLoading = isLoading,
+            currentTimeMillis = currentTimeMillis,
             eventSink = { event ->
                 when (event) {
                     PaymentSuccessEvent.BackToHome -> navigator.resetRoot(BottomNavKey.Home())

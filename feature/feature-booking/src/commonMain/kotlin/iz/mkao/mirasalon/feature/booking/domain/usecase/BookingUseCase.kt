@@ -18,8 +18,8 @@ class BookingUseCase(
     suspend fun loadSpecialists(serviceId: String): List<BookingSpecialist> =
         repository.getSpecialistsForService(serviceId)
 
-    suspend fun loadTimeSlots(specialistId: String, date: String): List<BookingTimeSlot> =
-        repository.getTimeSlots(specialistId, date)
+    suspend fun loadTimeSlots(specialistId: String, date: String, duration: Int? = null): List<BookingTimeSlot> =
+        repository.getTimeSlots(specialistId, date, duration)
 
     suspend fun book(
         specialistId: String,

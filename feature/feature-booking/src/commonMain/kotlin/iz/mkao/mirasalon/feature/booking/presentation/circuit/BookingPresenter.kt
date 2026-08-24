@@ -12,21 +12,22 @@ import com.slack.circuit.runtime.CircuitContext
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.slack.circuit.runtime.screen.Screen
+import iz.mkao.mirasalon.core.domain.repository.PaymentMethodRepository
 import iz.mkao.mirasalon.core.navigation.BookingRoute
 import iz.mkao.mirasalon.core.navigation.BottomNavKey
-import iz.mkao.mirasalon.core.domain.repository.PaymentMethodRepository
 import iz.mkao.mirasalon.feature.booking.data.repository.BookingRepository
 import iz.mkao.mirasalon.feature.booking.domain.usecase.BookingUseCase
 import kotlinx.coroutines.launch
-import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 class BookingPresenter(
     private val screen: BookingRoute.Booking,
@@ -35,30 +36,43 @@ class BookingPresenter(
     private val navigator: Navigator,
 ) : Presenter<BookingState> {
 
-    @OptIn(ExperimentalTime::class)
     @Composable
     override fun present(): BookingState {
         var state by remember { mutableStateOf(BookingState()) }
         val scope = rememberCoroutineScope()
         val confirmedBookings by repository.confirmedBookings.collectAsState(initial = emptyList())
 
-        fun loadSlots(specialistId: String?, date: LocalDate?) {
+        fun loadSlots(specialistId: String?, date: LocalDate?, duration: Int?) {
             if (date == null) return
             val dateString = date.toString()
             scope.launch {
                 state = state.copy(isLoadingSlots = true, slotError = null, timeSlots = emptyList())
-                val slots = bookingUseCase.loadTimeSlots(specialistId ?: "any", dateString)
-                if (slots.none { it.isAvailable }) {
-                    state = state.copy(timeSlots = slots, isLoadingSlots = false, slotError = "All slots are fully booked")
+                val slots = bookingUseCase.loadTimeSlots(specialistId ?: "any", dateString, duration)
+                state = if (slots.none { it.isAvailable }) {
+                    state.copy(timeSlots = slots, isLoadingSlots = false, slotError = "All slots are fully booked")
                 } else {
-                    state = state.copy(timeSlots = slots, isLoadingSlots = false, slotError = null)
+                    state.copy(timeSlots = slots, isLoadingSlots = false, slotError = null)
                 }
             }
         }
 
         LaunchedEffect(Unit) {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            val days = (0 until 14).map { today.plus(DatePeriod(days = it)) }
+            
+            // Align calendar to start on Monday
+            val daysToSubtract = when (today.dayOfWeek) {
+                DayOfWeek.MONDAY -> 0
+                DayOfWeek.TUESDAY -> 1
+                DayOfWeek.WEDNESDAY -> 2
+                DayOfWeek.THURSDAY -> 3
+                DayOfWeek.FRIDAY -> 4
+                DayOfWeek.SATURDAY -> 5
+                DayOfWeek.SUNDAY -> 6
+                else -> 0
+            }
+            val startMonday = today.minus(daysToSubtract, DateTimeUnit.DAY)
+            val days = (0 until 21).map { startMonday.plus(it, DateTimeUnit.DAY) }
+            
             state = state.copy(days = days, selectedDate = today)
 
             val services = bookingUseCase.loadServices(screen.serviceIds)
@@ -82,7 +96,8 @@ class BookingPresenter(
             repository.refreshBookings()
 
             if (resolvedSpecialistId != null && state.selectedDate != null) {
-                loadSlots(resolvedSpecialistId, state.selectedDate)
+                val totalDuration = services.sumOf { it.durationMinutes }
+                loadSlots(resolvedSpecialistId, state.selectedDate, totalDuration)
             }
         }
 
@@ -93,10 +108,17 @@ class BookingPresenter(
             } == true
         }
 
+        val datesWithBookings = confirmedBookings.mapNotNull {
+            bookingDate(it.dateTime, timeZone)?.toString()
+        }.toSet()
+
+        println("DEBUG: BookingPresenter - services=${state.services.map { "${it.name}: price=${it.price}, discountedPrice=${it.discountedPrice}" }}, totalAmount=${state.services.sumOf { it.discountedPrice }}")
+
         return state.copy(
             existingBookings = confirmedBookings,
+            datesWithBookings = datesWithBookings,
             selectedDateBookings = selectedDateBookings,
-            totalAmount = state.services.sumOf { it.price },
+            totalAmount = state.services.sumOf { it.discountedPrice },
             canBook = state.selectedDate != null &&
                 state.selectedSlot != null &&
                 (state.specialists.isEmpty() || state.selectedSpecialistId != null) &&
@@ -112,7 +134,8 @@ class BookingPresenter(
                                 selectedSlot = null,
                                 sheetExpanded = true
                             )
-                            loadSlots(state.selectedSpecialistId, event.date)
+                            val totalDuration = state.services.sumOf { it.durationMinutes }
+                            loadSlots(state.selectedSpecialistId, event.date, totalDuration)
                         }
                     }
                     is BookingEvent.SheetExpanded -> {
@@ -127,7 +150,8 @@ class BookingPresenter(
                                 selectedSpecialistId = event.specialistId,
                                 selectedSlot = null,
                             )
-                            loadSlots(event.specialistId, state.selectedDate)
+                            val totalDuration = state.services.sumOf { it.durationMinutes }
+                            loadSlots(event.specialistId, state.selectedDate, totalDuration)
                         }
                     }
                     is BookingEvent.SlotSelected -> {
