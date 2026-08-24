@@ -244,6 +244,6 @@ struct RatingTextChip: View {
             .padding(.horizontal, MiraTheme.spacingDefault)
             .padding(.vertical, MiraTheme.spacingTiny + 2)
             .background(MiraTheme.surfaceVariant)
-            .cornerRadius(MiraTheme.radiusMedium)
+            .cornerRadius(MiraTheme.radiusSmall)
     }
 }

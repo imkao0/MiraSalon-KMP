@@ -18,7 +18,7 @@ extension MiraTheme {
     static let brandBlueDark = MiraTheme.primary
 
     // Common radii actually used by the mirrored Android screens
-    static let radiusCard: CGFloat = MiraTheme.radiusMedium
+    static let radiusCard: CGFloat = MiraTheme.radiusSmall
     static let radiusSection: CGFloat = MiraTheme.radiusLarge
     static let radiusButton: CGFloat = MiraTheme.radiusSmall
 

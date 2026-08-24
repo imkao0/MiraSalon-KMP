@@ -38,9 +38,17 @@ struct CheckoutView: View {
                                                 .foregroundColor(MiraTheme.onSurfaceVariant)
                                         }
                                         Spacer()
-                                        Text(Double(service.discountedPrice).miraPrice())
-                                            .font(MiraType.bodyLarge.weight(.bold))
-                                            .foregroundColor(MiraTheme.primary)
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            if service.discountedPrice < service.price {
+                                                Text(Double(service.price).miraPrice())
+                                                    .font(MiraType.bodySmall)
+                                                    .strikethrough()
+                                                    .foregroundColor(MiraTheme.onSurfaceVariant)
+                                            }
+                                            Text(Double(service.discountedPrice).miraPrice())
+                                                .font(MiraType.bodyLarge.weight(.bold))
+                                                .foregroundColor(MiraTheme.primary)
+                                        }
                                     }
                                 }
                                 
@@ -68,9 +76,9 @@ struct CheckoutView: View {
                             }
                             .padding(MiraTheme.spacingMedium)
                             .background(MiraTheme.surface)
-                            .cornerRadius(MiraTheme.radiusMedium)
+                            .cornerRadius(MiraTheme.radiusSmall)
                             .overlay(
-                                RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                                RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                                     .stroke(MiraTheme.outlineVariant, lineWidth: MiraTheme.strokeThin)
                             )
                             
@@ -101,16 +109,16 @@ struct CheckoutView: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
                                         .background(
-                                            RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                                            RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                                                 .stroke(MiraTheme.outline, lineWidth: MiraTheme.strokeThin)
                                         )
                                 }
                             }
                             .padding(MiraTheme.spacingMedium)
                             .background(MiraTheme.surface)
-                            .cornerRadius(MiraTheme.radiusMedium)
+                            .cornerRadius(MiraTheme.radiusSmall)
                             .overlay(
-                                RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                                RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                                     .stroke(MiraTheme.outlineVariant, lineWidth: MiraTheme.strokeThin)
                             )
                             
@@ -234,7 +242,7 @@ private struct PolicySection: View {
                 .padding(MiraTheme.spacingMedium)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                    RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                         .stroke(MiraTheme.outlineVariant, lineWidth: 1)
                 )
         }
@@ -259,7 +267,7 @@ private struct RulesSection: View {
             }
             .padding(MiraTheme.spacingMedium)
             .background(
-                RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                     .stroke(MiraTheme.outlineVariant, lineWidth: 1)
             )
         }
@@ -325,8 +333,8 @@ private struct AddPaymentBottomSheet: View {
                     .onSubmit { focusedField = .number }
                     .padding()
                     .background(MiraTheme.surface)
-                    .cornerRadius(MiraTheme.radiusMedium)
-                    .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusMedium).stroke(MiraTheme.outlineVariant))
+                    .cornerRadius(MiraTheme.radiusSmall)
+                    .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).stroke(MiraTheme.outlineVariant))
             }
             
             VStack(alignment: .leading, spacing: MiraTheme.spacingSmall) {
@@ -339,8 +347,8 @@ private struct AddPaymentBottomSheet: View {
                     .keyboardType(.numberPad)
                     .padding()
                     .background(MiraTheme.surface)
-                    .cornerRadius(MiraTheme.radiusMedium)
-                    .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusMedium).stroke(MiraTheme.outlineVariant))
+                    .cornerRadius(MiraTheme.radiusSmall)
+                    .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).stroke(MiraTheme.outlineVariant))
             }
             
             HStack(spacing: MiraTheme.spacingMedium) {
@@ -353,8 +361,8 @@ private struct AddPaymentBottomSheet: View {
                         .onSubmit { focusedField = .cvc }
                         .padding()
                         .background(MiraTheme.surface)
-                        .cornerRadius(MiraTheme.radiusMedium)
-                        .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusMedium).stroke(MiraTheme.outlineVariant))
+                        .cornerRadius(MiraTheme.radiusSmall)
+                        .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).stroke(MiraTheme.outlineVariant))
                 }
                 
                 VStack(alignment: .leading, spacing: MiraTheme.spacingSmall) {
@@ -367,8 +375,8 @@ private struct AddPaymentBottomSheet: View {
                         .keyboardType(.numberPad)
                         .padding()
                         .background(MiraTheme.surface)
-                        .cornerRadius(MiraTheme.radiusMedium)
-                        .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusMedium).stroke(MiraTheme.outlineVariant))
+                        .cornerRadius(MiraTheme.radiusSmall)
+                        .overlay(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).stroke(MiraTheme.outlineVariant))
                 }
             }
             

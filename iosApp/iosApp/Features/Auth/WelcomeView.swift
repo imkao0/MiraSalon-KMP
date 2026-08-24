@@ -72,7 +72,7 @@ struct WelcomeContent: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: MiraTheme.buttonHeight)
                         .background(MiraTheme.primary)
-                        .cornerRadius(MiraTheme.radiusMedium)
+                        .cornerRadius(MiraTheme.radiusSmall)
                 }
                 .buttonStyle(.plain)
 
@@ -85,7 +85,7 @@ struct WelcomeContent: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: MiraTheme.buttonHeight)
                         .overlay(
-                            RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                            RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                                 .stroke(MiraTheme.primary, lineWidth: MiraTheme.strokeThin)
                         )
                 }

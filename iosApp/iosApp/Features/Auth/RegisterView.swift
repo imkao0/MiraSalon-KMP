@@ -167,7 +167,7 @@ struct RegisterContent: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: MiraTheme.buttonHeight)
                     .background(MiraTheme.primary)
-                    .cornerRadius(MiraTheme.radiusMedium)
+                    .cornerRadius(MiraTheme.radiusSmall)
                 }
                 .buttonStyle(.plain)
                 .disabled(isLoading)

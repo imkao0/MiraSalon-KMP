@@ -117,7 +117,7 @@ private struct MessageItem: View {
                     .foregroundColor(isMe ? MiraTheme.onPrimaryContainer : MiraTheme.onSurfaceVariant)
                     .padding(MiraTheme.spacingMedium)
                     .background(isMe ? MiraTheme.primaryContainer : MiraTheme.surfaceVariant)
-                    .cornerRadius(MiraTheme.radiusMedium, corners: isMe ? [.topLeft, .bottomLeft, .bottomRight] : [.topRight, .bottomLeft, .bottomRight])
+                    .cornerRadius(MiraTheme.radiusSmall, corners: isMe ? [.topLeft, .bottomLeft, .bottomRight] : [.topRight, .bottomLeft, .bottomRight])
                     .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
 
                 HStack(spacing: 4) {

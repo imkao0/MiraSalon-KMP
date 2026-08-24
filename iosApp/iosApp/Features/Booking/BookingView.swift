@@ -37,7 +37,10 @@ struct BookingView: View {
                         BookingDropdownSheetView(
                             expanded: state.sheetExpanded,
                             date: state.selectedDate,
-                            bookings: state.selectedDateBookings
+                            bookings: state.selectedDateBookings,
+                            onMessageClick: { bookingId in
+                                // Handle message click
+                            }
                         )
                         
                         SpecialistSection(state: state) { specialistId in

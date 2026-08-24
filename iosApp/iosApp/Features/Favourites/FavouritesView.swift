@@ -4,7 +4,6 @@ import ComposeApp
 /// Mirrors Android `FavouritesScreen.kt`.
 struct FavouritesView: View {
     @EnvironmentObject private var navigation: CircuitNavigation
-    @State private var selectedTab = 0
 
     var body: some View {
         CircuitView(screen: ProfileRouteFavourites(), navigator: navigation) { (state: FavouritesState_) in
@@ -15,15 +14,7 @@ struct FavouritesView: View {
                         .bold()
                 }
 
-                // Tab Row
-                HStack(spacing: 0) {
-                    TabItem(title: "Products", isSelected: selectedTab == 0) { selectedTab = 0 }
-                    TabItem(title: "Services", isSelected: selectedTab == 1) { selectedTab = 1 }
-                }
-                .padding(.vertical, 8)
-                .background(MiraTheme.background)
-
-                let isEmpty = selectedTab == 0 ? state.products.isEmpty : state.services.isEmpty
+                let isEmpty = state.products.isEmpty && state.services.isEmpty
 
                 if isEmpty {
                     EmptyStateView(
@@ -34,7 +25,11 @@ struct FavouritesView: View {
                 } else {
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: MiraTheme.spacingMedium) {
-                            if selectedTab == 0 {
+                            // Products section
+                            if !state.products.isEmpty {
+                                FavouritesSectionHeader(title: "Products", count: state.products.count)
+                                    .gridCellColumns(2)
+                                
                                 ForEach(state.products, id: \.id) { product in
                                     FavouriteProductCardView(product: product) {
                                         state.eventSink(FavouritesEventProductClicked(id: product.id))
@@ -42,7 +37,13 @@ struct FavouritesView: View {
                                         state.eventSink(FavouritesEventRemoveProductFavorite(id: product.id))
                                     }
                                 }
-                            } else {
+                            }
+
+                            // Services section
+                            if !state.services.isEmpty {
+                                FavouritesSectionHeader(title: "Services", count: state.services.count)
+                                    .gridCellColumns(2)
+                                
                                 ForEach(state.services, id: \.id) { service in
                                     FavouriteServiceCardView(service: service) {
                                         state.eventSink(FavouritesEventServiceClicked(id: service.id))
@@ -61,24 +62,22 @@ struct FavouritesView: View {
     }
 }
 
-private struct TabItem: View {
+private struct FavouritesSectionHeader: View {
     let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
+    let count: Int
+    
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 15, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? MiraTheme.primary : MiraTheme.onSurfaceVariant)
-                Rectangle()
-                    .fill(isSelected ? MiraTheme.primary : Color.clear)
-                    .frame(height: 3)
-            }
-            .frame(maxWidth: .infinity)
+        HStack {
+            Text(title)
+                .font(.title3)
+                .bold()
+                .foregroundColor(MiraTheme.onSurface)
+            Spacer()
+            Text("\(count) items")
+                .font(.subheadline)
+                .foregroundColor(MiraTheme.onSurfaceVariant)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, MiraTheme.spacingSmall)
     }
 }
 
@@ -98,25 +97,33 @@ private struct FavouriteProductCardView: View {
                         MiraTheme.surfaceVariant
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: MiraTheme.cardImageHeight)
+                    .frame(height: 180)
                     .clipped()
+
+                    // Gradient overlay
+                    LinearGradient(
+                        colors: [Color.clear, Color.black.opacity(0.6)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 180)
 
                     Button(action: onRemove) {
                         Image(systemName: "heart.fill")
                             .foregroundColor(.red)
-                            .padding(MiraTheme.spacingSmall)
-                            .background(Color.white.opacity(0.9))
+                            .frame(width: 36, height: 36)
+                            .background(Color.white.opacity(0.95))
                             .clipShape(Circle())
-                            .padding(MiraTheme.spacingSmall)
+                            .padding(8)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: MiraTheme.spacingTiny) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(product.name)
                         .font(.caption)
                         .bold()
                         .lineLimit(2)
-                        .foregroundColor(MiraTheme.onSurface)
+                        .foregroundColor(.white)
 
                     HStack {
                         Text(Double(product.discountedPrice).miraPrice())
@@ -124,20 +131,22 @@ private struct FavouriteProductCardView: View {
                             .bold()
                             .foregroundColor(MiraTheme.primary)
                         Spacer()
-                        Text("SALE")
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(MiraTheme.primaryContainer)
-                            .foregroundColor(MiraTheme.onPrimaryContainer)
-                            .cornerRadius(4)
+                        if product.discountPercent > 0 {
+                            Text("-\(product.discountPercent)%")
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(MiraTheme.primary)
+                                .foregroundColor(.white)
+                                .cornerRadius(6)
+                        }
                     }
                 }
-                .padding(MiraTheme.spacingDefault)
+                .padding(12)
             }
             .background(MiraTheme.surface)
-            .cornerRadius(MiraTheme.radiusMedium)
-            .miraElevation(MiraTheme.elevationLow)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -151,39 +160,49 @@ private struct FavouriteServiceCardView: View {
     var body: some View {
         Button(action: onClick) {
             ZStack(alignment: .topTrailing) {
-                VStack(spacing: MiraTheme.spacingSmall) {
+                VStack(spacing: 0) {
+                    // Gradient background icon area
                     ZStack {
-                        Circle().fill(MiraTheme.primary.opacity(0.1)).frame(width: MiraTheme.iconSizeLarge, height: MiraTheme.iconSizeLarge)
-                        Image(systemName: "heart.fill").foregroundColor(MiraTheme.primary)
+                        LinearGradient(
+                            colors: [MiraTheme.primary.opacity(0.2), MiraTheme.primary.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .frame(height: 115)
+                        .cornerRadius(2)
+                        
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(MiraTheme.primary)
+                            .font(.system(size: 40))
                     }
 
-                    Text(service.name)
-                        .font(.caption)
-                        .bold()
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .foregroundColor(MiraTheme.onSurface)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(service.name)
+                            .font(.caption)
+                            .bold()
+                            .lineLimit(2)
+                            .foregroundColor(MiraTheme.onSurface)
 
-                    Text(Double(service.price).miraPrice())
-                        .font(.subheadline)
-                        .bold()
-                        .foregroundColor(MiraTheme.primary)
+                        Text(Double(service.price).miraPrice())
+                            .font(.subheadline)
+                            .bold()
+                            .foregroundColor(MiraTheme.primary)
+                    }
+                    .padding(.top, 8)
                 }
-                .padding(MiraTheme.spacingMedium)
-                .frame(maxWidth: .infinity)
-                .frame(height: 140)
-                .background(MiraTheme.primaryContainer.opacity(0.1))
-                .cornerRadius(MiraTheme.radiusMedium)
+                .padding(12)
 
                 Button(action: onRemove) {
                     Image(systemName: "heart.fill")
                         .foregroundColor(.red)
-                        .padding(6)
-                        .background(Color.white.opacity(0.9))
+                        .frame(width: 32, height: 32)
+                        .background(Color.white.opacity(0.95))
                         .clipShape(Circle())
-                        .padding(MiraTheme.spacingSmall)
                 }
+                .padding(12)
             }
+            .background(MiraTheme.primaryContainer.opacity(0.3))
+            .cornerRadius(2)
         }
         .buttonStyle(.plain)
     }

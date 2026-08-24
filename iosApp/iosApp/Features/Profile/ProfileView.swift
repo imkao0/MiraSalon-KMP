@@ -46,7 +46,15 @@ struct ProfileView: View {
                                         state.eventSink(ProfileEventSavedAddresses())
                                     }
                                     ProfileDivider()
-                                    ProfileMenuRow(icon: "doc.plaintext", label: "Orders & History") {
+                                    ProfileMenuRow(
+                                        icon: "calendar",
+                                        label: "Appointments",
+                                        badgeCount: Int(state.upcomingRemindersCount)
+                                    ) {
+                                        state.eventSink(ProfileEventMyAppointments())
+                                    }
+                                    ProfileDivider()
+                                    ProfileMenuRow(icon: "doc.plaintext", label: "Orders") {
                                         state.eventSink(ProfileEventMyOrders())
                                     }
                                 }
@@ -62,7 +70,6 @@ struct ProfileView: View {
                                     ProfileMenuRowWithTrailing(
                                         icon: "bell",
                                         label: "In-app Notifications",
-                                        badgeCount: Int(state.unreadMessagesCount + state.upcomingRemindersCount),
                                         showChevron: true,
                                         trailing: {
                                             MiraRectangularSwitch(isOn: state.inAppNotificationsEnabled) { enabled in

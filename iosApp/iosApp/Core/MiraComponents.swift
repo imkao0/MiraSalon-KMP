@@ -28,7 +28,7 @@ struct MiraButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: MiraTheme.buttonHeight)
             .background(enabled ? MiraTheme.primary : MiraTheme.surfaceVariant)
-            .cornerRadius(MiraTheme.radiusMedium)
+            .cornerRadius(MiraTheme.radiusSmall)
         }
         .buttonStyle(.plain)
         .disabled(!enabled || isLoading)
@@ -48,7 +48,7 @@ struct MiraOutlinedButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: MiraTheme.buttonHeight)
                 .overlay(
-                    RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                    RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                         .stroke(
                             enabled ? MiraTheme.primary : MiraTheme.textSecondary.opacity(0.4),
                             lineWidth: MiraTheme.strokeThin
@@ -104,9 +104,9 @@ struct MiraChip: View {
                 .padding(.horizontal, MiraTheme.spacingMedium)
                 .padding(.vertical, MiraTheme.spacingSmall)
                 .background(isSelected ? MiraTheme.secondaryContainer : Color.clear)
-                .cornerRadius(MiraTheme.radiusMedium)
+                .cornerRadius(MiraTheme.radiusSmall)
                 .overlay(
-                    RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                    RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                         .stroke(
                             isSelected ? Color.clear : MiraTheme.outlineVariant,
                             lineWidth: MiraTheme.strokeThin
@@ -232,7 +232,7 @@ struct MiraErrorView: View {
                         .padding(.horizontal, MiraTheme.spacingLarge)
                         .frame(height: 40)
                         .background(MiraTheme.primary)
-                        .cornerRadius(MiraTheme.radiusMedium)
+                        .cornerRadius(MiraTheme.radiusSmall)
                 }
                 .buttonStyle(.plain)
             }
@@ -262,7 +262,7 @@ struct RatingChip: View {
         .padding(.horizontal, MiraTheme.spacingDefault)
         .padding(.vertical, 6)
         .background(MiraTheme.surfaceVariant.opacity(0.5))
-        .cornerRadius(MiraTheme.radiusMedium)
+        .cornerRadius(MiraTheme.radiusSmall)
     }
 }
 
@@ -283,7 +283,7 @@ struct InfoChip: View {
         .padding(MiraTheme.spacingDefault)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+            RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                 .stroke(MiraTheme.surfaceVariant, lineWidth: 1)
         )
     }
@@ -297,109 +297,60 @@ struct SpecialistCard: View {
 
     var body: some View {
         Button(action: onClick) {
-            ZStack(alignment: .bottom) {
-                let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: specialist.imageUrl)
-                AsyncImage(url: URL(string: resolvedUrl ?? "")) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure(let error):
-                        let _ = print("SpecialistCard: Image load failed for \(resolvedUrl ?? "nil"): \(error.localizedDescription)")
-                        MiraTheme.surfaceVariant.overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(MiraTheme.onSurfaceVariant.opacity(0.3))
-                        )
-                    case .empty:
-                        MiraTheme.surfaceVariant
-                    @unknown default:
-                        MiraTheme.surfaceVariant
-                    }
-                }
-                .frame(width: MiraTheme.cardWidthLarge, height: MiraTheme.cardWidthLarge / 0.7)
-                .clipped()
-                .onAppear {
-                    if let resolvedUrl = resolvedUrl {
-                        print("SpecialistCard: Attempting to load \(resolvedUrl)")
-                    }
-                }
-
-                // Rating badge at top-right
-                Circle()
-                    .fill(Color(hex: 0xFFFFD700))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Text(String(format: "%.1f", specialist.rating))
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.black)
-                    )
-                    .padding(MiraTheme.spacingMedium)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Text(specialist.name)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(MiraTheme.textPrimary)
-                            .lineLimit(1)
-
-                        if specialist.isVerified {
-                            Circle()
-                                .fill(Color(hex: 0xFFFFD700))
-                                .frame(width: 20, height: 20)
-                                .overlay(
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.black)
-                                )
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: specialist.imageUrl)
+                    AsyncImage(url: URL(string: resolvedUrl ?? "")) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure(let error):
+                            let _ = print("SpecialistCard: Image load failed for \(resolvedUrl ?? "nil"): \(error.localizedDescription)")
+                            MiraTheme.surfaceVariant.overlay(
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(MiraTheme.onSurfaceVariant.opacity(0.3))
+                            )
+                        case .empty:
+                            MiraTheme.surfaceVariant
+                        @unknown default:
+                            MiraTheme.surfaceVariant
                         }
                     }
+                    .frame(width: 100, height: 100)
+                    .clipShape(Circle())
+                    .onAppear {
+                        if let resolvedUrl = resolvedUrl {
+                            print("SpecialistCard: Attempting to load \(resolvedUrl)")
+                        }
+                    }
+
+                    // Rating badge at bottom-right
+                    Circle()
+                        .fill(Color(hex: 0xFFFFD700))
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            Text(String(format: "%.1f", specialist.rating))
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.black)
+                        )
+                        .overlay(Circle().stroke(MiraTheme.surface, lineWidth: 1.5))
+                }
+
+                VStack(alignment: .center, spacing: 2) {
+                    Text(specialist.name.components(separatedBy: " ").first ?? "")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(MiraTheme.textPrimary)
+                        .lineLimit(1)
 
                     Text(specialist.role ?? "Specialist")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(MiraTheme.textSecondary)
-                        .lineLimit(2)
-
-                    HStack(spacing: 8) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(MiraTheme.textSecondary)
-                            Text("\(specialist.customersCount)")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(MiraTheme.textSecondary)
-                        }
-
-                        HStack(spacing: 2) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12))
-                                .foregroundColor(MiraTheme.textSecondary)
-                            Text("\(specialist.yearsOfExperience)")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(MiraTheme.textSecondary)
-                        }
-                    }
+                        .lineLimit(1)
                 }
-                .padding(.horizontal, MiraTheme.spacingDefault)
-                .padding(.bottom, 6)
-                .padding(.top, MiraTheme.spacingMedium)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            MiraTheme.surface.opacity(0.7),
-                            MiraTheme.surface
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
             }
-            .frame(width: 160)
-            .cornerRadius(MiraTheme.radiusMedium)
-            .background(MiraTheme.surface)
+            .frame(width: 120)
         }
         .buttonStyle(.plain)
     }

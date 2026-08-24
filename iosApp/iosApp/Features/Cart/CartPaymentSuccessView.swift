@@ -76,8 +76,17 @@ struct CartPaymentSuccessView: View {
 
                             VStack(spacing: 16) {
                                 MiraDetailRow(label: "Order ID", value: String(order.id.prefix(8)).uppercased())
-                                let totalWithShipping = order.subtotal + order.tax + order.shippingFees - order.discount
-                                MiraDetailRow(label: "Amount Paid", value: Double(totalWithShipping).miraPrice())
+                                MiraDetailRow(label: "Subtotal", value: Double(order.subtotal).miraPrice())
+                                if order.discount > 0 {
+                                    MiraDetailRow(label: "Discount", value: "-\(Double(order.discount).miraPrice())")
+                                }
+                                if order.shippingFees > 0 {
+                                    MiraDetailRow(label: "Delivery", value: Double(order.shippingFees).miraPrice())
+                                }
+
+                                let total = order.total > 0 ? order.total : (order.subtotal + order.tax + order.shippingFees - order.discount)
+                                MiraDetailRow(label: "Amount Paid", value: Double(total).miraPrice())
+
                                 MiraDetailRow(label: "Payment Method", value: order.paymentMethod ?? "Card")
                                 MiraDetailRow(label: "Name", value: order.userName ?? "Guest")
                                 MiraDetailRow(label: "Email", value: order.userEmail ?? "")
@@ -143,8 +152,8 @@ private struct OrderSummaryCard: View {
                         .font(.caption2)
                         .foregroundColor(MiraTheme.onSurfaceVariant)
                     Spacer()
-                    let totalWithShipping = order.subtotal + order.tax + order.shippingFees - order.discount
-                    Text(Double(totalWithShipping).miraPrice())
+                    let total = order.total > 0 ? order.total : (order.subtotal + order.tax + order.shippingFees - order.discount)
+                    Text(Double(total).miraPrice())
                         .font(.subheadline)
                         .bold()
                         .foregroundColor(MiraTheme.onSurface)

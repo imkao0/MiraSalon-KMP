@@ -128,7 +128,7 @@ struct SpecialistSection: View {
             if state.isLoadingSpecialists {
                 HStack(spacing: 16) {
                     ForEach(0..<4, id: \.self) { _ in
-                        MiraShimmerBlock(width: 64, height: 80, cornerRadius: 32)
+                        MiraShimmerBlock(width: 72, height: 88, cornerRadius: 36)
                     }
                 }
             } else if state.specialists.isEmpty {
@@ -168,7 +168,7 @@ struct SpecialistAvatar: View {
                         Image(systemName: "person.fill")
                             .foregroundColor(MiraTheme.onSurfaceVariant.opacity(0.5))
                     }
-                    .frame(width: 56, height: 56)
+                    .frame(width: 64, height: 64)
                     .clipShape(Circle())
                     .padding(2)
                     .overlay(
@@ -183,7 +183,7 @@ struct SpecialistAvatar: View {
                     .foregroundColor(isSelected ? MiraTheme.primary : MiraTheme.onSurfaceVariant)
                     .lineLimit(1)
             }
-            .frame(width: 64)
+            .frame(width: 72)
         }
         .buttonStyle(.plain)
     }
@@ -305,7 +305,8 @@ struct BookingDropdownSheetView: View {
     let expanded: Bool
     let date: Kotlinx_datetimeLocalDate?
     let bookings: [ConfirmedBooking]
-    
+    var onMessageClick: (String) -> Void = { _ in }
+
     var body: some View {
         if expanded {
             VStack(alignment: .leading, spacing: 12) {
@@ -324,9 +325,12 @@ struct BookingDropdownSheetView: View {
                         .padding(.vertical, 12)
                         .multilineTextAlignment(.center)
                 } else {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 12) {
                         ForEach(bookings, id: \.id) { booking in
-                            SheetAppointmentCard(booking: booking)
+                            SheetAppointmentCard(
+                                booking: booking,
+                                onMessageClick: onMessageClick
+                            )
                         }
                     }
                 }
@@ -353,32 +357,60 @@ struct BookingDropdownSheetView: View {
 
 struct SheetAppointmentCard: View {
     let booking: ConfirmedBooking
-    
+    let onMessageClick: (String) -> Void
+
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(formatBookingTime(booking.dateTime))
-                    .font(MiraType.labelSmall)
-                    .foregroundColor(MiraTheme.onSurfaceVariant)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(booking.timeSlotLabel.isEmpty ? formatBookingTime(booking.dateTime) : booking.timeSlotLabel)
+                .font(MiraType.labelSmall)
+                .fontWeight(.semibold)
+                .foregroundColor(MiraTheme.onSurfaceVariant)
+
+            HStack(alignment: .center, spacing: 10) {
+                let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: booking.specialistImageUrl ?? booking.salonImageUrl)
+                AsyncImage(url: URL(string: resolvedUrl ?? "")) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(MiraTheme.onSurfaceVariant.opacity(0.5))
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: MiraTheme.radiusDefault))
                 
-                Text(booking.salonName)
-                    .font(MiraType.titleSmall)
-                    .bold()
-                    .foregroundColor(MiraTheme.onSurface)
-                    .lineLimit(1)
-                
-                Text(booking.services.map { $0.name }.joined(separator: ", ").uppercased())
-                    .font(MiraType.labelSmall)
-                    .foregroundColor(MiraTheme.onSurfaceVariant)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(booking.specialistName.isEmpty ? booking.salonName : booking.specialistName)
+                        .font(MiraType.titleSmall)
+                        .bold()
+                        .foregroundColor(MiraTheme.onSurface)
+                        .lineLimit(1)
+
+                    Text(booking.services.map { $0.name }.joined(separator: ", ").isEmpty ? "Service" : booking.services.map { $0.name }.joined(separator: ", "))
+                        .font(MiraType.bodySmall)
+                        .foregroundColor(MiraTheme.onSurfaceVariant)
+                        .lineLimit(1)
+                }
             }
+            .padding(.top, 10)
             
-            Spacer()
-            
-            BookingStatusChip(status: booking.status)
+            HStack(alignment: .center) {
+                StatusPill(label: booking.status.name, isPaid: booking.status == .confirmed)
+
+                Spacer()
+
+                Button(action: { onMessageClick(booking.id) }) {
+                    Image(systemName: "bubble.left")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 14, height: 14)
+                        .foregroundColor(MiraTheme.onSurfaceVariant)
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 12)
         }
-        .padding(12)
-        .background(MiraTheme.primaryContainer.opacity(0.5))
+        .padding(14)
+        .background(MiraTheme.surfaceVariant.opacity(0.5))
         .cornerRadius(MiraTheme.radiusDefault)
     }
     
@@ -390,28 +422,29 @@ struct SheetAppointmentCard: View {
     }
 }
 
-struct BookingStatusChip: View {
-    let status: BookingStatus
+struct StatusPill: View {
+    let label: String
+    let isPaid: Bool
     
     var body: some View {
-        let colors = getColors()
-        Text(status.name)
-            .font(MiraType.labelSmall)
-            .bold()
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(colors.bg)
-            .foregroundColor(colors.fg)
-            .cornerRadius(4)
-    }
-    
-    private func getColors() -> (bg: Color, fg: Color) {
-        switch status {
-        case .confirmed: return (MiraTheme.primary, MiraTheme.onPrimary)
-        case .completed: return (MiraTheme.secondary, MiraTheme.onSecondary)
-        case .cancelled: return (MiraTheme.error, MiraTheme.onError)
-        default: return (MiraTheme.primary, MiraTheme.onPrimary)
+        HStack(spacing: 5) {
+            if isPaid {
+                Circle()
+                    .fill(MiraTheme.secondary)
+                    .frame(width: 5, height: 5)
+            }
+
+            Text(label.uppercased())
+                .font(MiraType.labelSmall)
+                .fontWeight(.semibold)
+                .foregroundColor(isPaid ? MiraTheme.onSecondaryContainer : MiraTheme.onSurfaceVariant)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(
+            isPaid ? MiraTheme.secondaryContainer.opacity(0.5) : MiraTheme.surfaceVariant
+        )
+        .cornerRadius(MiraTheme.radiusDefault)
     }
 }
 

@@ -6,7 +6,7 @@ import SwiftUI
  * AuthBackButton, AuthTextField, SocialLoginSection, SocialButton.
  */
 
-// MARK: - AuthBackButton (41x41, 1.dp outlineVariant border, RadiusMedium)
+// MARK: - AuthBackButton (41x41, 1.dp outlineVariant border, RadiusSmall)
 struct AuthBackButton: View {
     let onClick: () -> Void
 
@@ -20,7 +20,7 @@ struct AuthBackButton: View {
                 .frame(width: 41, height: 41)
                 .contentShape(Rectangle())
                 .overlay(
-                    RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+                    RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                         .stroke(MiraTheme.outlineVariant, lineWidth: MiraTheme.strokeThin)
                 )
         }
@@ -29,7 +29,7 @@ struct AuthBackButton: View {
     }
 }
 
-// MARK: - AuthTextField (56pt, surfaceVariant fill, RadiusMedium, password toggle)
+// MARK: - AuthTextField (56pt, surfaceVariant fill, RadiusSmall, password toggle)
 struct AuthTextField: View {
     @Binding var text: String
     let hint: String
@@ -76,9 +76,9 @@ struct AuthTextField: View {
         .frame(maxWidth: .infinity)
         .frame(height: MiraTheme.buttonHeight)
         .background(isError ? MiraTheme.error.opacity(0.1) : MiraTheme.surfaceVariant)
-        .cornerRadius(MiraTheme.radiusMedium)
+        .cornerRadius(MiraTheme.radiusSmall)
         .overlay(
-            RoundedRectangle(cornerRadius: MiraTheme.radiusMedium)
+            RoundedRectangle(cornerRadius: MiraTheme.radiusSmall)
                 .stroke(isError ? MiraTheme.error : Color.clear, lineWidth: 1)
         )
     }

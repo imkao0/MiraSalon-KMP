@@ -124,7 +124,6 @@ struct MiraAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(Circle().stroke(MiraTheme.onSurface.opacity(0.1), lineWidth: 1))
         .onAppear {
             if let resolved = resolved {
                 print("MiraAvatar: Attempting to load \(resolved)")

@@ -1,6 +1,7 @@
 import SwiftUI
 import ComposeApp
 import PhotosUI
+import UIKit
 
 /// Mirrors Android `EditProfileScreen.kt`.
 struct EditProfileView: View {
@@ -95,8 +96,12 @@ struct EditProfileView: View {
                             .disabled(state.isUploadingImage)
                             .onChange(of: selectedPhoto) { item in
                                 Task {
-                                    if let data = try? await item?.loadTransferable(type: Data.self) {
-                                        state.eventSink(EditProfileEventImageSelected(bytes: KotlinByteArray.from(data: data)))
+                                    guard let item = item else { return }
+                                    if let data = try? await item.loadTransferable(type: Data.self),
+                                       let uiImage = UIImage(data: data),
+                                       let resizedImage = uiImage.downscaled(),
+                                       let resizedData = resizedImage.jpegData(compressionQuality: 0.7) {
+                                        state.eventSink(EditProfileEventImageSelected(bytes: KotlinByteArray.from(data: resizedData)))
                                     }
                                 }
                             }
@@ -199,5 +204,26 @@ private struct EditProfileTextField: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 20)
+    }
+}
+
+extension UIImage {
+    func downscaled(maxDimension: CGFloat = 512) -> UIImage? {
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return self
+        }
+
+        let aspectRatio = size.width / size.height
+        let newSize: CGSize
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            self.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }
