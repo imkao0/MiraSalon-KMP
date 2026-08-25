@@ -9,6 +9,8 @@ data class ChatDetailState(
     val participantId: String? = null,
     val participantName: String? = null,
     val participantAvatarUrl: String? = null,
+    val participantRole: String? = null,
+    val isOnline: Boolean = false,
     val currentUserId: String? = null,
     val currentUserName: String? = null,
     val currentUserAvatarUrl: String? = null,

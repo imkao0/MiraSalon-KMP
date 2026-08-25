@@ -8,6 +8,7 @@ import iz.mkao.mirasalon.core.domain.model.chat.ChatMessage
 import iz.mkao.mirasalon.core.domain.model.chat.ChatSession
 
 data class AdminChatUiState(
+    val currentUserId: String? = null,
     val userName: String? = null,
     val userAvatar: String? = null,
     val specialists: List<Specialist> = emptyList(),
@@ -15,6 +16,7 @@ data class AdminChatUiState(
     val selectedSessionId: String? = null,
     val filteredChannels: List<ChatSession> = emptyList(),
     val selectedSession: ChatSession? = null,
+    val specialistUnreadCounts: Map<String, Int> = emptyMap(),
     val messages: List<ChatMessage> = emptyList(),
     val inputText: String = "",
     val pendingImageBytes: ByteArray? = null,

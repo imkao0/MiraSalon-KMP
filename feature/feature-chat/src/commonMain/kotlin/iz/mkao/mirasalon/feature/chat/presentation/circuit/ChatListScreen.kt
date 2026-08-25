@@ -27,7 +27,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +41,7 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -209,16 +209,14 @@ private fun ChatsContentUi(
                 }
             } else {
                 items(items = state.chats.distinctBy { it.id }, key = { it.id }) { chat ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = {
-                            if (it == SwipeToDismissBoxValue.EndToStart) {
-                                state.eventSink(ChatListEvent.DeleteChat(chat.id))
-                                true
-                            } else {
-                                false
-                            }
+                    val dismissState = rememberSwipeToDismissBoxState()
+                    
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            state.eventSink(ChatListEvent.DeleteChat(chat.id))
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         }
-                    )
+                    }
 
                     SwipeToDismissBox(
                         state = dismissState,
@@ -408,14 +406,6 @@ private fun ChatRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text     = item.lastMessage,
-                style    = MaterialTheme.typography.bodyMedium,
-                color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
 
         Spacer(modifier = Modifier.width(8.dp))

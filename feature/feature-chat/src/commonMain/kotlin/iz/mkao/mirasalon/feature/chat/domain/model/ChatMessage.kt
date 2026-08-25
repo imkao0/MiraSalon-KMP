@@ -14,5 +14,6 @@ data class Conversation(
     val participantRole: String? = null,
     val participantImageUrl: String?,
     val lastMessage: ChatMessage?,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val participantIds: List<String> = emptyList()
 )
