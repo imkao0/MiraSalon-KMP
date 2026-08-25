@@ -71,6 +71,7 @@ fun DashboardHeader(
     subtitle: String? = null,
     userName: String? = null,
     userAvatar: String? = null,
+    showCampaignAssistant: Boolean = false,
     onProfileClick: () -> Unit = {}
 ) {
     val tokenManager: TokenManager = koinInject()
@@ -102,32 +103,35 @@ fun DashboardHeader(
                 Spacer(modifier = Modifier.width(32.dp))
                 Text(subtitle, color = MiraTextSecondary, fontSize = 14.sp)
             }
-            Spacer(modifier = Modifier.width(32.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {  }) {
-                Text("Campaign assistant", color = MiraTextSecondary, fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Surface(
-                    color = Color(0xFFE3F2FD),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        "Demo",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        color = Color(0xFF1976D2),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+            if (showCampaignAssistant) {
+                Spacer(modifier = Modifier.width(32.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { }) {
+                    Text("Campaign assistant", color = MiraTextSecondary, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            "Demo",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = Color(0xFF1976D2),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             
-            Spacer(modifier = Modifier.width(32.dp))
-            Text(
-                "Trend predictions",
-                color = MiraTextSecondary,
-                fontSize = 14.sp,
-                modifier = Modifier.clickable {  }
-            )
+            if (showCampaignAssistant) {
+                Spacer(modifier = Modifier.width(32.dp))
+                Text(
+                    "Trend predictions",
+                    color = MiraTextSecondary,
+                    fontSize = 14.sp,
+                    modifier = Modifier.clickable { }
+                )
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {

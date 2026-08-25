@@ -436,7 +436,6 @@ fun CustomerListItem(
 
             CustomerDetailRow(icon = Icons.Outlined.Email, text = customer.email)
             CustomerDetailRow(icon = Icons.Outlined.Phone, text = if (customer.phone.isBlank()) "No phone number" else customer.phone)
-            CustomerDetailRow(icon = Icons.AutoMirrored.Outlined.Chat, text = "Message", onClick = onMessageClick)
             CustomerDetailRow(icon = Icons.Outlined.StarOutline, text = "Reviews", onClick = onReviewsClick)
             CustomerDetailRow(icon = Icons.Outlined.Badge, text = "Sales", onClick = onSalesClick)
         }

@@ -29,12 +29,9 @@ import iz.mkao.mirasalon.core.domain.model.ActivityEvent
 import iz.mkao.mirasalon.core.domain.model.AdminAppointmentStats
 import iz.mkao.mirasalon.core.domain.model.Product
 import iz.mkao.mirasalon.core.domain.model.SalesTrend
-import iz.mkao.mirasalon.presentation.DesktopScreen
-import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
-import iz.mkao.mirasalon.presentation.LocalProfileClick
-import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
-import iz.mkao.mirasalon.presentation.LocalToggleSidebar
+import iz.mkao.mirasalon.presentation.*
 import iz.mkao.mirasalon.presentation.components.DesktopLoadingState
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 import iz.mkao.mirasalon.presentation.dashboard.cards.AnalyticsCard
 import iz.mkao.mirasalon.presentation.dashboard.cards.AppointmentActivityCard
 import iz.mkao.mirasalon.presentation.dashboard.cards.RecentSalesCard
@@ -47,48 +44,26 @@ fun DesktopDashboardScreenUi(
     state: DesktopDashboardUiState,
     modifier: Modifier = Modifier
 ) {
-    val isSidebarExpanded = LocalSidebarExpanded.current
-    val onToggleSidebar = LocalToggleSidebar.current
-    val onNavigate = LocalDesktopNavigate.current
-    val onProfileClick = LocalProfileClick.current
-
-    Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Dashboard",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 280.dp else 80.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFFF9F9F9))) {
-            Box(modifier = Modifier.padding(horizontal = 40.dp, vertical = 24.dp)) {
-                DashboardHeader(
-                    title = "Welcome back",
-                    userName = state.userName,
-                    userAvatar = state.userAvatar,
-                    onProfileClick = onProfileClick
+    DesktopShell(
+        title = "Welcome back",
+        selectedRoute = "Dashboard"
+    ) {
+        if (state.isLoading && state.salesTrend == null) {
+            DesktopLoadingState()
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                DashboardContent(
+                    salesTrend = state.salesTrend,
+                    appointmentStats = state.appointmentStats,
+                    upcomingStats = state.upcomingStats,
+                    recentActivity = state.recentActivity,
+                    lowStockProducts = state.lowStockProducts
                 )
-            }
-
-            if (state.isLoading && state.salesTrend == null) {
-                DesktopLoadingState()
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 40.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    DashboardContent(
-                        salesTrend = state.salesTrend,
-                        appointmentStats = state.appointmentStats,
-                        upcomingStats = state.upcomingStats,
-                        recentActivity = state.recentActivity,
-                        lowStockProducts = state.lowStockProducts
-                    )
-                    Spacer(modifier = Modifier.height(40.dp))
-                }
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }

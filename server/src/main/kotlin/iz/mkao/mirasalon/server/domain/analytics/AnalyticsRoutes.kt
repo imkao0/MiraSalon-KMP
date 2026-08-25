@@ -208,7 +208,7 @@ fun Route.analyticsRoutes(
     }
 }
 
-private suspend fun calculateUpcomingAppointments(
+private fun calculateUpcomingAppointments(
     appRepo: AppointmentRepository,
     days: Int
 ): AppointmentStatsDto {
@@ -367,7 +367,6 @@ private suspend fun calculateDashboardOverview(
 
         val dayOrders = orders.filter { it.createdAt in dayStart until dayEnd }
 
-        // Counts should ONLY reflect appointments for the "Confirmed" label in the UI
         val confirmed = dayApps.count {
             it.status == AppointmentStatusDto.CONFIRMED ||
             it.status == AppointmentStatusDto.COMPLETED
@@ -554,7 +553,6 @@ private suspend fun calculateSalesTrend(
             it.status == OrderStatusDto.DELIVERED
         }.sumOf { it.totalAmount }
 
-        // The trend point for "appointments" should only reflect actual appointments, not orders
         val confirmedAppointments = dayApps.count { 
             it.status == AppointmentStatusDto.CONFIRMED || it.status == AppointmentStatusDto.COMPLETED 
         }
