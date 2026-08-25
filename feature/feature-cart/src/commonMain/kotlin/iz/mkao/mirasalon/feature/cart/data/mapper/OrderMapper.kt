@@ -3,7 +3,10 @@ package iz.mkao.mirasalon.feature.cart.data.mapper
 import iz.mkao.mirasalon.core.database.dao.OrderWithItems
 import iz.mkao.mirasalon.core.database.entity.OrderEntity
 import iz.mkao.mirasalon.core.database.entity.OrderItemEntity
-import iz.mkao.mirasalon.core.domain.model.*
+import iz.mkao.mirasalon.core.domain.model.CartItem
+import iz.mkao.mirasalon.core.domain.model.Order
+import iz.mkao.mirasalon.core.domain.model.OrderStatus
+import iz.mkao.mirasalon.core.domain.model.Product
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.network.model.dto.OrderDto
 import iz.mkao.mirasalon.core.network.model.dto.OrderItemDto
@@ -22,7 +25,7 @@ fun OrderDto.toDomain(): Order = Order(
     discount = discountAmount,
     total = totalAmount,
     status = status.toDomain(),
-    placedAtEpochSeconds = createdAt,
+    placedAtMillis = createdAt,
     promoCode = promoCode,
     shippingAddress = shippingAddress,
     paymentMethod = paymentMethod,
@@ -119,7 +122,7 @@ fun OrderWithItems.toDomain(): Order {
         discount = o.discountAmount,
         total = o.totalAmount,
         status = try { OrderStatus.valueOf(o.status) } catch(e: Exception) { OrderStatus.PENDING },
-        placedAtEpochSeconds = o.createdAt / 1000,
+        placedAtMillis = o.createdAt,
         promoCode = o.promoCode,
         shippingAddress = o.shippingAddress,
         paymentMethod = o.paymentMethod

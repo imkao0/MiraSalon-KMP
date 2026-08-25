@@ -48,7 +48,7 @@ struct CartPaymentSuccessView: View {
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(MiraTheme.onBackground)
 
-                            Text(MiraDateFormat.successDate(epochMillis: order.placedAtEpochSeconds * 1000))
+                            Text(MiraDateFormat.successDate(epochMillis: order.placedAtMillis))
                                 .font(.subheadline)
                                 .foregroundColor(MiraTheme.onSurfaceVariant)
                                 .padding(.top, 8)

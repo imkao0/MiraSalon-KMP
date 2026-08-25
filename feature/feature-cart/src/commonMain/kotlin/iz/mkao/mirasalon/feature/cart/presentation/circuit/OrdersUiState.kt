@@ -34,7 +34,7 @@ internal fun Order.toUiModel(): OrderUiModel {
     val formattedExpiry = expiry?.let { DateUtils.formatDateFull(it) }
     return OrderUiModel(
         order = this,
-        formattedDate = DateUtils.formatDateFull(placedAtEpochSeconds),
+        formattedDate = DateUtils.formatDateFull(placedAtMillis / 1000),
         isExpired = isExpired,
         formattedExpiry = formattedExpiry
     )
