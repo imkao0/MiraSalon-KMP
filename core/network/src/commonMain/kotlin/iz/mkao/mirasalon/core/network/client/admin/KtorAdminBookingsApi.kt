@@ -24,7 +24,7 @@ class KtorAdminBookingsApi(private val httpClient: HttpClient) : AdminBookingsAp
         dateTo: Long?,
         page: Int,
         pageSize: Int
-    ): Outcome<PagedResponse<AppointmentDto>> = apiCall {
+    ): Outcome<PagedResponse<AppointmentDto>> = apiCall<PagedResponse<AppointmentDto>> {
         httpClient.get(Endpoints.BOOKINGS) {
             parameter("status", status)
             parameter("specialistId", specialistId)
@@ -36,18 +36,18 @@ class KtorAdminBookingsApi(private val httpClient: HttpClient) : AdminBookingsAp
         }
     }
 
-    override suspend fun updateBookingStatus(id: String, status: String): Outcome<AppointmentDto> = apiCall {
+    override suspend fun updateBookingStatus(id: String, status: String): Outcome<AppointmentDto> = apiCall<AppointmentDto> {
         httpClient.put(Endpoints.bookingStatus(id)) {
             contentType(ContentType.Application.Json)
             setBody(UpdateAppointmentStatusRequest(status))
         }
     }
 
-    override suspend fun deleteBooking(id: String): Outcome<Unit> = apiCall {
+    override suspend fun deleteBooking(id: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.bookingDetail(id))
     }
 
-    override suspend fun createBooking(request: CreateAppointmentRequest): Outcome<AppointmentDto> = apiCall {
+    override suspend fun createBooking(request: CreateAppointmentRequest): Outcome<AppointmentDto> = apiCall<AppointmentDto> {
         httpClient.post(Endpoints.BOOKINGS) {
             contentType(ContentType.Application.Json)
             setBody(request)

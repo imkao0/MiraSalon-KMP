@@ -95,6 +95,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            implementation(libs.coil.svg)
             implementation(libs.cmptoast)
             implementation(libs.napier)
 

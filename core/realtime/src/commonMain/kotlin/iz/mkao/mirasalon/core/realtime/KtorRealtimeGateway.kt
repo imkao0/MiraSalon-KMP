@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.core.realtime
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocketSession
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,8 +27,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
-import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -47,9 +50,11 @@ open class KtorRealtimeGateway(
 
     protected var reconnectAttempt = 0
     protected var connectionJob: Job? = null
+    protected val connectionMutex = Mutex()
     protected val chatScopes = mutableMapOf<String, CoroutineScope>()
     protected val chatEventFlows = mutableMapOf<String, MutableSharedFlow<DomainEvent>>()
     protected val chatSessions = mutableMapOf<String, DefaultClientWebSocketSession>()
+    protected val pendingMessages = mutableMapOf<String, MutableList<DomainEvent>>()
 
     override suspend fun connect() {
         if (connectionJob?.isActive == true) return
@@ -70,31 +75,51 @@ open class KtorRealtimeGateway(
     }
 
     override suspend fun connectToChat(chatId: String) {
-        if (chatScopes.containsKey(chatId)) return
-        val chatScope = CoroutineScope(SupervisorJob())
-        chatScopes[chatId] = chatScope
-        chatEventFlows.getOrPut(chatId) { MutableSharedFlow(extraBufferCapacity = 32) }
-        chatScope.launch { runChatConnectionLoop(chatId) }
+        connectionMutex.withLock {
+            if (chatScopes.containsKey(chatId)) return
+            val chatScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            chatScopes[chatId] = chatScope
+            chatEventFlows.getOrPut(chatId) { MutableSharedFlow(replay = 8, extraBufferCapacity = 32) }
+            chatScope.launch { runChatConnectionLoop(chatId) }
+        }
     }
 
     override suspend fun disconnectFromChat(chatId: String) {
-        chatScopes.remove(chatId)?.cancel()
+        connectionMutex.withLock {
+            chatScopes.remove(chatId)?.cancel()
+            chatSessions.remove(chatId)?.let { runCatching { it.close() } }
+        }
     }
 
     override fun observeChatEvents(chatId: String): Flow<DomainEvent> {
-        return chatEventFlows.getOrPut(chatId) { MutableSharedFlow(extraBufferCapacity = 32) }
+        return chatEventFlows.getOrPut(chatId) { MutableSharedFlow(replay = 8, extraBufferCapacity = 32) }
     }
 
     override suspend fun sendChatEvent(chatId: String, event: DomainEvent) {
         val session = chatSessions[chatId]
         if (session != null && session.isActive) {
             val payload = json.encodeToString(DomainEvent.serializer(), event)
-            session.send(Frame.Text(payload))
+            val result = runCatching { session.send(Frame.Text(payload)) }
+            if (result.isFailure) {
+                Napier.e(result.exceptionOrNull()) { "[RealtimeGateway] Failed to send event to $chatId. Queueing." }
+                pendingMessages.getOrPut(chatId) { mutableListOf() }.add(event)
+            }
+        } else {
+            Napier.w { "[RealtimeGateway] No active session for $chatId. Queueing message and triggering connect." }
+            pendingMessages.getOrPut(chatId) { mutableListOf() }.add(event)
+            connectToChat(chatId)
         }
     }
 
     protected suspend fun runConnectionLoop() {
-        while (coroutineContext.isActive) {
+        while (currentCoroutineContext().isActive) {
+            val token = tokenProvider.accessToken()
+            if (token == null) {
+                _connectionState.value = RealtimeConnectionState.Idle
+                delay(5000.milliseconds)
+                continue
+            }
+
             _connectionState.value = if (reconnectAttempt == 0) {
                 RealtimeConnectionState.Connecting
             } else {
@@ -117,17 +142,22 @@ open class KtorRealtimeGateway(
             runCatching {
                 for (frame in session.incoming) {
                     if (frame is Frame.Text) {
-                        val event = runCatching { json.decodeFromString<DomainEvent>(frame.readText()) }
+                        val text = frame.readText()
+                        Napier.v { "[RealtimeGateway] Raw event (notifications): $text" }
+                        val event = runCatching { json.decodeFromString<DomainEvent>(text) }
                             .onFailure { if (it is CancellationException) throw it }
                             .getOrNull()
                         // This pipe no longer receives chat messages in the "Strict" server implementation.
-                        if (event != null) _events.emit(event)
+                        if (event != null) {
+                            Napier.d { "[RealtimeGateway] Decoded event (notifications): $event" }
+                            _events.emit(event)
+                        }
                     }
                 }
             }.onFailure { if (it is CancellationException) throw it }
 
             session.close()
-            if (!coroutineContext.isActive) return
+            if (!currentCoroutineContext().isActive) return
             awaitBackoff()
         }
     }
@@ -138,9 +168,18 @@ open class KtorRealtimeGateway(
         val eventFlow = chatEventFlows[chatId]!!
 
         while (chatScopes[chatId]?.isActive == true) {
+            val token = tokenProvider.accessToken()
+            if (token == null) {
+                delay(5000.milliseconds)
+                continue
+            }
+
             val session = runCatching {
                 httpClient.webSocketSession(urlString = chatUrl)
-            }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+            }.onFailure { 
+                if (it is CancellationException) throw it 
+                Napier.e(it) { "[RealtimeGateway] Connection failed for chat $chatId at $chatUrl" }
+            }.getOrNull()
 
             if (session == null) {
                 chatReconnectAttempt++
@@ -150,14 +189,36 @@ open class KtorRealtimeGateway(
 
             chatReconnectAttempt = 0
             chatSessions[chatId] = session
+            Napier.i { "[RealtimeGateway] Successfully connected to chat $chatId. Flushing ${pendingMessages[chatId]?.size ?: 0} pending messages." }
+            
+            // Flush pending messages
+            pendingMessages[chatId]?.let { queue ->
+                val iterator = queue.iterator()
+                while (iterator.hasNext()) {
+                    val msg = iterator.next()
+                    runCatching {
+                        val payload = json.encodeToString(DomainEvent.serializer(), msg)
+                        session.send(Frame.Text(payload))
+                        iterator.remove()
+                    }.onFailure { 
+                        Napier.e(it) { "[RealtimeGateway] Failed to flush pending message for $chatId" }
+                        break 
+                    }
+                }
+            }
             runCatching {
                 for (frame in session.incoming) {
                     if (frame is Frame.Text) {
-                        val event = runCatching { json.decodeFromString<DomainEvent>(frame.readText()) }
+                        val text = frame.readText()
+                        Napier.v { "[RealtimeGateway] Raw event (chat $chatId): $text" }
+                        val event = runCatching { json.decodeFromString<DomainEvent>(text) }
                             .onFailure { if (it is CancellationException) throw it }
                             .getOrNull()
                         if (event != null) {
+                            Napier.d { "[RealtimeGateway] Decoded event (chat $chatId): $event" }
                             eventFlow.emit(event)
+                            // Forward to global bus so observers like NotificationRepository are alerted
+                            _events.emit(event)
                         }
                     }
                 }

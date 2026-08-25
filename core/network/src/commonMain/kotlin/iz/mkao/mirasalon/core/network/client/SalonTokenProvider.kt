@@ -1,5 +1,7 @@
 package iz.mkao.mirasalon.core.network.client
 
+import kotlinx.coroutines.flow.Flow
+
 interface SalonTokenProvider {
     suspend fun accessToken(): String?
     suspend fun refreshToken(): String?
@@ -22,4 +24,6 @@ interface SalonTokenProvider {
         gender: String? = null
     )
     suspend fun onAuthenticationExpired()
+
+    fun observeUserId(): Flow<String?>
 }

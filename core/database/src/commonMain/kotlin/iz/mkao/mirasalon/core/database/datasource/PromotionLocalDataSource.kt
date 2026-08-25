@@ -8,7 +8,6 @@ import iz.mkao.mirasalon.core.domain.model.PromoType
 import iz.mkao.mirasalon.core.domain.model.Promotion
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant
 
 class PromotionLocalDataSource(private val database: MiraDatabase) {
     private val promoDao = database.promotionDao()
@@ -36,8 +35,8 @@ private fun PromotionEntity.toDomain() = Promotion(
     discountValue = discountValue,
     imageUrl = imageUrl,
     status = try { PromoStatus.valueOf(status) } catch(e: Exception) { PromoStatus.ACTIVE },
-    validFrom = validFrom?.let { Instant.fromEpochMilliseconds(it) },
-    validUntil = validUntil?.let { Instant.fromEpochMilliseconds(it) },
+    validFrom = validFrom?.let { kotlin.time.Instant.fromEpochMilliseconds(it) },
+    validUntil = validUntil?.let { kotlin.time.Instant.fromEpochMilliseconds(it) },
     title = title,
     ctaText = ctaText,
     type = try { PromoType.valueOf(promoType) } catch(e: Exception) { PromoType.EXPERTS }

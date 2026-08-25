@@ -51,6 +51,11 @@ sealed class DomainEvent {
         override val message: String,
         val bookingId: String,
         val specialistId: String = "",
+        val specialistName: String? = null,
+        val specialistAvatarUrl: String? = null,
+        val customerName: String? = null,
+        val customerAvatarUrl: String? = null,
+        val serviceName: String? = null,
         val startTime: Long = 0L,
         val appointmentId: String = ""
     ) : DomainEvent() {
@@ -65,6 +70,10 @@ sealed class DomainEvent {
         override val message: String,
         val bookingId: String,
         val status: String,
+        val specialistName: String? = null,
+        val specialistAvatarUrl: String? = null,
+        val customerName: String? = null,
+        val customerAvatarUrl: String? = null,
         val appointmentId: String = ""
     ) : DomainEvent() {
         companion object
@@ -124,12 +133,25 @@ sealed class DomainEvent {
     }
 
     @Serializable
+    data class SpecialistCreated(
+        override val eventId: String,
+        override val timestamp: Long,
+        override val actorId: String?,
+        override val message: String,
+        val specialistId: String
+    ) : DomainEvent() {
+        companion object
+    }
+
+    @Serializable
     data class UserProfileUpdated(
         override val eventId: String,
         override val timestamp: Long,
         override val actorId: String?,
         override val message: String,
-        val userId: String
+        val userId: String,
+        val userName: String? = null,
+        val userAvatarUrl: String? = null
     ) : DomainEvent() {
         companion object
     }
@@ -154,7 +176,14 @@ sealed class DomainEvent {
         val conversationId: String,
         val messageId: String,
         val senderId: String,
-        val text: String
+        val text: String,
+        val senderName: String? = null,
+        val senderAvatarUrl: String? = null,
+        val specialistId: String? = null, // Specialist ID for server-side participant resolution
+        val senderRole: String = "CLIENT", // CLIENT, SPECIALIST, ADMIN
+        val actingAsId: String? = null, // For Admin impersonation
+        val status: String = "SENT", // SENT, DELIVERED, READ
+        val isInternal: Boolean = false // Zendesk-style internal notes
     ) : DomainEvent() {
         companion object
     }
@@ -172,15 +201,29 @@ sealed class DomainEvent {
     }
 
     @Serializable
+    data class ChatTyping(
+        override val eventId: String,
+        override val timestamp: Long,
+        override val actorId: String?,
+        override val message: String = "Typing...",
+        val conversationId: String,
+        val userId: String,
+        val isTyping: Boolean
+    ) : DomainEvent() {
+        companion object
+    }
+
+    @Serializable
     data class NotificationReceived(
         override val eventId: String,
         override val timestamp: Long,
         override val actorId: String? = null,
         override val message: String,
-        val type: String,
+        val notificationType: String,
         val referenceId: String? = null,
         val senderName: String? = null,
-        val senderAvatarUrl: String? = null
+        val senderAvatarUrl: String? = null,
+        val messageId: String? = null
     ) : DomainEvent() {
         companion object
     }
@@ -206,7 +249,20 @@ sealed class DomainEvent {
         override val timestamp: Long,
         override val actorId: String?,
         override val message: String,
-        val promotionId: String? = null
+        val promotionId: String? = null,
+        val promoTitle: String? = null
+    ) : DomainEvent() {
+        companion object
+    }
+
+    @Serializable
+    data class ChatHistory(
+        override val eventId: String,
+        override val timestamp: Long,
+        override val actorId: String? = null,
+        override val message: String = "Chat history",
+        val conversationId: String,
+        val messages: List<ChatMessageReceived>
     ) : DomainEvent() {
         companion object
     }

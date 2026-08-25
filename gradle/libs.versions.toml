@@ -48,7 +48,6 @@ lifecycle = "2.11.0"
 # Database
 room = "2.8.4"
 sqliteBundled = "2.6.0"       # androidx.sqlite driver, used by Room KMP
-sqldelight = "2.3.2"
 
 # Image loading
 coil = "3.5.0"
@@ -89,6 +88,7 @@ jakarta-inject = "2.0.1"
 # KSafe
 ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
 ksafe-compose = { module = "eu.anifantakis:ksafe-compose", version.ref = "ksafe" }
+coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 
 # Kotlin / Coroutines
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -160,20 +160,13 @@ jetbrains-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:naviga
 jetbrains-lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
 jetbrains-material3-adaptive-navigation3 = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation3", version.ref = "adaptive" }
 
-# Room (replacing SQLDelight)
+# Database
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqliteBundled" }
 
-# SqlDelight
+# Compose
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
-sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
-sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
-sqldelight-primitive-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqldelight" }
-
-# Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
@@ -228,7 +221,6 @@ dependencyAnalysis-gradle = { module = "com.autonomousapps:dependency-analysis-g
 androidPluginGradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlinPluginGradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 composePluginGradle = { module = "org.jetbrains.compose:compose-gradle-plugin", version.ref = "composeMultiplatform" }
-sqldelightPluginGradle = { module = "app.cash.sqldelight:gradle-plugin", version.ref = "sqldelight" }
 kspPluginGradle = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
 
 jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
@@ -273,5 +265,4 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 dependencyAnalysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 kotlinParcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }

@@ -17,7 +17,7 @@ data class Order(
     val discount: Double = 0.0,
     val total: Double,
     val status: OrderStatus = OrderStatus.PENDING,
-    val placedAtEpochSeconds: Long,
+    val placedAtMillis: Long,
     val promoCode: String? = null,
     val shippingAddress: String? = null,
     val paymentMethod: String? = null,

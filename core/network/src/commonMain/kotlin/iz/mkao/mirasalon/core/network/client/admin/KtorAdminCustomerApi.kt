@@ -22,7 +22,7 @@ class KtorAdminCustomerApi(private val httpClient: HttpClient) : AdminCustomerAp
         query: String?,
         page: Int?,
         pageSize: Int?
-    ): Outcome<PagedResponse<CustomerSummaryDto>> = apiCall {
+    ): Outcome<PagedResponse<CustomerSummaryDto>> = apiCall<PagedResponse<CustomerSummaryDto>> {
         httpClient.get(Endpoints.CUSTOMERS) {
             parameter("query", query)
             parameter("page", page)
@@ -30,25 +30,25 @@ class KtorAdminCustomerApi(private val httpClient: HttpClient) : AdminCustomerAp
         }
     }
 
-    override suspend fun createCustomer(request: UpdateCustomerRequestDto): Outcome<String> = apiCall {
+    override suspend fun createCustomer(request: UpdateCustomerRequestDto): Outcome<String> = apiCall<String> {
         httpClient.post(Endpoints.CUSTOMERS) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun fetchCustomerDetail(id: String): Outcome<CustomerDetailDto> = apiCall {
+    override suspend fun fetchCustomerDetail(id: String): Outcome<CustomerDetailDto> = apiCall<CustomerDetailDto> {
         httpClient.get(Endpoints.customer(id))
     }
 
-    override suspend fun updateCustomer(id: String, request: UpdateCustomerRequestDto): Outcome<Unit> = apiCall {
+    override suspend fun updateCustomer(id: String, request: UpdateCustomerRequestDto): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.customer(id)) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun deleteCustomer(id: String): Outcome<Unit> = apiCall {
+    override suspend fun deleteCustomer(id: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.customer(id))
     }
 

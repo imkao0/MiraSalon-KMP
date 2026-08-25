@@ -67,7 +67,7 @@ fun Throwable.toNetworkError(): NetworkError = when (this) {
         is SalonError.Conflict -> NetworkError.HttpError(409, error.asUiMessage())
         is SalonError.Validation -> NetworkError.HttpError(422, error.asUiMessage())
         is SalonError.ServerError -> NetworkError.HttpError(error.code, error.asUiMessage())
-        is SalonError.Serialization -> NetworkError.Unknown(error.asUiMessage())
+        is SalonError.DataParsing -> NetworkError.Unknown(error.asUiMessage())
         is SalonError.Unknown -> NetworkError.Unknown(error.asUiMessage())
     }
     is kotlinx.io.IOException -> NetworkError.NoConnection()

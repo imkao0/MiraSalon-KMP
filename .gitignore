@@ -1,9 +1,37 @@
 .gradle/
+.gradle_tmp/
 .idea/
 .kotlin/
 build/
+**/build/
 local.properties
 .env
 *.env.local
-.env
-*.env.local
+
+# iOS
+iosApp/iosApp.xcodeproj/project.xcworkspace/
+iosApp/iosApp.xcodeproj/xcuserdata/
+DerivedData/
+
+# Server
+server/uploads/
+
+# Screenshots & Media (if not intended for commit)
+# screenshots/mobile/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Backup files
+*.bak
+
+# Project specific
+.artifacts/
+.gradle_user_home/
+terminal_logs/
+.todo.json
+todo.md
+AGENTS.md

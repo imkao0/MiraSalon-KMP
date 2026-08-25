@@ -23,7 +23,7 @@ class KtorAdminOrdersApi(private val httpClient: HttpClient) : AdminOrdersApi {
         dateTo: Long?,
         page: Int,
         pageSize: Int
-    ): Outcome<PagedResponse<OrderDto>> = apiCall {
+    ): Outcome<PagedResponse<OrderDto>> = apiCall<PagedResponse<OrderDto>> {
         httpClient.get(Endpoints.ORDERS_ALL) {
             parameter("status", status)
             parameter("query", query)
@@ -34,14 +34,14 @@ class KtorAdminOrdersApi(private val httpClient: HttpClient) : AdminOrdersApi {
         }
     }
 
-    override suspend fun updateOrderStatus(id: String, status: String): Outcome<Unit> = apiCall {
+    override suspend fun updateOrderStatus(id: String, status: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.orderStatus(id)) {
             contentType(ContentType.Application.Json)
             setBody(UpdateOrderStatusRequest(status))
         }
     }
 
-    override suspend fun deleteOrder(id: String): Outcome<Unit> = apiCall {
+    override suspend fun deleteOrder(id: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.orderDetail(id))
     }
 

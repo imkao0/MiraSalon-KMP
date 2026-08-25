@@ -15,5 +15,6 @@ data class SpecialistEntity(
     val salonId: String? = null,
     val customersCount: Int = 0,
     val yearsOfExperience: Int = 0,
-    val isOnline: Boolean = false
+    val isOnline: Boolean = false,
+    val userId: String? = null
 )

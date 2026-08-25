@@ -10,7 +10,6 @@ dependencies {
     implementation(libs.androidPluginGradle)
     implementation(libs.kotlinPluginGradle)
     implementation(libs.composePluginGradle)
-    implementation(libs.sqldelightPluginGradle)
     implementation(libs.kspPluginGradle)
     implementation(libs.detekt.gradle)
     implementation(libs.ktlint.gradle)
@@ -31,10 +30,6 @@ gradlePlugin {
         register("kmpFeature") {
             id = "mirasalon.kmp.feature"
             implementationClass = "mirasalon.convention.KmpFeatureConventionPlugin"
-        }
-        register("sqlDelight") {
-            id = "mirasalon.sqldelight"
-            implementationClass = "mirasalon.convention.SqlDelightConventionPlugin"
         }
         register("koin") {
             id = "mirasalon.koin"

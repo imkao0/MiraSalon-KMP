@@ -8,6 +8,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import iz.mkao.mirasalon.core.network.model.SalonApiConfig
 import iz.mkao.mirasalon.core.network.result.SalonApiException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,6 +33,8 @@ class SalonNetworkClientTest {
         override suspend fun userName(): String? = null
         override suspend fun userAddress(): String? = null
         override suspend fun userAvatarUrl(): String? = null
+        override suspend fun savedEmail(): String? = null
+        override suspend fun saveEmail(email: String?) {}
         override suspend fun onTokensRefreshed(
             accessToken: String,
             refreshToken: String,
@@ -50,6 +54,8 @@ class SalonNetworkClientTest {
             accessToken = null
             refreshToken = null
         }
+
+        override fun observeUserId(): Flow<String?> = flowOf("user_1")
     }
 
     @Test

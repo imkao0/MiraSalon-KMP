@@ -29,6 +29,7 @@ import iz.mkao.mirasalon.core.domain.model.Cart
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.repository.CartRepository
 import iz.mkao.mirasalon.core.domain.repository.NotificationRepository
+import iz.mkao.mirasalon.core.domain.repository.UpcomingAppointmentsSource
 import iz.mkao.mirasalon.core.navigation.AuthRoute
 import iz.mkao.mirasalon.core.navigation.BottomNavKey
 import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
@@ -62,6 +63,10 @@ fun MainScreen() {
     val unreadNotificationCount by notificationRepository.unreadCount
         .collectAsStateWithLifecycle(initialValue = 0)
 
+    val upcomingAppointmentsSource: UpcomingAppointmentsSource = koinInject()
+    val upcomingAppointmentsCount by upcomingAppointmentsSource.observeUpcomingAppointmentsCount()
+        .collectAsStateWithLifecycle(initialValue = 0)
+
     val connectionScope = rememberCoroutineScope()
     DisposableEffect(realtimeGateway) {
         connectionScope.launch { realtimeGateway.connect() }
@@ -74,33 +79,24 @@ fun MainScreen() {
         realtimeGateway.events
             .onEach { event ->
                 val message = when (event) {
-                    is DomainEvent.BookingCreated -> "New appointment scheduled!"
-                    is DomainEvent.BookingUpdated -> {
-                        if (event.status.uppercase() == "CANCELLED") "An appointment was cancelled."
-                        else "Appointment details updated."
-                    }
-                    is DomainEvent.InventoryUpdated -> "Stock updated for one of our products."
-                    is DomainEvent.SpecialistStatusChanged -> "Specialist information updated."
-                    is DomainEvent.OrderCreated -> "Order placed successfully!"
+                    is DomainEvent.BookingCreated -> event.message
+                    is DomainEvent.BookingUpdated -> event.message
+                    is DomainEvent.OrderCreated -> event.message
                     is DomainEvent.ChatMessageReceived -> null
+                    is DomainEvent.AppointmentReminder -> {
+                        val sender = event.specialistName?.let { "$it: " } ?: ""
+                        "$sender${event.message}"
+                    }
+                    is DomainEvent.PromotionChanged -> event.message
                     is DomainEvent.NotificationReceived -> {
-                        if (event.message.contains("Mira salon you have a new notification", ignoreCase = true) || 
-                            event.message.contains("You have a new notification", ignoreCase = true)) {
-                            when (event.type.uppercase()) {
-                                "MESSAGE" -> "New message from specialist"
-                                "PROMO" -> "New promotion available!"
-                                "REMINDER" -> "Appointment reminder"
-                                "LIKE" -> "Someone liked your photo"
-                                "COMMENT" -> "New comment on your post"
-                                "FOLLOW" -> "New follower!"
-                                else -> event.message
-                            }
-                        } else event.message
+                        val sender = event.senderName?.takeIf { it.isNotBlank() }?.let { "$it: " } ?: ""
+                        "$sender${event.message}"
                     }
-                    is DomainEvent.ReviewSubmitted -> {
-                        val name = event.userName ?: "A customer"
-                        "$name submitted a ${event.rating}-star review!"
-                    }
+                    // ReviewSubmitted events are routed to the admin desktop
+                    // dashboard only; clients should never be notified about
+                    // their own (or others') review submissions.
+                    is DomainEvent.ReviewSubmitted -> null
+                    is DomainEvent.UserProfileUpdated -> event.message
                     else -> null
                 }
                 
@@ -134,7 +130,7 @@ fun MainScreen() {
     val backStack = rememberSaveableBackStack(initialScreen)
     val navigator = rememberCircuitNavigator(backStack) { /* onRootPop */ }
 
-    val bottomNavItems = remember(cart.itemCount, unreadMessageCount) {
+    val bottomNavItems = remember(cart.itemCount, unreadMessageCount, upcomingAppointmentsCount) {
         BottomNavKey.items.map { key: BottomNavKey ->
             BottomNavItem(
                 label = key.label,
@@ -143,6 +139,7 @@ fun MainScreen() {
                 badgeCount = when (key) {
                     is BottomNavKey.Cart -> cart.itemCount
                     is BottomNavKey.Chat -> unreadMessageCount
+                    is BottomNavKey.Booking -> upcomingAppointmentsCount
                     else -> 0
                 }
             )
