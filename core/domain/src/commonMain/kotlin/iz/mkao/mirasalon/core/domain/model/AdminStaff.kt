@@ -18,7 +18,8 @@ data class AdminSpecialist(
     val customersServed: Int = 0,
     val yearsOfExperience: Int = 0,
     val services: List<Service> = emptyList(),
-    val shifts: List<AdminSpecialistShift> = emptyList()
+    val shifts: List<AdminSpecialistShift> = emptyList(),
+    val absences: List<AdminSpecialistAbsence> = emptyList()
 )
 
 /** A recurring weekly shift for a specialist. */
@@ -28,7 +29,26 @@ data class AdminSpecialistShift(
     val dayOfWeek: Int,
     val startTime: String,
     val endTime: String,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val breaks: List<AdminSpecialistBreak> = emptyList()
+)
+
+/** A break within a shift (e.g., lunch break). */
+data class AdminSpecialistBreak(
+    val id: String = "",
+    val startTime: String,
+    val endTime: String,
+    val title: String = "Break"
+)
+
+/** A temporary absence for a specific time range. */
+data class AdminSpecialistAbsence(
+    val id: String = "",
+    val specialistId: String = "",
+    val startTime: Long, // timestamp
+    val endTime: Long, // timestamp
+    val reason: String? = null,
+    val createdAt: Long = 0
 )
 
 /** Aggregated performance statistics for a specialist. */

@@ -13,6 +13,7 @@ sealed interface ChatRoute : Route {
     data class ChatDetail(
         val conversationId: String,
         val participantName: String? = null,
-        val participantAvatarUrl: String? = null
+        val participantAvatarUrl: String? = null,
+        val participantId: String? = null
     ) : ChatRoute
 }

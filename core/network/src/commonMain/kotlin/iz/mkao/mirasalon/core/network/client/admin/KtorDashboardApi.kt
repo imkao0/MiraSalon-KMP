@@ -14,41 +14,41 @@ import iz.mkao.mirasalon.core.network.result.apiCall
 
 class KtorDashboardApi(private val httpClient: HttpClient) : DashboardApi {
 
-    override suspend fun fetchAppointmentStats(days: Int): Outcome<AppointmentStatsDto> = apiCall {
+    override suspend fun fetchAppointmentStats(days: Int): Outcome<AppointmentStatsDto> = apiCall<AppointmentStatsDto> {
         httpClient.get(Endpoints.APPOINTMENTS) {
             parameter("days", days)
         }
     }
 
-    override suspend fun fetchOverviewStats(days: Int): Outcome<AppointmentStatsDto> = apiCall {
+    override suspend fun fetchOverviewStats(days: Int): Outcome<AppointmentStatsDto> = apiCall<AppointmentStatsDto> {
         httpClient.get(Endpoints.OVERVIEW) {
             parameter("days", days)
         }
     }
 
-    override suspend fun fetchSalesTrend(days: Int): Outcome<SalesTrendDto> = apiCall {
+    override suspend fun fetchSalesTrend(days: Int): Outcome<SalesTrendDto> = apiCall<SalesTrendDto> {
         httpClient.get(Endpoints.SALES) {
             parameter("days", days)
         }
     }
 
-    override suspend fun fetchRecentActivity(): Outcome<List<ActivityEventDto>> = apiCall {
+    override suspend fun fetchRecentActivity(): Outcome<List<ActivityEventDto>> = apiCall<List<ActivityEventDto>> {
         httpClient.get(Endpoints.ACTIVITY)
     }
 
-    override suspend fun fetchSpecialistPerformance(days: Int): Outcome<List<SpecialistPerformanceDto>> = apiCall {
+    override suspend fun fetchSpecialistPerformance(days: Int): Outcome<List<SpecialistPerformanceDto>> = apiCall<List<SpecialistPerformanceDto>> {
         httpClient.get(Endpoints.SPECIALISTS) {
             parameter("days", days)
         }
     }
 
-    override suspend fun fetchServicePopularity(days: Int): Outcome<List<ServicePopularityDto>> = apiCall {
+    override suspend fun fetchServicePopularity(days: Int): Outcome<List<ServicePopularityDto>> = apiCall<List<ServicePopularityDto>> {
         httpClient.get(Endpoints.SERVICES) {
             parameter("days", days)
         }
     }
 
-    override suspend fun fetchLowStockProducts(threshold: Int): Outcome<List<ProductDto>> = apiCall {
+    override suspend fun fetchLowStockProducts(threshold: Int): Outcome<List<ProductDto>> = apiCall<List<ProductDto>> {
         httpClient.get(Endpoints.LOW_STOCK) {
             parameter("threshold", threshold)
         }

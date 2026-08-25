@@ -98,3 +98,8 @@ data class UpdateProductCategoryRequest(
     val imageUrl: String? = null,
     val description: String? = null
 )
+
+@Serializable
+data class ProductCountResponse(
+    val count: Long
+)

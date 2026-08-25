@@ -1,124 +1,163 @@
-# 💇‍♀️ MiraSalon KMP
+<p align="center">
+  <img src="core/designsystem/src/commonMain/composeResources/drawable/logo.png" width="120" alt="MiraSalon Logo">
+</p>
 
-**MiraSalon** is a Kotlin Multiplatform project built with Jetpack Compose Multiplatform and powered by a custom Ktor backend server. It targets **Android, iOS, Web, and Desktop** platforms, offering a full-featured salon management ecosystem.
+<h1 align="center">💇‍♀️ MiraSalon KMP</h1>
 
-It includes:
-- A **Customer-facing Android app** for appointment booking and client engagement
-- A **Salon Admin Dashboard** for managing appointments, staff schedules, inventory, payments, and marketing campaigns
-- A **Custom Ktor Server** to handle APIs, authentication, and real-time updates
+<p align="center">
+  <strong>Modern Salon Management Ecosystem powered by Kotlin Multiplatform.</strong>
+</p>
 
----
+<p align="center">
+  <video src="screenshots/mira.mp4" width="800" controls></video>
+</p>
 
-## ✨ Supported Features
-
-- User Authentication
-- Real-Time Appointment Booking
-- Order Tracking
-- Service Catalog Management
-- Push Notifications
-- Wishlist and Favorites
-- Ratings and Reviews
-- Promotions and Discounts
-- Campaign Management
-- Analytics and Reports Dashboard
-- Responsive Design
-- Customer Support
-- Social Media Integration
-- Booking Reminders
-- Cross-device Session Sync
+<p align="center">
+  <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.4.10-blue?logo=kotlin" alt="Kotlin"></a>
+  <a href="https://www.jetbrains.com/lp/compose-multiplatform/"><img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-blue?logo=jetpackcompose" alt="Compose Multiplatform"></a>
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Desktop%20%7C%20Web-orange" alt="Platform">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green" alt="License"></a>
+</p>
 
 ---
 
-## 🏗️ Architecture
-
-The project follows a modern **Shared Presenter Architecture** using **Slack Circuit**. This allows UI logic (Presenters) to be shared across platforms while keeping the UI (Compose) declarative.
-
-- **Presenter (Circuit):** Handles state management using Compose-style logic.
-- **UI (Compose Multiplatform):** Renders the shared state across Android, iOS, Desktop, and Web.
-- **Domain Layer:** Uses UseCases and Repositories to manage business logic and data flow.
-- **Data Layer:** Handles network (Ktor) and local persistence (Room for Mobile/Desktop, Exposed for Server).
+## About This Project
+**MiraSalon** is a full-stack Kotlin Multiplatform project designed to revolutionize salon management. By leveraging **Compose Multiplatform** for the UI and a custom **Ktor Server** for the backend, MiraSalon provides a unified experience across Android, iOS, Desktop, and Web. It is built with a focus on shared business logic, reactive state management, and seamless real-time interactions.
 
 ---
 
-## 🛠️ Libraries & Technologies
+## Supported Features
 
-### 🚀 Shared / KMP
-- **[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform)** - Modern declarative UI shared across all platforms.
-- **[Slack Circuit](https://github.com/slackhq/circuit)** - A reactive architecture for building Compose-based UIs.
-- **[Stream Chat SDK](https://getstream.io/chat/docs/sdk/kotlin/)** - Real-time chat integration for Android and JVM (Desktop).
-- **[Koin](https://github.com/InsertKoinIO/koin)** - Lightweight dependency injection for Kotlin.
-- **[Navigation 3](https://developer.android.com/jetpack/compose/navigation)** - Modern, type-safe multiplatform navigation for Compose.
-- **[Ktor Client](https://github.com/ktorio/ktor)** - Multiplatform asynchronous HTTP client for networking.
-- **[kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines)** - Support for asynchronous programming.
-- **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)** - Type-safe JSON serialization.
-- **[Room KMP](https://developer.android.com/kotlin/multiplatform/room)** - Local database persistence for Mobile and Desktop.
-- **[Coil 3](https://github.com/coil-kt/coil)** - Image loading library for Compose Multiplatform.
-- **[Kizitonwose Calendar](https://github.com/kizitonwose/Calendar)** - Highly customizable calendar library for Compose Multiplatform.
-- **[Multiplatform Settings](https://github.com/russhwolf/multiplatform-settings)** - Persistent key-value storage for shared preferences.
-- **[QRose](https://github.com/alexzhirkevich/qrose)** - QR code generation library for Compose Multiplatform.
-- **[Molecule](https://github.com/cashapp/molecule)** - Transforms Compose-style logic into state streams.
-- **[Napier](https://github.com/aakira/Napier)** - Versatile logger for Kotlin Multiplatform.
-- **[Lucide Icons](https://github.com/composables/icons-lucide)** - Modern icon pack integrated for Compose.
-- **[CMPToast](https://github.com/ChainTechNetwork/CMPToast)** - Customizable toast notifications for Compose Multiplatform.
-- **[KSafe](https://github.com/anifantakis/KSafe)** - Type-safe, multiplatform navigation utility.
-- **[SKIE](https://github.com/touchlab/SKIE)** - Enhances Swift interop for Kotlin Multiplatform.
+- **User Authentication**: Secure JWT-based login for customers and staff.
+- **Real-Time Booking**: Interactive calendar for appointment scheduling and management.
+- **Service Catalog**: Detailed service listings with categories, pricing, and staff assignments.
+- **Push Notifications**: Real-time alerts for booking updates and marketing campaigns.
+- **Admin Dashboard**: Comprehensive analytics, staff scheduling, and inventory tracking.
+- **Customer CRM**: Manage customer profiles, booking history, and feedback.
+- **Integrated Chat**: Real-time support chat powered by Stream SDK for Desktop/JVM.
+- **Marketing & Promotions**: Launch and track salon-wide campaigns and discounts.
+- **Responsive Design**: Optimized layouts for mobile, tablet, and desktop screens.
+- **Cross-device Sync**: Sessions and data synchronized across all user devices.
 
-### 🖥️ Backend (Ktor Server)
-- **[Exposed](https://github.com/JetBrains/Exposed)** - Kotlin SQL framework for database access.
-- **[Flyway](https://github.com/flyway/flyway)** - Database migration tool to manage schema changes.
-- **PostgreSQL / H2** - Production and development database support.
-- **JWT Auth** - Secure authentication using JSON Web Tokens.
-- **[Micrometer](https://github.com/micrometer-metrics/micrometer)** - Metrics collection for Prometheus monitoring and observability.
+## Future Planning Features
 
-### 🧪 Testing & Quality
-- **[Kotest](https://github.com/kotest/kotest)** - Multiplatform testing framework.
-- **[Mockative](https://github.com/mockative/mockative)** - Mocking library for KMP.
-- **[Robolectric](https://github.com/robolectric/robolectric)** - Testing tools for Android.
-- **[Detekt](https://github.com/detekt/detekt)** / **[Ktlint](https://github.com/pinterest/ktlint)** - Static analysis and linting for code quality.
+- **AI-Powered Insights**: Smart predictions for peak booking times and revenue forecasting.
+- **Multi-language Support**: Localization for international salon chains.
+- **AR Hair Stylist**: Virtual try-on for hair styles and colors.
+- **Payment Gateway Integration**: Direct in-app payments via Stripe or PayPal.
+- **Cloud Deployment**: One-click deployment templates for Google Cloud and AWS.
 
 ---
 
-## 📸 Screenshots
+## Technologies Used
 
-### Dashboard & Analytics
-| Overview | Business Analytics |
-| :---: | :---: |
-| <img src="./screenshots/dashboard_overview.png" width="400"> | <img src="./screenshots/business_analytics.png" width="400"> |
+### Jetpack Compose Multiplatform
+- **Compose Multiplatform**: 1.11.1
+- **Navigation 3**: 1.1.1
+- **Material3 Adaptive**: 1.3.0-beta02
 
-### Management
-| Calendar | Staff | Bookings |
-| :---: | :---: | :---: |
-| <img src="./screenshots/salon_calendar_month.png" width="300"> | <img src="./screenshots/staff_management.png" width="300"> | <img src="./screenshots/bookings_list.png" width="300"> |
+### Architecture & Logic
+- **Slack Circuit**: 0.33.1
+- **Cash App Molecule**: 2.2.0
+- **SKIE**: 0.10.14
+- **KSafe**: 2.2.1
+- **Koin (DI)**: 4.0.2
 
-### Services & Products
-| Services | Products | Orders |
-| :---: | :---: | :---: |
-| <img src="./screenshots/services_list.png" width="300"> | <img src="./screenshots/products_management.png" width="300"> | <img src="./screenshots/order_management.png" width="300"> |
+### Networking & Data
+- **Ktor Client**: 3.5.1
+- **Stream Chat SDK**: 6.4.0 (Android) / 1.45.0 (Java/Desktop)
+- **Room KMP**: 2.8.4
+- **Multiplatform Settings**: 1.3.0
+- **Kotlinx Serialization**: 1.9.0
+- **Kotlinx Coroutines**: 1.11.0
 
-### Customer Engagement
-| Customers | Reviews | Promotions |
-| :---: | :---: | :---: |
-| <img src="./screenshots/customer_management.png" width="300"> | <img src="./screenshots/customer_feedback_reviews.png" width="300"> | <img src="./screenshots/promotions_offers.png" width="300"> |
+### Backend (Ktor Server)
+- **Ktor Server**: 3.5.1
+- **Exposed (ORM)**: 0.59.0
+- **Flyway**: 11.3.4
+- **PostgreSQL Driver**: 42.7.5
+
+### UI & Utilities
+- **Coil 3**: 3.5.0
+- **Kizitonwose Calendar**: 2.10.0
+- **Napier (Logging)**: 2.7.1
+- **Lucide Icons**: 1.1.0
 
 ---
 
-## 🛠️ Getting Started
+## Screen Shots
 
-Clone the repo:
+### Mobile Screen Shots
+<p align="center">
+  <table>
+    <tr>
+      <td><img src="screenshots/mobile/home.jpg" width="280"><br align="center"><b>Home Screen</b></td>
+      <td><img src="screenshots/mobile/services.jpg" width="280"><br align="center"><b>Service Catalog</b></td>
+      <td><img src="screenshots/mobile/product.jpg" width="280"><br align="center"><b>Service Details</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/mobile/specialist.jpg" width="280"><br align="center"><b>Staff Profiles</b></td>
+      <td><img src="screenshots/mobile/appointment.jpg" width="280"><br align="center"><b>Booking Flow</b></td>
+      <td><img src="screenshots/mobile/bookings.jpg" width="280"><br align="center"><b>My Appointments</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/mobile/chat.jpg" width="280"><br align="center"><b>Customer Support</b></td>
+      <td><img src="screenshots/mobile/notif.jpg" width="280"><br align="center"><b>Notifications</b></td>
+      <td><img src="screenshots/mobile/profile.jpg" width="280"><br align="center"><b>User Profile</b></td>
+    </tr>
+  </table>
+</p>
 
+### Desktop Screen Shots
+<p align="center">
+  <table>
+    <tr>
+      <td><img src="screenshots/dashboard_overview.png" width="450"><br align="center"><b>Admin Dashboard</b></td>
+      <td><img src="screenshots/business_analytics.png" width="450"><br align="center"><b>Analytics</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/salon_calendar_month.png" width="450"><br align="center"><b>Salon Calendar</b></td>
+      <td><img src="screenshots/staff_management.png" width="450"><br align="center"><b>Staff Management</b></td>
+    </tr>
+  </table>
+</p>
+
+---
+
+## Build Instruction
+
+### Prerequisites
+- JDK 17+
+- Android Studio Koala+ / IntelliJ IDEA
+- Xcode (for iOS)
+- KDoctor (for environment check)
+
+### Clone Repository
 ```bash
 git clone https://github.com/mkaomwakuni/MiraSalon-KMP.git
 ```
 
-### Running the Server
+### Running Backend
 ```bash
 ./gradlew :server:run
 ```
-The server will log its local IP address on startup (e.g., `192.168.1.113`).
 
-### Running the Android App on Physical Device
-To connect a physical Android device to your local server, you must use your machine's LAN IP address.
-Run the app with the `apiBaseUrl` property:
+### Running Android
 ```bash
-./gradlew :androidApp:installDebug -PapiBaseUrl=http://192.168.1.113:8080/
+./gradlew :androidApp:installDebug
 ```
+
+### Running Desktop
+```bash
+./gradlew :composeApp:run
+```
+
+### Running iOS
+1. Open `iosApp/iosApp.xcworkspace` in Xcode.
+2. Select your target device/simulator and click **Run**.
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/mkaomwakuni">mkaomwakuni</a>
+</p>

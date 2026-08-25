@@ -2,6 +2,9 @@ package iz.mkao.mirasalon.core.network.client
 
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.set
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class SettingsTokenProvider(private val settings: Settings) : SalonTokenProvider {
     companion object {
@@ -16,6 +19,10 @@ class SettingsTokenProvider(private val settings: Settings) : SalonTokenProvider
         private const val USER_ADDRESS_KEY = "user_address"
         private const val USER_GENDER_KEY = "user_gender"
     }
+
+    private val _userIdFlow = MutableStateFlow(settings.getStringOrNull(USER_ID_KEY))
+
+    override fun observeUserId(): Flow<String?> = _userIdFlow.asStateFlow()
 
     override suspend fun accessToken(): String? {
         return settings.getStringOrNull(ACCESS_TOKEN_KEY)
@@ -69,6 +76,7 @@ class SettingsTokenProvider(private val settings: Settings) : SalonTokenProvider
         settings[REFRESH_TOKEN_KEY] = refreshToken
         if (userId != null) {
             settings[USER_ID_KEY] = userId
+            _userIdFlow.value = userId
         }
         if (userName != null) {
             settings[USER_NAME_KEY] = userName
@@ -97,6 +105,7 @@ class SettingsTokenProvider(private val settings: Settings) : SalonTokenProvider
         settings.remove(ACCESS_TOKEN_KEY)
         settings.remove(REFRESH_TOKEN_KEY)
         settings.remove(USER_ID_KEY)
+        _userIdFlow.value = null
         settings.remove(USER_NAME_KEY)
         settings.remove(USER_AVATAR_KEY)
         settings.remove(USER_FIRST_NAME_KEY)

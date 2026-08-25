@@ -1,9 +1,13 @@
 package iz.mkao.mirasalon
 
 import androidx.compose.runtime.Composable
+import platform.UIKit.UIApplication
+import platform.UIKit.UIStatusBarStyleDarkContent
+import platform.UIKit.UIStatusBarStyleLightContent
+import platform.UIKit.setStatusBarStyle
 
 @Composable
 actual fun StatusBarEffect(isDarkTheme: Boolean) {
-    // iOS status bar style is handled by SwiftUI in ContentView.swift
-    // No additional Compose-side handling needed
+    val style = if (isDarkTheme) UIStatusBarStyleLightContent else UIStatusBarStyleDarkContent
+    UIApplication.sharedApplication.setStatusBarStyle(style, true)
 }

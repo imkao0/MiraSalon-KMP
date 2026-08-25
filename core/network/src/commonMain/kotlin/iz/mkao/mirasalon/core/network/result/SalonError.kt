@@ -3,7 +3,7 @@ package iz.mkao.mirasalon.core.network.result
 sealed interface SalonError {
     data object NoConnectivity : SalonError
     data class Timeout(val cause: Throwable) : SalonError
-    data class Serialization(val cause: Throwable) : SalonError
+    data class DataParsing(val cause: Throwable) : SalonError
     data class Unauthorized(val message: String?) : SalonError
     data class Forbidden(val message: String?) : SalonError
     data class NotFound(val message: String?) : SalonError
@@ -35,7 +35,7 @@ sealed interface SalonError {
 fun SalonError.asUiMessage(): String = when (this) {
     SalonError.NoConnectivity -> "No internet connection. Please check your network."
     is SalonError.Timeout -> "Connection timed out. Please try again."
-    is SalonError.Serialization -> "Error parsing data from server."
+    is SalonError.DataParsing -> "Error parsing data from server."
     is SalonError.Unauthorized -> message ?: "Session expired. Please log in again."
     is SalonError.Forbidden -> message ?: "You don't have permission to perform this action."
     is SalonError.NotFound -> message ?: "The requested resource was not found."

@@ -1,7 +1,7 @@
 package iz.mkao.mirasalon.core.realtime
 
 import io.ktor.client.HttpClient
-import iz.mkao.mirasalon.core.domain.repository.StreamChatManager
+import iz.mkao.mirasalon.core.domain.repository.ChatManager
 import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
 import iz.mkao.mirasalon.core.network.model.SalonApiConfig
 import org.koin.core.context.GlobalContext
@@ -16,17 +16,9 @@ actual fun createRealtimeGateway(
     return KtorRealtimeGateway(httpClient, config, tokenProvider)
 }
 
-actual fun createStreamChatManager(
+actual fun createChatManager(
+    httpClient: HttpClient,
     tokenProvider: SalonTokenProvider
-): StreamChatManager {
-    // For JVM/Desktop, we need the Stream credentials.
-    // They are available in the Desktop's build config or passed via Koin.
-    // Here we use Koin to get the config.
-    val koin = GlobalContext.get()
-    val config = koin.get<SalonApiConfig>()
-    
-    return DesktopStreamChatManager(
-        apiKey = config.streamApiKey ?: "",
-        apiSecret = config.streamApiSecret ?: ""
-    )
+): ChatManager {
+    return KtorChatManager(httpClient)
 }

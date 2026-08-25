@@ -10,6 +10,7 @@ data class AdminReviewDto(
     val targetId: String,
     val targetType: String,
     val targetName: String,
+    val userAvatarUrl: String? = null,
     val rating: Int,
     val comment: String? = null,
     val adminReply: String? = null,

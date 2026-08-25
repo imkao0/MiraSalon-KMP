@@ -15,52 +15,52 @@ import iz.mkao.mirasalon.core.network.result.apiCall
 
 class KtorAdminStaffApi(private val httpClient: HttpClient) : AdminStaffApi {
 
-    override suspend fun fetchStaff(query: String?): Outcome<List<SpecialistDto>> = apiCall {
+    override suspend fun fetchStaff(query: String?): Outcome<List<SpecialistDto>> = apiCall<List<SpecialistDto>> {
         httpClient.get(Endpoints.STAFF) {
             parameter("query", query)
         }
     }
 
-    override suspend fun createStaff(request: CreateSpecialistRequestDto): Outcome<SpecialistDto> = apiCall {
+    override suspend fun createStaff(request: CreateSpecialistRequestDto): Outcome<SpecialistDto> = apiCall<SpecialistDto> {
         httpClient.post(Endpoints.STAFF) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun updateStaff(id: String, request: UpdateSpecialistRequestDto): Outcome<Unit> = apiCall {
+    override suspend fun updateStaff(id: String, request: UpdateSpecialistRequestDto): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.staff(id)) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun updateStaffStatus(id: String, status: String): Outcome<Unit> = apiCall {
+    override suspend fun updateStaffStatus(id: String, status: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.staffStatus(id)) {
             contentType(ContentType.Application.Json)
             setBody(UpdateSpecialistStatusRequest(status))
         }
     }
 
-    override suspend fun updateStaffActive(id: String, isActive: Boolean): Outcome<Unit> = apiCall {
+    override suspend fun updateStaffActive(id: String, isActive: Boolean): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.staffActive(id)) {
             contentType(ContentType.Application.Json)
             setBody(UpdateSpecialistActiveRequest(isActive))
         }
     }
 
-    override suspend fun fetchStaffStats(id: String): Outcome<SpecialistPerformanceDto> = apiCall {
+    override suspend fun fetchStaffStats(id: String): Outcome<SpecialistPerformanceDto> = apiCall<SpecialistPerformanceDto> {
         httpClient.get(Endpoints.staffStats(id))
     }
 
-    override suspend fun updateStaffShifts(id: String, shifts: List<SpecialistShiftDto>): Outcome<Unit> = apiCall {
+    override suspend fun updateStaffShifts(id: String, shifts: List<SpecialistShiftDto>): Outcome<Unit> = apiCall<Unit> {
         httpClient.post(Endpoints.staffShifts(id)) {
             contentType(ContentType.Application.Json)
             setBody(shifts)
         }
     }
 
-    override suspend fun deleteStaff(id: String): Outcome<Unit> = apiCall {
+    override suspend fun deleteStaff(id: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.staff(id))
     }
 

@@ -43,7 +43,7 @@ import iz.mkao.mirasalon.core.database.entity.SpecialistServiceEntity
         ServiceFavoriteEntity::class,
         SpecialistServiceEntity::class
     ],
-    version = 12,
+    version = 14,
     exportSchema = true
 )
 @ConstructedBy(MiraDatabaseConstructor::class)

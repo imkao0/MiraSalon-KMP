@@ -1,12 +1,14 @@
 package iz.mkao.mirasalon.core.network.mapper.admin
 
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialist
+import iz.mkao.mirasalon.core.domain.model.AdminSpecialistBreak
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistShift
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistStats
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistPerformanceDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistShiftDto
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
+import iz.mkao.mirasalon.core.network.model.dto.SpecialistBreakDto
 
 fun SpecialistDto.toAdminSpecialist(): AdminSpecialist = AdminSpecialist(
     id = id,
@@ -29,7 +31,15 @@ fun SpecialistShiftDto.toDomain(): AdminSpecialistShift = AdminSpecialistShift(
     dayOfWeek = dayOfWeek,
     startTime = startTime,
     endTime = endTime,
-    isActive = isWorkingDay
+    isActive = isWorkingDay,
+    breaks = breaks.map { it.toDomain() }
+)
+
+fun SpecialistBreakDto.toDomain() = AdminSpecialistBreak(
+    id = id ?: "",
+    startTime = startTime,
+    endTime = endTime,
+    title = title
 )
 
 fun SpecialistPerformanceDto.toDomain(): AdminSpecialistStats {
@@ -65,5 +75,13 @@ fun AdminSpecialistShift.toDto(): SpecialistShiftDto = SpecialistShiftDto(
     dayOfWeek = dayOfWeek,
     startTime = startTime,
     endTime = endTime,
-    isWorkingDay = isActive
+    isWorkingDay = isActive,
+    breaks = breaks.map { it.toDto() }
+)
+
+fun AdminSpecialistBreak.toDto() = SpecialistBreakDto(
+    id = id,
+    startTime = startTime,
+    endTime = endTime,
+    title = title
 )

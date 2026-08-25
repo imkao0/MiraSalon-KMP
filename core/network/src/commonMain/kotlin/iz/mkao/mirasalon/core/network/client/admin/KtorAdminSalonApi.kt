@@ -14,14 +14,14 @@ import iz.mkao.mirasalon.core.network.result.apiCall
 
 class KtorAdminSalonApi(private val httpClient: HttpClient) : AdminSalonApi {
 
-    override suspend fun fetchManagementInfo(page: Int, pageSize: Int): Outcome<SalonPaginatedResponseDto> = apiCall {
+    override suspend fun fetchManagementInfo(page: Int, pageSize: Int): Outcome<SalonPaginatedResponseDto> = apiCall<SalonPaginatedResponseDto> {
         httpClient.get(Endpoints.MANAGEMENT) {
             parameter("page", page)
             parameter("pageSize", pageSize)
         }
     }
 
-    override suspend fun updateSalon(id: String, request: UpdateSalonRequest): Outcome<Unit> = apiCall {
+    override suspend fun updateSalon(id: String, request: UpdateSalonRequest): Outcome<Unit> = apiCall<Unit> {
         httpClient.put("${Endpoints.MANAGEMENT}/$id") {
             contentType(ContentType.Application.Json)
             setBody(request)

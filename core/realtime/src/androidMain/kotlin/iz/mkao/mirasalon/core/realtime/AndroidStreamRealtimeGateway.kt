@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
 class AndroidStreamRealtimeGateway(
@@ -112,14 +113,18 @@ class AndroidStreamRealtimeGateway(
     }
 
     override fun observeChatEvents(chatId: String): Flow<DomainEvent> {
-        return streamEvents.asSharedFlow().filter { 
-            val eventCid = when (it) {
-                is DomainEvent.ChatMessageReceived -> it.conversationId
-                is DomainEvent.ChatSeen -> it.conversationId
-                else -> null
+        val baseFlow = super.observeChatEvents(chatId)
+        return merge(
+            baseFlow,
+            streamEvents.asSharedFlow().filter { 
+                val eventCid = when (it) {
+                    is DomainEvent.ChatMessageReceived -> it.conversationId
+                    is DomainEvent.ChatSeen -> it.conversationId
+                    else -> null
+                }
+                eventCid == chatId || eventCid?.endsWith(":$chatId") == true
             }
-            eventCid == chatId || eventCid?.endsWith(":$chatId") == true
-        }
+        )
     }
 
     override suspend fun sendChatEvent(chatId: String, event: DomainEvent) {

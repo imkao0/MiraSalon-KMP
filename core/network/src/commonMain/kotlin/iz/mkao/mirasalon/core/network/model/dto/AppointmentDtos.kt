@@ -22,6 +22,7 @@ data class AppointmentDto(
     val id: String,
     val userId: String,
     val userName: String? = null,
+    val userAvatarUrl: String? = null,
     val userEmail: String? = null,
     val salonId: String,
     val salonName: String,
@@ -59,4 +60,20 @@ data class CreateAppointmentRequest(
 @Serializable
 data class UpdateAppointmentStatusRequest(
     val status: String
+)
+
+@Serializable
+data class CancelAppointmentResponse(
+    val id: String,
+    val cancelledAt: Long
+)
+
+@Serializable
+data class SimpleMessageResponse(
+    val message: String
+)
+
+@Serializable
+data class UpdateReminderRequest(
+    val enabled: Boolean
 )

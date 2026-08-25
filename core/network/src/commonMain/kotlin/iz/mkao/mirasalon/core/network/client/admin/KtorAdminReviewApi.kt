@@ -22,7 +22,7 @@ class KtorAdminReviewApi(private val httpClient: HttpClient) : AdminReviewApi {
         query: String?,
         page: Int?,
         pageSize: Int?
-    ): Outcome<PagedResponse<AdminReviewDto>> = apiCall {
+    ): Outcome<PagedResponse<AdminReviewDto>> = apiCall<PagedResponse<AdminReviewDto>> {
         httpClient.get(Endpoints.ALL_REVIEWS) {
             parameter("query", query)
             parameter("page", page)
@@ -30,21 +30,21 @@ class KtorAdminReviewApi(private val httpClient: HttpClient) : AdminReviewApi {
         }
     }
 
-    override suspend fun postAdminReply(reviewId: String, reply: String): Outcome<Unit> = apiCall {
+    override suspend fun postAdminReply(reviewId: String, reply: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.post(Endpoints.reply(reviewId)) {
             contentType(ContentType.Application.Json)
             setBody(AdminReplyRequest(reply))
         }
     }
 
-    override suspend fun updateVisibility(reviewId: String, isVisible: Boolean): Outcome<Unit> = apiCall {
+    override suspend fun updateVisibility(reviewId: String, isVisible: Boolean): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.visibility(reviewId)) {
             contentType(ContentType.Application.Json)
             setBody(UpdateReviewVisibilityRequest(isVisible))
         }
     }
 
-    override suspend fun deleteReview(reviewId: String): Outcome<Unit> = apiCall {
+    override suspend fun deleteReview(reviewId: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.review(reviewId))
     }
 

@@ -9,6 +9,7 @@ import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.svg.SvgDecoder
 import io.ktor.client.HttpClient
 import iz.mkao.mirasalon.core.designsystem.theme.MiraSalonTheme
 import iz.mkao.mirasalon.feature.profile.domain.model.AppSettings
@@ -27,6 +28,7 @@ fun App() {
         ImageLoader.Builder(context)
             .components {
                 add(KtorNetworkFetcherFactory(imageHttpClient))
+                add(SvgDecoder.Factory())
             }
             .build()
     }

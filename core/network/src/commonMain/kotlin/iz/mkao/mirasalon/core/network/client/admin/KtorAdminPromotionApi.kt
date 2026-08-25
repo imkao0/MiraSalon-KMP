@@ -22,7 +22,7 @@ class KtorAdminPromotionApi(private val httpClient: HttpClient) : AdminPromotion
         query: String?,
         page: Int?,
         pageSize: Int?
-    ): Outcome<PagedResponse<PromotionDto>> = apiCall {
+    ): Outcome<PagedResponse<PromotionDto>> = apiCall<PagedResponse<PromotionDto>> {
         httpClient.get(Endpoints.PROMOTIONS_ALL) {
             parameter("query", query)
             parameter("page", page)
@@ -30,25 +30,25 @@ class KtorAdminPromotionApi(private val httpClient: HttpClient) : AdminPromotion
         }
     }
 
-    override suspend fun createPromotion(request: CreatePromotionRequestDto): Outcome<PromotionDto> = apiCall {
+    override suspend fun createPromotion(request: CreatePromotionRequestDto): Outcome<PromotionDto> = apiCall<PromotionDto> {
         httpClient.post(Endpoints.PROMOTIONS) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun updatePromotion(id: String, request: UpdatePromotionRequestDto): Outcome<Unit> = apiCall {
+    override suspend fun updatePromotion(id: String, request: UpdatePromotionRequestDto): Outcome<Unit> = apiCall<Unit> {
         httpClient.put(Endpoints.promotion(id)) {
             contentType(ContentType.Application.Json)
             setBody(request)
         }
     }
 
-    override suspend fun deletePromotion(id: String): Outcome<Unit> = apiCall {
+    override suspend fun deletePromotion(id: String): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.promotion(id))
     }
 
-    override suspend fun deleteAllPromotions(): Outcome<Unit> = apiCall {
+    override suspend fun deleteAllPromotions(): Outcome<Unit> = apiCall<Unit> {
         httpClient.delete(Endpoints.PROMOTIONS_ALL)
     }
 

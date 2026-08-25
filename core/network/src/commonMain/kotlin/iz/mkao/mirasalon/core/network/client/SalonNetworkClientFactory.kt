@@ -28,10 +28,10 @@ import io.ktor.serialization.kotlinx.json.json
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.SalonApiConfig
 import iz.mkao.mirasalon.core.network.model.SalonErrorResponse
-import iz.mkao.mirasalon.core.network.result.SalonApiException
-import iz.mkao.mirasalon.core.network.result.SalonError
 import iz.mkao.mirasalon.core.network.model.dto.RefreshTokenRequest
 import iz.mkao.mirasalon.core.network.model.dto.RefreshTokenResponse
+import iz.mkao.mirasalon.core.network.result.SalonApiException
+import iz.mkao.mirasalon.core.network.result.SalonError
 import iz.mkao.mirasalon.core.network.util.NetworkJson
 import iz.mkao.mirasalon.core.network.util.SalonNetworkLogger
 import kotlinx.io.IOException
@@ -66,6 +66,9 @@ internal object SalonNetworkClientFactory {
 
             install(WebSockets) {
                 pingIntervalMillis = 20_000
+                // Explicitly disable extensions to avoid handshake failures on iOS (Darwin engine)
+                // when connecting to Ktor servers over non-TLS ws://
+                extensions { }
             }
 
             if (config.enableLogging) {
@@ -120,7 +123,7 @@ internal object SalonNetworkClientFactory {
                         is HttpRequestTimeoutException,
                         is ConnectTimeoutException,
                         is SocketTimeoutException -> SalonError.Timeout(cause)
-                        is SerializationException -> SalonError.Serialization(cause)
+                        is SerializationException -> SalonError.DataParsing(cause)
                         is IOException -> SalonError.NoConnectivity
                         is SalonApiException -> return@handleResponseExceptionWithRequest
                         else -> SalonError.Unknown(cause)
@@ -129,11 +132,13 @@ internal object SalonNetworkClientFactory {
                 }
 
                 validateResponse { response ->
-                    if (!response.status.isSuccess()) {
+                    val status = response.status
+                    // Allow 2xx Success and 101 Switching Protocols (for WebSockets)
+                    if (!status.isSuccess() && status.value != 101) {
                         val errorBody = runCatching { response.body<SalonErrorResponse>() }.getOrNull()
                         val message = errorBody?.message ?: runCatching { response.bodyAsText() }.getOrNull()
                         val error = SalonError.fromHttpStatus(
-                            code = response.status.value,
+                            code = status.value,
                             message = message,
                             fieldErrors = errorBody?.errors.orEmpty(),
                         )

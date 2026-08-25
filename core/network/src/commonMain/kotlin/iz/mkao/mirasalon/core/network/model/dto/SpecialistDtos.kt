@@ -46,7 +46,16 @@ data class SpecialistShiftDto(
     val dayOfWeek: Int, // 1 (Monday) to 7 (Sunday)
     val startTime: String,
     val endTime: String,
-    val isWorkingDay: Boolean = true
+    val isWorkingDay: Boolean = true,
+    val breaks: List<SpecialistBreakDto> = emptyList()
+)
+
+@Serializable
+data class SpecialistBreakDto(
+    val id: String? = null,
+    val startTime: String,
+    val endTime: String,
+    val title: String
 )
 
 @Serializable
