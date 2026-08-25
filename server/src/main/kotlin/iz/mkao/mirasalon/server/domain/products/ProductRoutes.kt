@@ -17,6 +17,7 @@ import io.ktor.server.routing.route
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.ApiResponse
+import iz.mkao.mirasalon.core.network.model.dto.ProductCountResponse
 import iz.mkao.mirasalon.core.network.model.dto.CreateProductCategoryRequest
 import iz.mkao.mirasalon.core.network.model.dto.CreateProductRequest
 import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
@@ -124,9 +125,10 @@ fun Route.productRoutes(
         val count = productRepository.count()
         call.respond(
             HttpStatusCode.OK,
-            ApiResponse
-                (success = true,
-                data = mapOf("count" to count))
+            ApiResponse(
+                success = true,
+                data = ProductCountResponse(count = count)
+            )
         )
     }
 

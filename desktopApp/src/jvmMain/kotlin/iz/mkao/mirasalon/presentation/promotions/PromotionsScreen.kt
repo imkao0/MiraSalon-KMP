@@ -5,47 +5,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CalendarToday
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.LocalOffer
-import androidx.compose.material.icons.outlined.PauseCircle
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,22 +36,14 @@ import com.slack.circuit.runtime.screen.Screen
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
 import io.github.aakira.napier.Napier
-import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
-import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
-import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
-import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.theme.VelvetaSlateBlue
+import iz.mkao.mirasalon.core.designsystem.theme.*
 import iz.mkao.mirasalon.core.domain.model.AdminDiscountType
 import iz.mkao.mirasalon.core.domain.model.AdminPromoStatus
 import iz.mkao.mirasalon.core.domain.model.AdminPromotion
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
-import iz.mkao.mirasalon.presentation.DesktopScreen
-import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
-import iz.mkao.mirasalon.presentation.LocalProfileClick
-import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
-import iz.mkao.mirasalon.presentation.LocalToggleSidebar
+import iz.mkao.mirasalon.presentation.*
 import iz.mkao.mirasalon.presentation.components.DesktopLoadingState
-import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,11 +51,7 @@ import java.util.Locale
 @Composable
 fun PromotionsScreenUi(
     state: PromotionsUiState,
-    modifier: Modifier = Modifier,
-    onNavigate: (String) -> Unit,
-    isSidebarExpanded: Boolean,
-    onToggleSidebar: () -> Unit,
-    onProfileClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val promotions = state.promotions
     val isLoading = state.isLoading
@@ -153,106 +111,113 @@ fun PromotionsScreenUi(
         )
     }
 
-    Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Promotions",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 280.dp else 80.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    DesktopShell(
+        title = "Promotions & Offers",
+        subtitle = "Manage campaign discounts and banners",
+        selectedRoute = "Promotions",
+        showCampaignAssistant = true
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Search Bar
+            Surface(
+                modifier = Modifier.width(400.dp).height(40.dp),
+                color = Color.White,
+                shape = RoundedCornerShape(2.dp),
+                border = BorderStroke(1.dp, MiraBorder)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Promotions & Offers",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MiraTextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.width(32.dp))
-
-            
-                    Surface(
-                        modifier = Modifier.width(400.dp).height(40.dp),
-                        color = Color.White,
-                        shape = RoundedCornerShape(2.dp),
-                        border = BorderStroke(1.dp, MiraBorder)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp), tint = MiraTextSecondary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            androidx.compose.foundation.text.BasicTextField(
-                                value = state.searchQuery,
-                                onValueChange = { state.eventSink(PromotionsEvent.Search(it)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = MiraTextPrimary),
-                                singleLine = true,
-                                decorationBox = { innerTextField ->
-                                    if (state.searchQuery.isEmpty()) {
-                                        Text("Search promotions...", fontSize = 14.sp, color = MiraTextSecondary)
-                                    }
-                                    innerTextField()
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .clickable { onProfileClick() },
-                    shape = CircleShape,
-                    color = Color.LightGray
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = Color.White
-                        )
-                    }
+                    Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp), tint = MiraTextSecondary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    BasicTextField(
+                        value = state.searchQuery,
+                        onValueChange = { state.eventSink(PromotionsEvent.Search(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(fontSize = 14.sp, color = MiraTextPrimary),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            if (state.searchQuery.isEmpty()) {
+                                Text("Search promotions...", fontSize = 14.sp, color = MiraTextSecondary)
+                            }
+                            innerTextField()
+                        }
+                    )
                 }
             }
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Current Offers (${promotions.size})",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MiraTextPrimary
-                )
+        Spacer(modifier = Modifier.height(32.dp))
 
-                Row {
-                    if (promotions.isNotEmpty()) {
-                        OutlinedButton(
-                            onClick = { showClearConfirm = true },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                            shape = RoundedCornerShape(2.dp),
-                            modifier = Modifier.padding(end = 12.dp)
-                        ) {
-                            Icon(Icons.Outlined.DeleteSweep, null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear All")
-                        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Current Offers (${promotions.size})",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MiraTextPrimary
+            )
+
+            Row {
+                if (promotions.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { showClearConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                        shape = RoundedCornerShape(2.dp),
+                        modifier = Modifier.padding(end = 12.dp)
+                    ) {
+                        Icon(Icons.Outlined.DeleteSweep, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Clear All")
                     }
+                }
 
+                Button(
+                    onClick = { showAddDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MiraCoral),
+                    shape = RoundedCornerShape(2.dp)
+                ) {
+                    Icon(Icons.Outlined.Add, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("New Promotion")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (isLoading && promotions.isEmpty()) {
+            DesktopLoadingState()
+        } else if (promotions.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Outlined.LocalOffer,
+                        null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No promotions found",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MiraTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Create your first offer to attract more customers!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MiraTextSecondary.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = { showAddDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = MiraCoral),
@@ -260,66 +225,27 @@ fun PromotionsScreenUi(
                     ) {
                         Icon(Icons.Outlined.Add, null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("New Promotion")
+                        Text("Create Promotion")
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (isLoading && promotions.isEmpty()) {
-                DesktopLoadingState()
-            } else if (promotions.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Outlined.LocalOffer,
-                            null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.Gray.copy(alpha = 0.3f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No promotions found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MiraTextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Create your first offer to attract more customers!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MiraTextSecondary.copy(alpha = 0.7f)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { showAddDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = MiraCoral),
-                            shape = RoundedCornerShape(2.dp)
-                        ) {
-                            Icon(Icons.Outlined.Add, null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Create Promotion")
-                        }
-                    }
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(promotions.distinctBy { it.id }, key = { it.id }) { promo ->
-                        PromotionListItem(
-                            promotion = promo,
-                            onToggleActive = {
-                                val nextStatus = if (promo.status == AdminPromoStatus.Active) AdminPromoStatus.Draft else AdminPromoStatus.Active
-                                state.eventSink(PromotionsEvent.UpdatePromotion(promo.copy(status = nextStatus)))
-                            },
-                            onEdit = { editingPromotion = promo },
-                            onDelete = { state.eventSink(PromotionsEvent.DeletePromotion(promo.id)) }
-                        )
-                    }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(promotions.distinctBy { it.id }, key = { it.id }) { promo ->
+                    PromotionListItem(
+                        promotion = promo,
+                        onToggleActive = {
+                            val nextStatus = if (promo.status == AdminPromoStatus.Active) AdminPromoStatus.Draft else AdminPromoStatus.Active
+                            state.eventSink(PromotionsEvent.UpdatePromotion(promo.copy(status = nextStatus)))
+                        },
+                        onEdit = { editingPromotion = promo },
+                        onDelete = { state.eventSink(PromotionsEvent.DeletePromotion(promo.id)) }
+                    )
                 }
             }
         }
@@ -496,14 +422,9 @@ fun PromotionListItem(
 /** Circuit [Ui.Factory] binding [DesktopScreen.Promotions] to [PromotionsScreenUi]. */
 class PromotionsUiFactory : Ui.Factory {
     override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
-        is DesktopScreen.Promotions -> ui<PromotionsUiState> { state, modifier ->
+        is DesktopScreen.Promotions -> ui<PromotionsUiState> { state, _ ->
             PromotionsScreenUi(
-                state = state,
-                modifier = modifier,
-                onNavigate = LocalDesktopNavigate.current,
-                isSidebarExpanded = LocalSidebarExpanded.current,
-                onToggleSidebar = LocalToggleSidebar.current,
-                onProfileClick = LocalProfileClick.current
+                state = state
             )
         }
         else -> null

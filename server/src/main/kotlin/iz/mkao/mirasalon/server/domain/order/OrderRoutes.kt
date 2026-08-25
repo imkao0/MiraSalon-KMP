@@ -18,7 +18,11 @@ import iz.mkao.mirasalon.server.data.repository.OrderCreationResult
 import iz.mkao.mirasalon.server.data.repository.OrderRepoStatus
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
 import iz.mkao.mirasalon.server.data.repository.OrderStatusUpdateResult
-import iz.mkao.mirasalon.server.error.*
+import iz.mkao.mirasalon.server.error.ForbiddenException
+import iz.mkao.mirasalon.server.error.GeneralDomainException
+import iz.mkao.mirasalon.server.error.InsufficientStockException
+import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.getUserId
 import iz.mkao.mirasalon.server.util.getUserRole
 import iz.mkao.mirasalon.server.util.isAdmin
@@ -55,7 +59,8 @@ fun Route.orderRoutes(orderRepository: OrderRepository) {
                 paymentMethod = request.paymentMethod,
                 specialInstructions = request.specialInstructions,
                 promotionCode = request.promoCode,
-                idempotencyKey = idempotencyKey
+                idempotencyKey = idempotencyKey,
+                shipping = request.shippingFees
             )
 
             when (result) {

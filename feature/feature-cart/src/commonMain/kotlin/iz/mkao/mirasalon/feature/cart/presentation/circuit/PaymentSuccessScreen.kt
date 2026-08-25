@@ -128,7 +128,7 @@ fun PaymentSuccessContent(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            val dateLabel = DateUtils.formatDateFull(order.placedAtEpochSeconds)
+            val dateLabel = DateUtils.formatDateFull(order.placedAtMillis / 1000)
             Text(
                 text = dateLabel,
                 style = MaterialTheme.typography.bodyMedium,

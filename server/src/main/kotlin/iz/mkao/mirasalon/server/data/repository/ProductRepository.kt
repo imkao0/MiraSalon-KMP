@@ -6,6 +6,7 @@ import iz.mkao.mirasalon.core.domain.model.ProductCategory
 import iz.mkao.mirasalon.core.domain.model.ProductPage
 import iz.mkao.mirasalon.core.domain.model.Review
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.dto.CategoryDto
@@ -14,6 +15,9 @@ import iz.mkao.mirasalon.core.network.model.dto.ProductDto
 import iz.mkao.mirasalon.core.network.model.dto.ProductPageDto
 import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateProductRequest
+import iz.mkao.mirasalon.server.data.tables.OrderItemsTable
+import iz.mkao.mirasalon.server.data.tables.OrdersTable
+import iz.mkao.mirasalon.server.data.tables.OutboxAudience
 import iz.mkao.mirasalon.server.data.tables.ProductCategoriesTable
 import iz.mkao.mirasalon.server.data.tables.ProductsTable
 import iz.mkao.mirasalon.server.data.tables.PromotionsTable
@@ -64,7 +68,6 @@ sealed class ProductCategoryDeleteResult {
 
 class ProductRepository(
     private val outboxRepository: OutboxRepository,
-    private val json: Json,
     private val meterRegistry: MeterRegistry
 ) : CoreProductRepository {
 
@@ -182,8 +185,33 @@ class ProductRepository(
     override suspend fun submitReview(productId: String, rating: Int, comment: String, userId: String?): Outcome<Review> {
         return transaction {
             try {
-                val id = UUID.randomUUID().toString()
                 val finalUserId = userId ?: return@transaction Outcome.Error(Failure.ClientError(401, "Authentication required"))
+
+                // Business Rule: Check eligibility and allow repeat reviews for repeat purchases (Amazon-style)
+                val twoMonthsAgo = System.currentTimeMillis() - (60L * 24 * 60 * 60 * 1000)
+                // Count total separate purchases of this product in delivered orders within the last 2 months
+                val purchaseCount = (OrdersTable innerJoin OrderItemsTable).selectAll().where {
+                    (OrdersTable.userId eq finalUserId) and
+                    (OrdersTable.status eq "DELIVERED") and
+                    (OrderItemsTable.productId eq productId) and
+                    (OrdersTable.createdAt greaterEq twoMonthsAgo)
+                }.count()
+
+                if (purchaseCount == 0L) {
+                    return@transaction Outcome.Error(Failure.ServerError(403, "You can only review products you have purchased and received within the last 2 months."))
+                }
+
+                // Count existing reviews for this product for these purchases
+                val reviewCount = ReviewsTable.selectAll().where {
+                    (ReviewsTable.userId eq finalUserId) and (ReviewsTable.targetId eq productId) and (ReviewsTable.targetType eq "PRODUCT") and
+                    (ReviewsTable.createdAt greaterEq twoMonthsAgo)
+                }.count()
+
+                if (reviewCount >= purchaseCount) {
+                    return@transaction Outcome.Error(Failure.ServerError(409, "You have already submitted reviews for all your recent purchases of this product."))
+                }
+
+                val id = UUID.randomUUID().toString()
                 val user = UsersTable.selectAll().where { UsersTable.id eq finalUserId }.singleOrNull()
             
                 ReviewsTable.insert {
@@ -214,18 +242,14 @@ class ProductRepository(
                         userName = user?.get(UsersTable.name),
                         userAvatarUrl = user?.get(UsersTable.avatarUrl)
                     )
-                    outboxRepository.save(finalUserId, json.encodeToString(event))
+                    // Reviews are back-office signals - route to the admin desktop
+                    // dashboard only, never to the client's own notification feed.
+                    outboxRepository.save(null, DomainEventCodec.encode(event), OutboxAudience.ADMIN)
                     Outcome.Success(review)
                 }
                 else Outcome.Error(Failure.ServerError(500, "Failed to create review"))
             } catch (e: Exception) {
-                val message = e.message ?: "Database error"
-                val friendlyMessage = if (message.contains("idx_reviews_user_target")) {
-                    "You have already submitted a review for this product."
-                } else {
-                    message
-                }
-                Outcome.Error(Failure.ServerError(500, friendlyMessage))
+                Outcome.Error(Failure.ServerError(500, e.message ?: "Database error"))
             }
         }
     }
@@ -271,7 +295,7 @@ class ProductRepository(
             message = "Product $name created",
             productId = id
         )
-        outboxRepository.save(null, json.encodeToString(event))
+        outboxRepository.save(null, DomainEventCodec.encode(event))
         
         Outcome.Success(product)
     }
@@ -310,7 +334,7 @@ class ProductRepository(
                 message = "Product $id updated",
                 productId = id
             )
-            outboxRepository.save(null, json.encodeToString(event))
+            outboxRepository.save(null, DomainEventCodec.encode(event))
             Outcome.Success(product)
         } else Outcome.Error(Failure.ServerError(404, "Product not found"))
     }

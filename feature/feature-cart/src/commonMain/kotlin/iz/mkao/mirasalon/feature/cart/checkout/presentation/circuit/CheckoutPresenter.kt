@@ -21,9 +21,9 @@ import iz.mkao.mirasalon.core.navigation.CartRoute
 import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
 import iz.mkao.mirasalon.feature.profile.domain.repository.AddressRepository
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 class CheckoutPresenter(
     private val cartRepository: CartRepository,
@@ -237,7 +237,7 @@ class CheckoutPresenter(
                                     shippingFees = deliveryFee,
                                     discount = cart.discountAmount,
                                     total = cart.total + deliveryFee,
-                                    placedAtEpochSeconds = 0L,
+                                    placedAtMillis = 0L,
                                     promoCode = cart.couponCode,
                                     shippingAddress = selectedAddress?.let { addr ->
                                         listOf(addr.street, addr.city, addr.state, addr.zipCode, addr.country)

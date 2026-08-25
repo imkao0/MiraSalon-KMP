@@ -82,11 +82,16 @@ class ProductDetailPresenter(
                     }
                     is ProductDetailEvent.SubmitReview -> {
                         scope.launch {
-                            productRepository.submitReview(screen.productId, event.rating, event.comment)
-                            // Re-fetch reviews
-                            val reviewResult = productRepository.getReviews(screen.productId)
-                            if (reviewResult is Outcome.Success) {
-                                reviews = reviewResult.data
+                            val result = productRepository.submitReview(screen.productId, event.rating, event.comment)
+                            if (result is Outcome.Error) {
+                                error = "Failed to submit review"
+                            } else {
+                                error = null
+                                // Re-fetch reviews
+                                val reviewResult = productRepository.getReviews(screen.productId)
+                                if (reviewResult is Outcome.Success) {
+                                    reviews = reviewResult.data
+                                }
                             }
                         }
                     }

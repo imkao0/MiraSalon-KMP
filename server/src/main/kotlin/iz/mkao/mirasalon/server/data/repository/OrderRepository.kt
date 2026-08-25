@@ -12,6 +12,7 @@ import iz.mkao.mirasalon.core.network.model.dto.OrderDto
 import iz.mkao.mirasalon.core.network.model.dto.OrderItemDto
 import iz.mkao.mirasalon.core.network.model.dto.OrderItemRequest
 import iz.mkao.mirasalon.core.network.model.dto.OrderStatusDto
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.server.data.tables.OrderItemsTable
 import iz.mkao.mirasalon.server.data.tables.OrdersTable
 import iz.mkao.mirasalon.server.data.tables.ProductsTable
@@ -20,7 +21,6 @@ import iz.mkao.mirasalon.server.data.tables.SalonsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -59,12 +59,17 @@ sealed class OrderStatusUpdateResult {
 
 class OrderRepository(
     private val outboxRepository: OutboxRepository,
-    private val json: Json,
     private val meterRegistry: MeterRegistry,
     private val promotionRepository: PromotionRepository
 ) : CoreOrderRepository {
 
     private val log = LoggerFactory.getLogger(OrderRepository::class.java)
+
+    /**
+     * Customer-facing order number: the first 5 characters of the order UUID,
+     * uppercased (e.g. "3F9A2"), matching the short order ids shown in the apps.
+     */
+    private fun shortOrderNumber(id: String): String = id.take(5).uppercase()
 
     fun countByStatusInRange(status: OrderRepoStatus, start: Long, end: Long): Int = transaction {
         OrdersTable.selectAll().where {
@@ -76,13 +81,21 @@ class OrderRepository(
 
     fun totalRevenue(): Double = transaction {
         OrdersTable.selectAll().where {
-            OrdersTable.status eq OrderRepoStatus.DELIVERED.name
+            OrdersTable.status inList listOf(
+                OrderRepoStatus.DELIVERED.name,
+                OrderRepoStatus.SHIPPED.name,
+                OrderRepoStatus.PENDING.name
+            )
         }.sumOf { it[OrdersTable.totalAmount] }
     }
 
     fun totalRevenueInRange(start: Long, end: Long): Double = transaction {
         OrdersTable.selectAll().where {
-            (OrdersTable.status eq OrderRepoStatus.DELIVERED.name) and
+            (OrdersTable.status inList listOf(
+                OrderRepoStatus.DELIVERED.name,
+                OrderRepoStatus.SHIPPED.name,
+                OrderRepoStatus.PENDING.name
+            )) and
             (OrdersTable.createdAt greaterEq start) and
             (OrdersTable.createdAt less end)
         }.sumOf { it[OrdersTable.totalAmount] }
@@ -97,6 +110,13 @@ class OrderRepository(
             .map { it.toOrderDto() }
     }
 
+    fun hasOrderBefore(userId: String, timestamp: Long): Boolean = transaction {
+        OrdersTable.selectAll().where {
+            (OrdersTable.userId eq userId) and
+            (OrdersTable.createdAt less timestamp)
+        }.any()
+    }
+
     suspend fun createOrder(
         userId: String,
         salonId: String,
@@ -105,7 +125,8 @@ class OrderRepository(
         paymentMethod: String?,
         specialInstructions: String?,
         promotionCode: String?,
-        idempotencyKey: String?
+        idempotencyKey: String?,
+        shipping: Double = 0.0
     ): OrderCreationResult = newSuspendedTransaction {
         try {
             // Validate salonId - if "default_salon" or invalid, try to use the first one
@@ -135,30 +156,66 @@ class OrderRepository(
                 }
             }
 
+            // Re-calculate subtotal and total from DB
+            val resolvedSubtotal = items.sumOf { item ->
+                val product = ProductsTable.selectAll().where { ProductsTable.id eq item.productId }.single()
+                val price = product[ProductsTable.price]
+                val discountPercent = product[ProductsTable.discountPercent]
+                val discountedPrice = price * (1.0 - discountPercent / 100.0)
+                discountedPrice * item.quantity
+            }
+
+            // Record promotion usage if a promo code was used
+            var calculatedDiscount = 0.0
+            if (!promotionCode.isNullOrBlank()) {
+                val promoResult = promotionRepository.validatePromoCode(
+                    code = promotionCode,
+                    userId = userId,
+                    cartTotal = resolvedSubtotal,
+                    serviceIds = items.map { it.productId }
+                )
+                if (promoResult is Outcome.Success && promoResult.data.isValid) {
+                    calculatedDiscount = promoResult.data.discountAmount
+                } else {
+                    return@newSuspendedTransaction OrderCreationResult.Error("Invalid or inapplicable promo code")
+                }
+            }
+
+            val finalShipping = if (shipping > 0.0) shipping else 10.0
+            val finalTotal = (resolvedSubtotal + finalShipping - calculatedDiscount).coerceAtLeast(0.0)
+
             val orderId = UUID.randomUUID().toString()
-            val total = items.sumOf { (it.pricePerUnit ?: 0.0) * it.quantity }
             
             meterRegistry.counter("orders_created_total", "salon_id", finalSalonId).increment()
-            meterRegistry.summary("orders_revenue_amount", "salon_id", finalSalonId).record(total)
+            meterRegistry.summary("orders_revenue_amount", "salon_id", finalSalonId).record(finalTotal)
 
-            // Record inventory updates
+            // Record inventory updates for Admin (only if stock is low)
             stockUpdates.forEach { (productId, newStock) ->
-                val invEvent = DomainEvent.InventoryUpdated(
-                    eventId = UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    actorId = userId,
-                    message = "Stock reduced for order $orderId",
-                    productId = productId,
-                    newStock = newStock
-                )
-                outboxRepository.save(userId, json.encodeToString(invEvent))
+                if (newStock < 5) {
+                    val productName = ProductsTable.select(ProductsTable.name)
+                        .where { ProductsTable.id eq productId }
+                        .singleOrNull()?.get(ProductsTable.name) ?: "Product"
+
+                    val invEvent = DomainEvent.InventoryUpdated(
+                        eventId = UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        actorId = "system",
+                        message = "Low stock alert: $productName ($newStock left)",
+                        productId = productId,
+                        newStock = newStock
+                    )
+                    outboxRepository.save(null, DomainEventCodec.encode(invEvent))
+                }
             }
 
             OrdersTable.insert {
                 it[OrdersTable.id] = orderId
                 it[OrdersTable.userId] = userId
                 it[OrdersTable.salonId] = finalSalonId
-                it[OrdersTable.totalAmount] = total
+                it[OrdersTable.subtotalAmount] = resolvedSubtotal
+                it[OrdersTable.discountAmount] = calculatedDiscount
+                it[OrdersTable.shippingFees] = finalShipping
+                it[OrdersTable.totalAmount] = finalTotal
                 it[OrdersTable.status] = OrderRepoStatus.PENDING.name
                 it[OrdersTable.createdAt] = System.currentTimeMillis()
                 it[OrdersTable.shippingAddress] = shippingAddress
@@ -169,8 +226,8 @@ class OrderRepository(
                 it[OrdersTable.expiresAt] = System.currentTimeMillis() + (24 * 60 * 60 * 1000)
             }
 
-            // Record promotion usage if a promo code was used
-            if (!promotionCode.isNullOrBlank()) {
+            // Record promotion usage
+            if (!promotionCode.isNullOrBlank() && calculatedDiscount > 0) {
                 val promo = PromotionsTable.selectAll().where { PromotionsTable.code eq promotionCode }.singleOrNull()
                 if (promo != null) {
                     promotionRepository.recordPromoUsage(promo[PromotionsTable.id], userId, orderId)
@@ -197,9 +254,9 @@ class OrderRepository(
                 actorId = userId,
                 message = "Order created",
                 orderId = orderId,
-                totalAmount = total
+                totalAmount = finalTotal
             )
-            outboxRepository.save(userId, json.encodeToString(event))
+            outboxRepository.save(userId, DomainEventCodec.encode(event))
 
             OrderCreationResult.Success(orderId)
         } catch (e: Exception) {
@@ -316,6 +373,13 @@ class OrderRepository(
 
             if (currentStatus == status) return@transaction OrderStatusUpdateResult.Success
 
+            // Prevent cancellation of SHIPPED/DELIVERED orders
+            if (status == OrderRepoStatus.CANCELLED) {
+                if (currentStatus == OrderRepoStatus.SHIPPED || currentStatus == OrderRepoStatus.DELIVERED) {
+                    return@transaction OrderStatusUpdateResult.InvalidTransition
+                }
+            }
+
             // Handle stock restoration if order is being cancelled
             if (status == OrderRepoStatus.CANCELLED) {
                 val items = OrderItemsTable.selectAll().where { OrderItemsTable.orderId eq id }
@@ -351,11 +415,16 @@ class OrderRepository(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = order[OrdersTable.userId],
-                    message = "Order status updated to ${status.name}",
+                    message = when (status) {
+                        OrderRepoStatus.CANCELLED -> "Your order #${shortOrderNumber(id)} has been cancelled"
+                        OrderRepoStatus.DELIVERED -> "Your order #${shortOrderNumber(id)} has been delivered"
+                        OrderRepoStatus.SHIPPED -> "Your order #${shortOrderNumber(id)} has been shipped"
+                        else -> "Order #${shortOrderNumber(id)} status updated to ${status.name}"
+                    },
                     orderId = id,
                     status = status.name
                 )
-                outboxRepository.save(order[OrdersTable.userId], json.encodeToString(updateEvent))
+                outboxRepository.save(order[OrdersTable.userId], DomainEventCodec.encode(updateEvent))
                 
                 // If it was cancelled, also send inventory updates for restored items
                 if (status == OrderRepoStatus.CANCELLED) {
@@ -363,17 +432,17 @@ class OrderRepository(
                     items.forEach { itemRow ->
                         val productId = itemRow[OrderItemsTable.productId]
                         val product = ProductsTable.selectAll().where { ProductsTable.id eq productId }.singleOrNull()
-                        if (product != null) {
-                            val invEvent = DomainEvent.InventoryUpdated(
-                                eventId = UUID.randomUUID().toString(),
-                                timestamp = System.currentTimeMillis(),
-                                actorId = "system",
-                                message = "Stock restored for cancelled order $id",
-                                productId = productId,
-                                newStock = product[ProductsTable.stockQuantity]
-                            )
-                            outboxRepository.save(null, json.encodeToString(invEvent))
-                        }
+                            if (product != null && product[ProductsTable.stockQuantity] < 5) {
+                                val invEvent = DomainEvent.InventoryUpdated(
+                                    eventId = UUID.randomUUID().toString(),
+                                    timestamp = System.currentTimeMillis(),
+                                    actorId = "system",
+                                    message = "Low stock alert: ${product[ProductsTable.name]} (${product[ProductsTable.stockQuantity]} left)",
+                                    productId = productId,
+                                    newStock = product[ProductsTable.stockQuantity]
+                                )
+                                outboxRepository.save(null, DomainEventCodec.encode(invEvent))
+                            }
                     }
                 }
                 OrderStatusUpdateResult.Success
@@ -430,13 +499,14 @@ class OrderRepository(
         // Mapping domain Order back to server-side creation
         val result = createOrder(
             userId = order.userId,
-            salonId = "", // Should be part of Order or provided context
+            salonId = "",
             items = order.items.map { it.toOrderItemRequest() },
-            shippingAddress = null,
-            paymentMethod = null,
-            specialInstructions = null,
+            shippingAddress = order.shippingAddress,
+            paymentMethod = order.paymentMethod,
+            specialInstructions = order.specialInstructions,
             promotionCode = order.promoCode,
-            idempotencyKey = null
+            idempotencyKey = null,
+            shipping = order.shippingFees
         )
         return when (result) {
             is OrderCreationResult.Success -> Outcome.Success(result.orderId)
@@ -523,8 +593,11 @@ class OrderRepository(
         log.info("toOrderDto: orderId={}, userId={}, resolvedName={}, userRole={}, rawDbName={}", 
             orderId, userId, resolvedName, userRole, dbName)
 
-        val totalAmount = this[OrdersTable.totalAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
+        val subtotalAmount = this[OrdersTable.subtotalAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
         val discountAmount = this[OrdersTable.discountAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
+        val shippingFees = this[OrdersTable.shippingFees].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
+        val taxAmount = this[OrdersTable.taxAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
+        val totalAmount = this[OrdersTable.totalAmount].let { if (it.isNaN() || it.isInfinite()) 0.0 else it }
 
         val userEmail = this.getOrNull(UsersTable.email)
         val userPhone = this.getOrNull(UsersTable.phone)
@@ -536,9 +609,9 @@ class OrderRepository(
             userEmail = userEmail,
             userPhone = userPhone,
             items = resolvedItems,
-            subtotalAmount = totalAmount - discountAmount,
-            taxAmount = 0.0,
-            shippingFees = 0.0,
+            subtotalAmount = if (subtotalAmount > 0) subtotalAmount else (totalAmount + discountAmount - shippingFees - taxAmount),
+            taxAmount = taxAmount,
+            shippingFees = shippingFees,
             discountAmount = discountAmount,
             totalAmount = totalAmount,
             status = statusEnum,
@@ -568,14 +641,20 @@ class OrderRepository(
         return Order(
             id = this[OrdersTable.id],
             userId = this[OrdersTable.userId],
-            items = emptyList(), // Items should be fetched separately if needed
+            items = emptyList(), 
+            subtotal = this[OrdersTable.subtotalAmount],
+            tax = this[OrdersTable.taxAmount],
+            shippingFees = this[OrdersTable.shippingFees],
+            discount = this[OrdersTable.discountAmount],
             total = this[OrdersTable.totalAmount],
             status = statusEnum,
-            placedAtEpochSeconds = this[OrdersTable.createdAt] / 1000,
+            placedAtMillis = this[OrdersTable.createdAt],
             promoCode = this[OrdersTable.promoCode],
-            expiresAt = this[OrdersTable.expiresAt]?.let { it / 1000 },
+            expiresAt = this[OrdersTable.expiresAt],
             userName = "$firstName $lastName".trim().ifEmpty { "Guest Customer" },
             userEmail = email,
+            shippingAddress = this[OrdersTable.shippingAddress],
+            paymentMethod = this[OrdersTable.paymentMethod]
         )
     }
 

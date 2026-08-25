@@ -44,7 +44,7 @@ class OrderDetailPresenter(
 
         return OrderDetailState(
             order = order,
-            placedAt = order?.let { DateUtils.formatDateTime(it.placedAtEpochSeconds) } ?: "",
+            placedAt = order?.let { DateUtils.formatDateTime(it.placedAtMillis / 1000) } ?: "",
             isLoading = isLoading,
             error = error,
             fromCheckout = screen.fromCheckout,
