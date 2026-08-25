@@ -27,10 +27,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,21 +68,18 @@ import iz.mkao.mirasalon.core.designsystem.theme.ChatTextSent
 import iz.mkao.mirasalon.core.designsystem.theme.ChatTimeText
 import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
+import iz.mkao.mirasalon.core.designsystem.theme.Success
 import iz.mkao.mirasalon.core.domain.model.Specialist
 import iz.mkao.mirasalon.core.domain.model.chat.ChatMessage
 import iz.mkao.mirasalon.core.domain.model.chat.ChatSession
 import iz.mkao.mirasalon.core.domain.model.chat.MessageContent
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.presentation.DesktopScreen
-import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
-import iz.mkao.mirasalon.presentation.LocalProfileClick
-import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
-import iz.mkao.mirasalon.presentation.LocalToggleSidebar
-import iz.mkao.mirasalon.presentation.dashboard.components.DashboardHeader
-import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
@@ -95,148 +92,127 @@ import kotlin.time.Clock
 @Composable
 fun AdminChatScreenUi(
     state: AdminChatUiState,
-    modifier: Modifier = Modifier,
-    onNavigate: (String) -> Unit,
-    isSidebarExpanded: Boolean,
-    onToggleSidebar: () -> Unit,
-    onProfileClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
+    DesktopShell(
+        title = "Support",
+        subtitle = "Real-time client support",
+        selectedRoute = "Chat"
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(RadiusSmall),
+            color = Color.White,
+            shadowElevation = 0.dp,
+            border = BorderStroke(1.dp, MiraBorder)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    "Staff Members",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(state.specialists) { specialist ->
+                        SpecialistChatAvatar(
+                            specialist = specialist,
+                            isSelected = state.selectedSpecialistId == specialist.id,
+                            unreadCount = state.specialistUnreadCounts[specialist.id] ?: 0,
+                            onClick = { state.eventSink(AdminChatEvent.SelectSpecialist(specialist.id)) }
+                        )
+                    }
+                }
+            }
+        }
 
-    Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Chat",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 260.dp else 80.dp)
-        )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
-            DashboardHeader(
-                title = "Support",
-                userName = state.userName,
-                userAvatar = state.userAvatar,
-                onProfileClick = onProfileClick
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-
+        Row(modifier = Modifier.weight(1f)) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(RadiusSmall),
+                modifier = Modifier.width(300.dp).fillMaxHeight(),
+                shape = RectangleShape,
                 color = Color.White,
                 shadowElevation = 0.dp,
                 border = BorderStroke(1.dp, MiraBorder)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column {
                     Text(
-                        "Staff Members",
+                        "Customers",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(16.dp)
                     )
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
-                        contentPadding = PaddingValues(horizontal = 8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(state.specialists) { specialist ->
-                            SpecialistChatAvatar(
-                                specialist = specialist,
-                                isSelected = state.selectedSpecialistId == specialist.id,
-                                onClick = { state.eventSink(AdminChatEvent.SelectSpecialist(specialist.id)) }
-                            )
+
+                    HorizontalDivider(color = MiraBorder)
+
+                    if (state.filteredChannels.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No active chats", color = MiraTextSecondary, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(state.filteredChannels) { session ->
+                                CustomerProfileItem(
+                                    session = session,
+                                    isSelected = state.selectedSession?.id == session.id,
+                                    onClick = { state.eventSink(AdminChatEvent.SelectSession(session.id)) }
+                                )
+                                HorizontalDivider(color = MiraBorder.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.width(24.dp))
 
-            Row(modifier = Modifier.weight(1f)) {
-
-                Surface(
-                    modifier = Modifier.width(300.dp).fillMaxHeight(),
-                    shape = RectangleShape,
-                    color = Color.White,
-                    shadowElevation = 0.dp,
-                    border = BorderStroke(1.dp, MiraBorder)
-                ) {
-                    Column {
-                        Text(
-                            "Customers",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(16.dp)
-                        )
-
-                        HorizontalDivider(color = MiraBorder)
-
-                        if (state.filteredChannels.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("No active chats", color = MiraTextSecondary, style = MaterialTheme.typography.bodyMedium)
-                            }
-                        } else {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(state.filteredChannels) { session ->
-                                    CustomerProfileItem(
-                                        session = session,
-                                        isSelected = state.selectedSession?.id == session.id,
-                                        onClick = { state.eventSink(AdminChatEvent.SelectSession(session.id)) }
-                                    )
-                                    HorizontalDivider(color = MiraBorder.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-
-                Surface(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = RoundedCornerShape(RadiusSmall),
-                    color = Color.White,
-                    shadowElevation = 0.dp,
-                    border = BorderStroke(1.dp, MiraBorder)
-                ) {
-                    state.selectedSession?.let { session ->
-                        val specialist = state.specialists.find { it.id == state.selectedSpecialistId }
-                        DesktopAdminChatView(
-                            session = session,
-                            messages = state.messages,
-                            inputText = state.inputText,
-                            onInputTextChanged = { state.eventSink(AdminChatEvent.InputTextChanged(it)) },
-                            onSendMessage = { state.eventSink(AdminChatEvent.SendMessage) },
-                            specialistId = specialist?.id ?: state.selectedSpecialistId,
-                            specialistName = specialist?.name ?: "Admin",
-                            specialistAvatar = specialist?.imageUrl,
-                            pendingImagePreview = state.pendingImagePreview,
-                            isSendingImage = state.isSendingImage,
-                            onPickImage = { bytes, name, preview ->
-                                state.eventSink(AdminChatEvent.ImageSelected(bytes, name, preview))
-                            },
-                            onClearPendingImage = { state.eventSink(AdminChatEvent.ClearPendingImage) }
-                        )
-                    } ?: run {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.Chat,
-                                    null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = Color.LightGray
+            Surface(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                shape = RoundedCornerShape(RadiusSmall),
+                color = Color.White,
+                shadowElevation = 0.dp,
+                border = BorderStroke(1.dp, MiraBorder)
+            ) {
+                state.selectedSession?.let { session ->
+                    val specialist = state.specialists.find { it.id == state.selectedSpecialistId }
+                    DesktopAdminChatView(
+                        session = session,
+                        messages = state.messages,
+                        inputText = state.inputText,
+                        onInputTextChanged = { state.eventSink(AdminChatEvent.InputTextChanged(it)) },
+                        onSendMessage = { state.eventSink(AdminChatEvent.SendMessage) },
+                        specialistId = specialist?.id ?: state.selectedSpecialistId,
+                        specialistName = specialist?.name ?: "Admin",
+                        specialistAvatar = specialist?.imageUrl,
+                        pendingImagePreview = state.pendingImagePreview,
+                        isSendingImage = state.isSendingImage,
+                        onPickImage = { bytes, name, preview ->
+                            state.eventSink(AdminChatEvent.ImageSelected(bytes, name, preview))
+                        },
+                        onClearPendingImage = { state.eventSink(AdminChatEvent.ClearPendingImage) },
+                        currentUserId = state.currentUserId
+                    )
+                } ?: run {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Chat,
+                                null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.LightGray
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Select a customer to view conversation",
+                                color = MiraTextSecondary,
+                                style = MaterialTheme.typography.bodyLarge
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    "Select a customer to view conversation",
-                                    color = MiraTextSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
                         }
                     }
                 }
@@ -246,7 +222,12 @@ fun AdminChatScreenUi(
 }
 
 @Composable
-fun SpecialistChatAvatar(specialist: Specialist, isSelected: Boolean, onClick: () -> Unit) {
+fun SpecialistChatAvatar(
+    specialist: Specialist,
+    isSelected: Boolean,
+    unreadCount: Int = 0,
+    onClick: () -> Unit
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -255,38 +236,61 @@ fun SpecialistChatAvatar(specialist: Specialist, isSelected: Boolean, onClick: (
             .padding(vertical = 4.dp)
     ) {
         Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) MiraCoral.copy(alpha = 0.12f) else Color.White)
-                .border(
-                    width = if (isSelected) 3.dp else 1.dp,
-                    color = if (isSelected) MiraCoral else Color.LightGray.copy(alpha = 0.4f),
-                    shape = CircleShape
-                )
-                .padding(if (isSelected) 5.dp else 0.dp)
+            modifier = Modifier.size(72.dp)
         ) {
-            val imageUrl = specialist.imageUrl
-            if (!imageUrl.isNullOrBlank()) {
-                val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
-                AsyncImage(
-                    model = fullUrl,
-                    contentDescription = specialist.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                    onError = {
-                        Napier.e(it.result.throwable) { "Coil failed to load chat specialist image: $fullUrl" }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(if (isSelected) MiraCoral.copy(alpha = 0.12f) else Color.White)
+                    .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) MiraCoral else Color.LightGray.copy(alpha = 0.4f),
+                        shape = CircleShape
+                    )
+                    .padding(if (isSelected) 5.dp else 0.dp)
+            ) {
+                val imageUrl = specialist.imageUrl
+                if (!imageUrl.isNullOrBlank()) {
+                    val fullUrl = ApiEndpoints.resolveImageUrl(imageUrl)
+                    AsyncImage(
+                        model = fullUrl,
+                        contentDescription = specialist.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        onError = {
+                            Napier.e(it.result.throwable) { "Coil failed to load chat specialist image: $fullUrl" }
+                        }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(MiraCoral.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = specialist.name.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MiraCoral,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                )
-            } else {
+                }
+            }
+            
+            if (unreadCount > 0) {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(MiraCoral.copy(alpha = 0.2f)),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MiraCoral)
+                        .border(2.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = specialist.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MiraCoral,
+                        text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -379,18 +383,6 @@ fun CustomerProfileItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            session.lastMessage?.let { msg ->
-                Text(
-                    text = when (val content = msg.content) {
-                        is MessageContent.Text -> content.text
-                        is MessageContent.Image -> "Sent an image"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MiraTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
 
         if (session.unreadCount > 0) {
@@ -426,7 +418,8 @@ fun DesktopAdminChatView(
     pendingImagePreview: ImageBitmap?,
     isSendingImage: Boolean,
     onPickImage: (bytes: ByteArray, fileName: String, preview: ImageBitmap?) -> Unit,
-    onClearPendingImage: () -> Unit
+    onClearPendingImage: () -> Unit,
+    currentUserId: String? = null
 ) {
     val listState = rememberLazyListState()
 
@@ -467,7 +460,7 @@ fun DesktopAdminChatView(
 
         val groupedMessages = messages.groupBy {
             val systemTZ = TimeZone.currentSystemDefault()
-            kotlinx.datetime.Instant.fromEpochMilliseconds(it.timestamp).toLocalDateTime(systemTZ).date
+            Instant.fromEpochMilliseconds(it.timestamp).toLocalDateTime(systemTZ).date
         }
 
         LazyColumn(
@@ -512,7 +505,7 @@ fun DesktopAdminChatView(
                     }
                 }
                 items(messagesForDate) { message ->
-                    val isMe = message.senderId == "admin" || message.senderId == "me" || message.senderId == specialistId
+                    val isMe = message.isFromAdmin || message.senderId == currentUserId || (specialistId != null && message.actingAsId == specialistId)
                     DesktopMessageBubble(
                         message = message,
                         isMe = isMe,
@@ -621,10 +614,26 @@ private fun pickChatImage(
 
 @Composable
 fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: String? = null) {
+    val backgroundColor = when {
+        message.isInternal -> Color(0xFFFFF9C4) // Light yellow for internal notes
+        isMe -> ChatBubbleSent
+        else -> ChatBubbleReceived
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
     ) {
+        if (message.isInternal) {
+            Text(
+                "INTERNAL NOTE",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.DarkGray,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
+
         Row(verticalAlignment = Alignment.Bottom) {
             if (!isMe) {
                 Box(
@@ -644,7 +653,7 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
             }
 
             Surface(
-                color = if (isMe) ChatBubbleSent else ChatBubbleReceived,
+                color = backgroundColor,
                 shape = RoundedCornerShape(RadiusSmall)
             ) {
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
@@ -652,7 +661,7 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
                         is MessageContent.Text -> {
                             Text(
                                 text = content.text,
-                                color = if (isMe) ChatTextSent else ChatTextReceived,
+                                color = if (message.isInternal) Color.Black else if (isMe) ChatTextSent else ChatTextReceived,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -688,10 +697,17 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isMe) {
+                val statusIcon = when (message.status) {
+                    "READ" -> Icons.Filled.DoneAll
+                    "DELIVERED" -> Icons.Filled.DoneAll
+                    else -> Icons.Outlined.Check
+                }
+                val statusColor = if (message.status == "READ") Success else MaterialTheme.colorScheme.tertiary
+
                 Icon(
-                    imageVector = Icons.Outlined.Check,
+                    imageVector = statusIcon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
+                    tint = statusColor,
                     modifier = Modifier.size(12.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -715,14 +731,9 @@ fun DesktopMessageBubble(message: ChatMessage, isMe: Boolean, specialistName: St
 /** Circuit [Ui.Factory] binding [DesktopScreen.Chat] to [AdminChatScreenUi]. */
 class AdminChatUiFactory : Ui.Factory {
     override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
-        is DesktopScreen.Chat -> ui<AdminChatUiState> { state, modifier ->
+        is DesktopScreen.Chat -> ui<AdminChatUiState> { state, _ ->
             AdminChatScreenUi(
-                state = state,
-                modifier = modifier,
-                onNavigate = LocalDesktopNavigate.current,
-                isSidebarExpanded = LocalSidebarExpanded.current,
-                onToggleSidebar = LocalToggleSidebar.current,
-                onProfileClick = LocalProfileClick.current
+                state = state
             )
         }
         else -> null

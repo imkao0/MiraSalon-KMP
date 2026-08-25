@@ -11,13 +11,14 @@ struct ChatDetailView: View {
     var body: some View {
         CircuitView(screen: screen, navigator: navigation) { (state: ChatDetailState) in
             VStack(spacing: 0) {
-                MiraTopBar {
-                    Text(state.participantName ?? state.conversationId)
-                        .font(.headline)
-                        .bold()
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { state.eventSink(ChatDetailEventHeaderClicked()) }
+                ChatDetailTopBar(
+                    participantName: state.participantName ?? state.conversationId,
+                    participantRole: state.participantRole ?? "Specialist",
+                    participantAvatarUrl: state.participantAvatarUrl,
+                    isOnline: state.isOnline,
+                    onBack: { navigation.pop(result: nil) },
+                    onTap: { state.eventSink(ChatDetailEventHeaderClicked()) }
+                )
 
                 // Messages grouped by date
                 ScrollViewReader { proxy in
@@ -205,5 +206,49 @@ private struct ChatInputBar: View {
         }
         .padding(MiraTheme.spacingMedium)
         .background(Color.clear)
+    }
+}
+
+private struct ChatDetailTopBar: View {
+    let participantName: String
+    let participantRole: String
+    let participantAvatarUrl: String?
+    let isOnline: Bool
+    let onBack: () -> Void
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: MiraTheme.spacingSmall) {
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .foregroundColor(MiraTheme.onSurface)
+            }
+
+            HStack(spacing: MiraTheme.spacingSmall) {
+                MiraAvatar(url: participantAvatarUrl, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(participantName)
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(MiraTheme.onSurface)
+                    HStack(spacing: 4) {
+                        Text(participantRole)
+                            .font(.caption)
+                            .foregroundColor(MiraTheme.onSurfaceVariant)
+                        Circle()
+                            .fill(isOnline ? Color.green : Color.gray)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+
+            Spacer()
+        }
+        .padding(.horizontal, MiraTheme.spacingMedium)
+        .padding(.vertical, MiraTheme.spacingSmall)
+        .background(MiraTheme.surface)
     }
 }

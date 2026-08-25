@@ -18,13 +18,13 @@ import iz.mkao.mirasalon.core.domain.model.chat.ChatSession
 import iz.mkao.mirasalon.core.domain.model.chat.MessageContent
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
-import iz.mkao.mirasalon.core.domain.repository.NotificationRepository
+import iz.mkao.mirasalon.core.domain.repository.ChatManager
 import iz.mkao.mirasalon.core.domain.repository.SpecialistRepository
-import iz.mkao.mirasalon.core.domain.repository.StreamChatManager
 import iz.mkao.mirasalon.core.domain.repository.UploadRepository
 import iz.mkao.mirasalon.core.realtime.RealtimeGateway
 import iz.mkao.mirasalon.data.local.TokenManager
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
@@ -34,9 +34,8 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
 class AdminChatPresenter(
-    private val chatManager: StreamChatManager,
+    private val chatManager: ChatManager,
     private val specialistRepository: SpecialistRepository,
-    private val notificationRepository: NotificationRepository,
     private val tokenManager: TokenManager,
     private val uploadRepository: UploadRepository,
     private val realtimeGateway: RealtimeGateway,
@@ -51,12 +50,13 @@ class AdminChatPresenter(
         val userAvatar = session.avatarUrl
 
         var refreshChannelsTrigger by remember { mutableStateOf(0) }
+        var refreshSpecialistsTrigger by remember { mutableStateOf(0) }
+        
         val allChannels by remember(refreshChannelsTrigger) {
             chatManager.getChannels()
         }.collectAsState(initial = emptyList())
         
         // Watch for new messages globally via the server's notification WebSocket
-        // (triggered by the Stream Webhook or Bridge)
         val globalEvents by realtimeGateway.events.collectAsState(null)
         
         var specialists by remember { mutableStateOf(emptyList<Specialist>()) }
@@ -79,7 +79,7 @@ class AdminChatPresenter(
         }
 
         val streamMessages by if (selectedSessionId != null) {
-            chatManager.watchChannel("messaging", selectedSessionId!!).collectAsState(emptyList())
+            chatManager.watchChannel(selectedSessionId!!).collectAsState(emptyList())
         } else {
             remember { mutableStateOf(emptyList()) }
         }
@@ -89,6 +89,7 @@ class AdminChatPresenter(
         // React to global events to update the UI and refresh channel list
         LaunchedEffect(globalEvents) {
             val event = globalEvents ?: return@LaunchedEffect
+            Napier.d { "[Desktop Chat] Global event received: $event" }
             
             // 1. If it's a message for the current chat, add it instantly
             if (event is DomainEvent.ChatMessageReceived && event.conversationId == selectedSessionId) {
@@ -100,24 +101,40 @@ class AdminChatPresenter(
             // 2. If it's any chat message, refresh the channel list to show the new/updated customer card
             if (event is DomainEvent.ChatMessageReceived || event is DomainEvent.NotificationReceived) {
                 refreshChannelsTrigger++
+                
+                // If it's a message for a specialist we don't have yet, refresh specialists too
+                if (event is DomainEvent.ChatMessageReceived) {
+                    val specId = event.specialistId ?: event.actingAsId
+                    if (specId != null && specialists.none { it.id == specId || it.userId == specId || "spec-${it.id}" == specId }) {
+                        refreshSpecialistsTrigger++
+                    }
+                }
+            }
+            
+            // 3. If a specialist is created or changed, refresh the specialists list
+            if (event is DomainEvent.SpecialistCreated || event is DomainEvent.SpecialistStatusChanged) {
+                refreshSpecialistsTrigger++
             }
         }
         
-        // Periodically refresh channel list as a fallback
+        // Periodically refresh lists as a fallback
         LaunchedEffect(Unit) {
             while (true) {
                 delay(30.seconds)
                 refreshChannelsTrigger++
+                refreshSpecialistsTrigger++
             }
         }
 
         val messages = remember(streamMessages, websocketMessages.toList()) {
-            (streamMessages + websocketMessages.toList()).distinctBy { it.id }.sortedBy { it.timestamp }
+            (streamMessages + websocketMessages.toList())
+                .distinctBy { it.id }
+                .sortedBy { it.timestamp }
         }
         
         val scope = rememberCoroutineScope()
 
-        LaunchedEffect(Unit) {
+        LaunchedEffect(refreshSpecialistsTrigger) {
             isLoading = true
             val result = specialistRepository.getSpecialists()
             if (result is Outcome.Success) {
@@ -131,44 +148,70 @@ class AdminChatPresenter(
             }
         }
 
+        val specialistUnreadCounts = remember(allChannels, specialists) {
+            specialists.associate { spec ->
+                val count = allChannels.filter { session ->
+                    // Reuse the same logic as filterChannels but for a specific specialist
+                    isChannelForSpecialist(session, spec.id, specialists)
+                }.sumOf { it.unreadCount }
+                spec.id to count
+            }
+        }
+
         LaunchedEffect(selectedSessionId) {
             websocketMessages.clear()
             if (selectedSessionId != null) {
+                // Determine the correct deterministic ID for this chat.
+                // If the selected session already has a deterministic ID (e.g. from the sidebar), use it.
+                val deterministicId = if (ChatUtils.isDeterministicChatId(selectedSessionId!!)) {
+                    selectedSessionId!!
+                } else {
+                    val specialistId = resolveSessionSpecialistId(selectedSession, selectedSpecialistId, specialists) ?: "admin"
+                    val targetUserId = selectedSession?.customerId ?: selectedSession?.participantId ?: ""
+                    ChatUtils.getDeterministicChatId(specialistId, targetUserId)
+                }
 
-
-
-                val specialistId = resolveSessionSpecialistId(selectedSession, selectedSpecialistId) ?: "admin"
-
-                val targetUserId = selectedSession?.customerId ?: selectedSession?.participantId ?: ""
-
-                val deterministicId = ChatUtils.getDeterministicChatId(specialistId, targetUserId)
-
-                Napier.d { "[Desktop Chat] Connecting to partition: $deterministicId (specialistId=$specialistId, customerId=$targetUserId, streamChannelId=$selectedSessionId)" }
-
-
-                realtimeGateway.connectToChat(deterministicId)
-
-
-                scope.launch {
-                    realtimeGateway.observeChatEvents(deterministicId)
-                        .collect { event ->
-                            when (event) {
-                                is DomainEvent.ChatMessageReceived -> {
-                                    Napier.d { "[Desktop Chat] Received message: ${event.messageId} from ${event.senderId} in partition $deterministicId" }
+                Napier.d { "[Desktop Chat] Connecting to partition: $deterministicId (requested: $selectedSessionId)" }
+                
+                // IMPORTANT: Subscribe BEFORE connecting to avoid missing the History event
+                val eventFlow = realtimeGateway.observeChatEvents(deterministicId)
+                val collectJob = scope.launch {
+                    eventFlow.collect { event ->
+                        when (event) {
+                            is DomainEvent.ChatMessageReceived -> {
+                                Napier.d { "[Desktop Chat] Partition event received: ${event.messageId} from ${event.senderId} in partition $deterministicId" }
+                                if (websocketMessages.none { it.id == event.messageId }) {
                                     websocketMessages.add(event.toChatMessage())
                                 }
-                                is DomainEvent.ChatSeen -> {
-                                    Napier.d { "[Desktop Chat] User ${event.userId} SEEN messages in partition $deterministicId" }
-
-                                }
-                                else -> {}
                             }
+                            is DomainEvent.ChatHistory -> {
+                                Napier.d { "[Desktop Chat] History received for $deterministicId: ${event.messages.size} messages" }
+                                val mapped = event.messages.map { it.toChatMessage() }
+                                val existingIds = websocketMessages.map { it.id }.toSet()
+                                websocketMessages.addAll(mapped.filterNot { it.id in existingIds })
+                            }
+                            is DomainEvent.ChatSeen -> {
+                                Napier.d { "[Desktop Chat] User ${event.userId} SEEN messages in partition $deterministicId" }
+                            }
+                            else -> {}
                         }
+                    }
+                }
+
+                realtimeGateway.connectToChat(deterministicId)
+                
+                // When effect is cancelled (session changed), stop collecting
+                try {
+                    awaitCancellation()
+                } finally {
+                    collectJob.cancel()
+                    realtimeGateway.disconnectFromChat(deterministicId)
                 }
             }
         }
 
         return AdminChatUiState(
+            currentUserId = session.userId,
             userName = userName,
             userAvatar = userAvatar,
             specialists = specialists,
@@ -176,6 +219,7 @@ class AdminChatPresenter(
             selectedSessionId = selectedSessionId,
             filteredChannels = filtered,
             selectedSession = selectedSession,
+            specialistUnreadCounts = specialistUnreadCounts,
             messages = messages,
             inputText = inputText,
             pendingImageBytes = pendingImageBytes,
@@ -208,13 +252,13 @@ class AdminChatPresenter(
 
                     Napier.d { "[Desktop Chat] Selecting session: ${event.id}, marking as read" }
                     scope.launch(ioDispatcher) {
-                        chatManager.markRead("messaging", event.id).collect { result ->
+                        chatManager.markRead(event.id).collect { result ->
                             Napier.d { "[Desktop Chat] markRead result for ${event.id}: $result" }
                         }
                     }
                 }
-                is AdminChatEvent.NotifyChatReply -> scope.launch(ioDispatcher) {
-                    notificationRepository.notifyChatReply(event.targetUserId, event.senderName, event.conversationId ?: selectedSessionId)
+                is AdminChatEvent.NotifyChatReply -> {
+                    // Handled automatically by server upon message reception
                 }
                 is AdminChatEvent.InputTextChanged -> inputText = event.text
                 is AdminChatEvent.ImageSelected -> {
@@ -228,105 +272,104 @@ class AdminChatPresenter(
                     pendingImagePreview = null
                 }
                 AdminChatEvent.SendMessage -> {
-                    val specialist = specialists.find { it.id == selectedSpecialistId }
-                    val asUserId = specialist?.id ?: selectedSpecialistId
-                    val targetUserId = selectedSession?.participantId ?: ""
-                    val senderName = specialist?.name ?: "Admin"
-
-                    val imageBytes = pendingImageBytes
-                    val imageName = pendingImageName
                     val messageText = inputText.trim()
+                    val selectedId = selectedSessionId
+                    val session = selectedSession
 
-                    when {
+                    if (selectedId != null) {
+                        val specialist = specialists.find { it.id == selectedSpecialistId }
+                        val senderName = specialist?.name ?: "Admin"
+                        
+                        // Use the same deterministic ID logic as in the history loading
+                        val deterministicId = if (ChatUtils.isDeterministicChatId(selectedId)) {
+                            selectedId
+                        } else {
+                            val specialistId = resolveSessionSpecialistId(session, selectedSpecialistId, specialists) ?: "admin"
+                            val targetUserId = session?.customerId ?: session?.participantId ?: ""
+                            ChatUtils.getDeterministicChatId(specialistId, targetUserId)
+                        }
 
-                        imageBytes != null && selectedSessionId != null -> {
-                            val channelId = selectedSessionId!!
-                            isSendingImage = true
-                            error = null
-                            scope.launch(ioDispatcher) {
-                                val upload = uploadRepository.uploadImage(
-                                    bytes = imageBytes,
-                                    fileName = imageName ?: "image.jpg",
-                                    mimeType = imageName.mimeTypeFromName()
-                                )
-                                when (upload) {
-                                    is Outcome.Success -> {
-                                        val specialistId = resolveSessionSpecialistId(selectedSession, selectedSpecialistId) ?: "admin"
-                                        val customerId = selectedSession?.customerId ?: selectedSession?.participantId ?: ""
-                                        val deterministicId = ChatUtils.getDeterministicChatId(specialistId, customerId)
+                        val imageBytes = pendingImageBytes
+                        val imageName = pendingImageName
 
-                                        Napier.d { "[Desktop Chat] Sending image message to Stream channel $channelId and WebSocket partition $deterministicId" }
-                                        
-                                        chatManager.sendImageMessage(
-                                            type = "messaging",
-                                            id = channelId,
-                                            imageUrl = upload.data,
-                                            caption = messageText.ifBlank { null },
-                                            asUserId = specialistId
-                                        ).collect { result ->
-                                            Napier.d { "[Desktop Chat] sendImageMessage result: $result" }
-                                            if (result is Outcome.Success) {
-                                                if (selectedSessionId == channelId) {
-                                                    inputText = ""
-                                                    pendingImageBytes = null
-                                                    pendingImageName = null
-                                                    pendingImagePreview = null
-                                                }
-                                                notificationRepository.notifyChatReply(targetUserId, senderName, deterministicId)
-                                            } else {
-                                                error = "Failed to send image"
+                        when {
+                            imageBytes != null -> {
+                                isSendingImage = true
+                                error = null
+                                scope.launch(ioDispatcher) {
+                                    val upload = uploadRepository.uploadImage(
+                                        bytes = imageBytes,
+                                        fileName = imageName ?: "image.jpg",
+                                        mimeType = imageName.mimeTypeFromName()
+                                    )
+                                    when (upload) {
+                                        is Outcome.Success -> {
+                                            val specialistId = resolveSessionSpecialistId(session, selectedSpecialistId, specialists) ?: "admin"
+                                            val currentAdminId = tokenManager.userId() ?: "admin"
+
+                                            Napier.d { "[Desktop Chat] Sending image message to WebSocket partition $deterministicId" }
+                                            
+                                            realtimeGateway.sendChatEvent(
+                                                deterministicId,
+                                                DomainEvent.ChatMessageReceived(
+                                                    eventId = "evt-${Random.nextLong()}",
+                                                    timestamp = System.currentTimeMillis(),
+                                                    actorId = currentAdminId,
+                                                    message = "Admin image message",
+                                                    conversationId = deterministicId,
+                                                    messageId = "msg-admin-${Random.nextLong()}",
+                                                    senderId = currentAdminId,
+                                                    text = "[Image] ${messageText.ifBlank { "" }}",
+                                                    senderName = senderName,
+                                                    senderAvatarUrl = specialist?.imageUrl ?: userAvatar,
+                                                    senderRole = "ADMIN",
+                                                    actingAsId = if (specialistId != "admin") specialistId else null
+                                                )
+                                            )
+
+                                            if (selectedSessionId == selectedId) {
+                                                inputText = ""
+                                                pendingImageBytes = null
+                                                pendingImageName = null
+                                                pendingImagePreview = null
                                             }
                                         }
+                                        else -> error = "Failed to upload image"
                                     }
-                                    else -> error = "Failed to upload image"
+                                    isSendingImage = false
                                 }
-                                isSendingImage = false
                             }
-                        }
-                        messageText.isNotBlank() && selectedSessionId != null -> {
-                            val channelId = selectedSessionId!!
-                            inputText = ""
-                            scope.launch(ioDispatcher) {
-                                val nowSeconds = java.time.Instant.now().epochSecond
-                                val msgId = "msg-admin-${Random.nextLong()}"
+                            messageText.isNotBlank() -> {
+                                inputText = ""
+                                scope.launch(ioDispatcher) {
+                                    val nowMillis = System.currentTimeMillis()
+                                    val msgId = "msg-admin-${Random.nextLong()}"
+                                    val currentAdminId = tokenManager.userId() ?: "admin"
+                                    val specialistId = resolveSessionSpecialistId(session, selectedSpecialistId, specialists) ?: "admin"
+                                    val targetUserId = session?.customerId ?: session?.participantId ?: ""
 
+                                    Napier.d { "[Desktop Chat] Sending text message to partition: $deterministicId (msgId=$msgId). Specialist: $specialistId, Customer: $targetUserId" }
 
-
-                                val specialistId = resolveSessionSpecialistId(selectedSession, selectedSpecialistId) ?: "admin"
-                                val customerId = selectedSession?.customerId ?: selectedSession?.participantId ?: ""
-                                val deterministicId = ChatUtils.getDeterministicChatId(specialistId, customerId)
-
-                                Napier.d { "[Desktop Chat] Sending text message to partition: $deterministicId. Specialist: $specialistId, Customer: $customerId. Monitoring for 'seen' status." }
-
-
-                                realtimeGateway.sendChatEvent(
-                                    deterministicId,
-                                    DomainEvent.ChatMessageReceived(
-                                        eventId = "evt-${Random.nextLong()}",
-                                        timestamp = nowSeconds,
-                                        actorId = specialistId,
-                                        message = "Admin message",
-                                        conversationId = deterministicId,
-                                        messageId = msgId,
-                                        senderId = specialistId,
-                                        text = messageText
+                                    realtimeGateway.sendChatEvent(
+                                        deterministicId,
+                                        DomainEvent.ChatMessageReceived(
+                                            eventId = "evt-${Random.nextLong()}",
+                                            timestamp = nowMillis,
+                                            actorId = currentAdminId,
+                                            message = "Admin message",
+                                            conversationId = deterministicId,
+                                            messageId = msgId,
+                                            senderId = currentAdminId,
+                                            text = messageText,
+                                            senderName = senderName,
+                                            senderAvatarUrl = specialist?.imageUrl ?: userAvatar,
+                                            senderRole = "ADMIN",
+                                            actingAsId = if (specialistId != "admin") specialistId else null
+                                        )
                                     )
-                                )
-
-                                chatManager.sendMessage(
-                                    type = "messaging",
-                                    id = channelId,
-                                    text = messageText,
-                                    asUserId = specialistId
-                                ).collect { result ->
-                                    Napier.d { "[Desktop Chat] sendMessage result: $result" }
-                                    if (result is Outcome.Success) {
-                                        notificationRepository.notifyChatReply(customerId, senderName, deterministicId)
-                                    }
                                 }
                             }
                         }
-                        else -> Unit
                     }
                 }
             }
@@ -338,11 +381,25 @@ class AdminChatPresenter(
      * (deterministic chat id participants / members), falling back to the currently
      * selected specialist in the sidebar.
      */
-    private fun resolveSessionSpecialistId(session: ChatSession?, fallbackSpecialistId: String?): String? {
+    private fun resolveSessionSpecialistId(
+        session: ChatSession?,
+        fallbackSpecialistId: String?,
+        specialistList: List<Specialist>
+    ): String? {
         if (session == null) return fallbackSpecialistId
-        return session.specialistId
-            ?: ChatUtils.parseParticipantIds(session.id)?.firstOrNull { it.startsWith("spec-") }
-            ?: session.memberIds.firstOrNull { it.startsWith("spec-") }
+        
+        // 1. Explicit specialistId from session
+        session.specialistId?.let { return it }
+        
+        // 2. Look in participants / memberIds for something in specialistList
+        val participants = ChatUtils.parseParticipantIds(session.id) ?: session.memberIds
+        val found = participants.firstOrNull { id ->
+            specialistList.any { it.id == id || it.userId == id || "spec-$id" == id }
+        }
+        if (found != null) return found
+        
+        // 3. Fallback to startsWith("spec-") for robustness
+        return participants.firstOrNull { it.startsWith("spec-") }
             ?: fallbackSpecialistId
     }
 
@@ -352,34 +409,48 @@ class AdminChatPresenter(
         specialistList: List<Specialist>
     ): List<ChatSession> {
         if (specialistId == null) return emptyList()
+        return channels.filter { session ->
+            isChannelForSpecialist(session, specialistId, specialistList)
+        }
+    }
+
+    private fun isChannelForSpecialist(
+        session: ChatSession,
+        specialistId: String,
+        specialistList: List<Specialist>
+    ): Boolean {
         val specialist = specialistList.find { it.id == specialistId }
         val dbId = specialist?.id ?: specialistId
+        val linkedUserId = specialist?.userId
         
-        return channels.filter { session ->
-            val participants = ChatUtils.parseParticipantIds(session.id)
-            if (participants != null) {
-                if (dbId in participants || "spec-$dbId" in participants) return@filter true
-            }
-
-            val sessionSpecId = session.specialistId
-            if (sessionSpecId != null) {
-                if (sessionSpecId == dbId || sessionSpecId == "spec-$dbId") return@filter true
-            }
-
-            if (dbId in session.memberIds || "spec-$dbId" in session.memberIds) return@filter true
-
-            val sessionSpecName = session.specialistName
-            if (sessionSpecName != null && specialist?.name != null) {
-                if (sessionSpecName.contains(specialist.name, ignoreCase = true)) return@filter true
-            }
-            
-            false
+        val participants = ChatUtils.parseParticipantIds(session.id)
+        if (participants != null) {
+            if (dbId in participants || "spec-$dbId" in participants) return true
+            if (linkedUserId != null && linkedUserId in participants) return true
         }
+
+        val sessionSpecId = session.specialistId
+        if (sessionSpecId != null) {
+            if (sessionSpecId == dbId || sessionSpecId == "spec-$dbId") return true
+            if (linkedUserId != null && sessionSpecId == linkedUserId) return true
+        }
+
+        if (dbId in session.memberIds || "spec-$dbId" in session.memberIds) return true
+        if (linkedUserId != null && linkedUserId in session.memberIds) return true
+
+        val sessionSpecName = session.specialistName
+        if (sessionSpecName != null && specialist?.name != null) {
+            if (sessionSpecName.contains(specialist.name, ignoreCase = true)) return true
+        }
+        
+        return false
     }
 
     private fun DomainEvent.ChatMessageReceived.toChatMessage(): ChatMessage {
         val systemTZ = TimeZone.currentSystemDefault()
-        val dateTime = Instant.fromEpochMilliseconds(timestamp * 1000).toLocalDateTime(systemTZ)
+        // Handle both seconds (legacy/some parts of system) and milliseconds (standard KMP)
+        val timestampMs = if (timestamp > 1_000_000_000_000L) timestamp else timestamp * 1000
+        val dateTime = Instant.fromEpochMilliseconds(timestampMs).toLocalDateTime(systemTZ)
         val timeFormatted = "${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
         
         return ChatMessage(
@@ -387,8 +458,10 @@ class AdminChatPresenter(
             sessionId = conversationId,
             senderId = senderId,
             text = text,
-            timestamp = timestamp * 1000,
-            isFromAdmin = false,
+            timestamp = timestampMs,
+            isFromAdmin = senderRole == "ADMIN",
+            status = status,
+            isInternal = isInternal,
             content = MessageContent.Text(text),
             timeFormatted = timeFormatted
         )

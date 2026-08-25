@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
@@ -38,6 +39,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import iz.mkao.mirasalon.core.common.util.DateUtils
-import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeSmall
@@ -103,10 +105,13 @@ fun ChatDetailContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            MiraTopAppBar(
-                title = state.participantName ?: state.conversationId,
+            ChatDetailTopBar(
+                participantName = state.participantName ?: state.conversationId,
+                participantRole = state.participantRole ?: "Specialist",
+                participantAvatarUrl = state.participantAvatarUrl,
+                isOnline = state.isOnline,
                 onBackClick = { state.eventSink(ChatDetailEvent.Back) },
-                modifier = Modifier.clickable { state.eventSink(ChatDetailEvent.HeaderClicked) }
+                onHeaderClick = { state.eventSink(ChatDetailEvent.HeaderClicked) }
             )
         },
         bottomBar = {
@@ -409,3 +414,67 @@ private fun ChatInput(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatDetailTopBar(
+    participantName: String,
+    participantRole: String,
+    participantAvatarUrl: String?,
+    isOnline: Boolean,
+    onBackClick: () -> Unit,
+    onHeaderClick: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onHeaderClick() }
+            ) {
+                AsyncImage(
+                    model = ApiEndpoints.resolveImageUrl(participantAvatarUrl),
+                    contentDescription = participantName,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(SpacingSmall))
+                Column {
+                    Text(
+                        text = participantName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = participantRole,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (isOnline) Color(0xFF4CAF50) else Color(0xFF9E9E9E))
+                        )
+                    }
+                }
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
