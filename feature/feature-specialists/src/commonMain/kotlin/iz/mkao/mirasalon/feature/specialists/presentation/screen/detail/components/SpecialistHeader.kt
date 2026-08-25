@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeLarge
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.domain.model.Specialist
@@ -42,7 +44,7 @@ fun SpecialistHeader(specialist: Specialist) {
         Box(
             modifier = Modifier
                 .size(110.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(RadiusSmall))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {

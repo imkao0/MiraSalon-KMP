@@ -24,7 +24,8 @@ fun SpecialistDto.toDomain(): Specialist = Specialist(
     yearsOfExperience = yearsOfExperience,
     bio = bio ?: "",
     services = services.map { it.toDomainService() },
-    reviews = reviews.map { it.toDomain() }
+    reviews = reviews.map { it.toDomain() },
+    userId = userId
 )
 
 fun ServiceDto.toDomainService(): Service = Service(
@@ -69,7 +70,8 @@ fun SpecialistDto.toEntity() = SpecialistEntity(
     salonId = salonId,
     customersCount = customersServed,
     yearsOfExperience = yearsOfExperience,
-    isOnline = isOnline
+    isOnline = isOnline,
+    userId = userId
 )
 
 fun SpecialistDto.toServiceEntities(): List<ServiceEntity> = services.map { dto ->
@@ -101,7 +103,8 @@ fun SpecialistEntity.toDomain() = Specialist(
     yearsOfExperience = yearsOfExperience,
     bio = bio ?: "",
     services = emptyList(),
-    reviews = emptyList()
+    reviews = emptyList(),
+    userId = userId
 )
 
 fun SpecialistWithServices.toDomain(): Specialist = specialist.toDomain().copy(

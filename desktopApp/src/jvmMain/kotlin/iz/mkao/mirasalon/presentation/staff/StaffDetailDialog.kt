@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -60,13 +58,14 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.common.util.formatRating
-import iz.mkao.mirasalon.core.designsystem.theme.MiraFaintGray
-import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
+import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.designsystem.theme.MiraFaintGray
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialist
+import iz.mkao.mirasalon.core.domain.model.AdminSpecialistBreak
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistShift
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialistStats
 import iz.mkao.mirasalon.core.domain.model.Service
@@ -117,7 +116,7 @@ fun StaffDetailDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                modifier = Modifier.size(80.dp).clip(CircleShape).background(Color.White).border(1.dp, MiraBorder, CircleShape),
+                                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(4.dp)).background(Color.White).border(1.dp, MiraBorder, RoundedCornerShape(4.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 val imageUrl = editedImageUrl
@@ -283,6 +282,8 @@ fun StaffDetailDialog(
                     when (selectedTab) {
                         0 -> OverviewTab(
                             staff = staff,
+                            bio = editedBio,
+                            onBioChange = { editedBio = it },
                             stats = stats,
                             allServices = allServices,
                             editedServices = editedServices,
@@ -290,7 +291,7 @@ fun StaffDetailDialog(
                             isLoading = isLoadingStats,
                             readOnly = readOnly
                         )
-                        1 -> ScheduleTab(staff, onUpdateShifts, readOnly)
+                        1 -> ScheduleTab(staff, onUpdateShifts, onDismiss, readOnly)
                     }
                 }
             }
@@ -298,10 +299,11 @@ fun StaffDetailDialog(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OverviewTab(
     staff: AdminSpecialist,
+    bio: String,
+    onBioChange: (String) -> Unit,
     stats: AdminSpecialistStats?,
     allServices: List<Service>,
     editedServices: MutableList<Service>,
@@ -336,6 +338,27 @@ fun OverviewTab(
                     color = MaterialTheme.colorScheme.secondaryContainer,
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text("Biography", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        if (isEditing && !readOnly) {
+            OutlinedTextField(
+                value = bio,
+                onValueChange = onBioChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Enter specialist biography...") },
+                shape = RoundedCornerShape(4.dp),
+                minLines = 4
+            )
+        } else {
+            Text(
+                text = bio.ifBlank { "No biography provided for this specialist." },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (bio.isBlank()) MiraTextSecondary else Color.Black
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -419,7 +442,12 @@ fun OverviewTab(
 }
 
 @Composable
-fun ScheduleTab(staff: AdminSpecialist, onUpdateShifts: (List<AdminSpecialistShift>) -> Unit, readOnly: Boolean = false) {
+fun ScheduleTab(
+    staff: AdminSpecialist,
+    onUpdateShifts: (List<AdminSpecialistShift>) -> Unit,
+    onDismiss: () -> Unit,
+    readOnly: Boolean = false
+) {
     val days = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
     var currentShifts by remember { mutableStateOf(staff.shifts) }
     var editingShift by remember { mutableStateOf<AdminSpecialistShift?>(null) }
@@ -446,7 +474,9 @@ fun ScheduleTab(staff: AdminSpecialist, onUpdateShifts: (List<AdminSpecialistShi
     }
 
     Column {
-        Text("Weekly Working Hours", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Weekly Working Hours", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
@@ -457,37 +487,89 @@ fun ScheduleTab(staff: AdminSpecialist, onUpdateShifts: (List<AdminSpecialistShi
                 val dayOfWeek = index + 1
                 val shift = currentShifts.find { it.dayOfWeek == dayOfWeek }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().border(1.dp, MiraBorder, RoundedCornerShape(4.dp)).padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.fillMaxWidth().border(1.dp, MiraBorder, RoundedCornerShape(4.dp)).padding(16.dp)
                 ) {
-                    Text(days[index], modifier = Modifier.width(100.dp), fontWeight = FontWeight.Medium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(days[index], modifier = Modifier.width(100.dp), fontWeight = FontWeight.Bold)
 
-                    if (shift != null && shift.isActive) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("${shift.startTime} - ${shift.endTime}", color = MiraTextPrimary)
+                        if (shift != null && shift.isActive) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("${shift.startTime} - ${shift.endTime}", color = MiraTextPrimary, fontWeight = FontWeight.Medium)
+                                if (!readOnly) {
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    TextButton(onClick = {
+                                        editingShift = shift
+                                        selectedDayOfWeek = dayOfWeek
+                                        showShiftDialog = true
+                                    }) {
+                                        Text("Edit", color = MiraCoral)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("Day Off", color = MiraTextSecondary)
                             if (!readOnly) {
-                                Spacer(modifier = Modifier.width(16.dp))
                                 TextButton(onClick = {
-                                    editingShift = shift
+                                    editingShift = null
                                     selectedDayOfWeek = dayOfWeek
                                     showShiftDialog = true
                                 }) {
-                                    Text("Edit", color = MiraCoral)
+                                    Text("Add Shift", color = MiraCoral)
                                 }
                             }
                         }
-                    } else {
-                        Text("Day Off", color = MiraTextSecondary)
-                        if (!readOnly) {
-                            TextButton(onClick = {
-                                editingShift = null
-                                selectedDayOfWeek = dayOfWeek
-                                showShiftDialog = true
-                            }) {
-                                Text("Add Shift", color = MiraCoral)
+                    }
+
+                    if (shift != null && shift.isActive && shift.breaks.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Close, null, modifier = Modifier.size(14.dp), tint = MiraCoral)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Breaks:", style = MaterialTheme.typography.bodySmall, color = MiraTextSecondary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            shift.breaks.forEach { b ->
+                                Surface(
+                                    color = MiraCoral.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier.padding(end = 8.dp)
+                                ) {
+                                    Text(
+                                        "${b.title}: ${b.startTime}-${b.endTime}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MiraCoral
+                                    )
+                                }
                             }
+                        }
+                    }
+                }
+            }
+            
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Upcoming Absences", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (staff.absences.isEmpty()) {
+                    Text("No scheduled absences", color = MiraTextSecondary, style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    staff.absences.forEach { absence ->
+                         Row(
+                            modifier = Modifier.fillMaxWidth().border(1.dp, MiraBorder, RoundedCornerShape(4.dp)).padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(absence.reason ?: "Away", fontWeight = FontWeight.Medium)
+                                // Simplified date formatting for demonstration
+                                Text("Duration: Temporary", style = MaterialTheme.typography.bodySmall, color = MiraTextSecondary)
+                            }
+                            Icon(Icons.Outlined.Close, null, tint = MiraCoral, modifier = Modifier.clickable { /* Handle delete */ })
                         }
                     }
                 }
@@ -498,7 +580,10 @@ fun ScheduleTab(staff: AdminSpecialist, onUpdateShifts: (List<AdminSpecialistShi
 
         if (!readOnly) {
             Button(
-                onClick = { onUpdateShifts(currentShifts) },
+                onClick = { 
+                    onUpdateShifts(currentShifts)
+                    onDismiss()
+                },
                 modifier = Modifier.align(Alignment.End),
                 colors = ButtonDefaults.buttonColors(containerColor = MiraCoral),
                 shape = RoundedCornerShape(2.dp)
@@ -518,11 +603,13 @@ fun ShiftDialog(
 ) {
     var startTime by remember { mutableStateOf(shift?.startTime ?: "09:00") }
     var endTime by remember { mutableStateOf(shift?.endTime ?: "17:00") }
+    val breaks = remember { mutableStateListOf<AdminSpecialistBreak>().apply { addAll(shift?.breaks ?: emptyList()) } }
+    
     val days = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier.width(400.dp),
+            modifier = Modifier.width(500.dp),
             shape = RoundedCornerShape(4.dp),
             color = Color.White
         ) {
@@ -535,6 +622,8 @@ fun ShiftDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                Text("Working Hours", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedTextField(
                         value = startTime,
@@ -554,6 +643,30 @@ fun ShiftDialog(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Breaks (Lunch, etc.)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { 
+                        breaks.add(AdminSpecialistBreak(startTime = "12:00", endTime = "13:00", title = "Lunch"))
+                    }) {
+                        Text("+ Add Break", color = MiraCoral)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                breaks.forEachIndexed { index, b ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(value = b.title, onValueChange = { breaks[index] = b.copy(title = it) }, modifier = Modifier.weight(1.5f), label = { Text("Label") })
+                        OutlinedTextField(value = b.startTime, onValueChange = { breaks[index] = b.copy(startTime = it) }, modifier = Modifier.weight(1f), label = { Text("Start") })
+                        OutlinedTextField(value = b.endTime, onValueChange = { breaks[index] = b.copy(endTime = it) }, modifier = Modifier.weight(1f), label = { Text("End") })
+                        IconButton(onClick = { breaks.removeAt(index) }) {
+                            Icon(Icons.Outlined.Close, null, tint = MiraCoral)
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -570,7 +683,8 @@ fun ShiftDialog(
                                     dayOfWeek = dayOfWeek,
                                     startTime = startTime,
                                     endTime = endTime,
-                                    isActive = true
+                                    isActive = true,
+                                    breaks = breaks.toList()
                                 )
                             )
                         },

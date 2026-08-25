@@ -109,6 +109,7 @@ class SalonPresenterTest {
         override suspend fun saveEmail(email: String?) {}
         override suspend fun onTokensRefreshed(accessToken: String, refreshToken: String, userId: String?, userName: String?, userAvatarUrl: String?, firstName: String?, lastName: String?, phone: String?, address: String?, gender: String?) {}
         override suspend fun onAuthenticationExpired() {}
+        override fun observeUserId(): Flow<String?> = flowOf("1")
     }
 
     private class FakeProfileRepository : ProfileRepository {

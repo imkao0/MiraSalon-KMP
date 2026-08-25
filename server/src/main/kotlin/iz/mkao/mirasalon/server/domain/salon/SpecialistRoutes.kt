@@ -17,14 +17,17 @@ import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.dto.CreateSpecialistRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistShiftDto
+import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateSpecialistRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateSpecialistStatusRequest
 import iz.mkao.mirasalon.server.data.repository.SpecialistAvailabilityRepository
+import iz.mkao.mirasalon.server.data.repository.SpecialistClientNotesRepository
 import iz.mkao.mirasalon.server.data.repository.SpecialistCreateResult
 import iz.mkao.mirasalon.server.data.repository.SpecialistFetchResult
 import iz.mkao.mirasalon.server.data.repository.SpecialistRepository
 import iz.mkao.mirasalon.server.data.repository.SpecialistStatusUpdateResult
 import iz.mkao.mirasalon.server.data.repository.SpecialistUpdateResult
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.getUserId
@@ -40,6 +43,7 @@ private val log = LoggerFactory.getLogger("SpecialistRoutes")
 fun Route.specialistRoutes(
     specialistRepository: SpecialistRepository,
     availabilityRepository: SpecialistAvailabilityRepository,
+    clientNotesRepository: SpecialistClientNotesRepository,
     appConfig: AppConfig
 ) {
     get("/{id}/avatar") {
@@ -119,7 +123,7 @@ fun Route.specialistRoutes(
             } else {
                 val trimmed = dateParam.trim()
                 // Try parsing as Long (timestamp) first, then fallback to LocalDate (YYYY-MM-DD)
-                trimmed.toLongOrNull() ?: LocalDate.parse(trimmed).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                trimmed.toLongOrNull() ?: LocalDate.parse(trimmed).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
             }
         } catch (e: Exception) {
             log.warn("[SpecialistRoutes] Invalid date parameter: '$dateParam'. Falling back to current time. Error: ${e.message}")
@@ -186,6 +190,7 @@ fun Route.specialistRoutes(
                 HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "ID required")
             )
             val request = call.receive<UpdateSpecialistRequestDto>()
+            log.info("Admin {} updating specialist {}: name={}, imageUrl={}", adminId, id, request.name, request.imageUrl)
 
             val result = specialistRepository.update(id, request)
             when (result) {
@@ -259,10 +264,11 @@ fun Route.specialistRoutes(
         }
 
         post("/{id}/reviews") {
+            val userId = call.getUserId() ?: throw UnauthorizedException("Authentication required")
             val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
-            val request = call.receive<iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest>()
+            val request = call.receive<SubmitReviewRequest>()
             
-            val result = specialistRepository.submitReview(id, request.rating, request.comment)
+            val result = specialistRepository.submitReview(id, request.rating, request.comment, userId)
             when (result) {
                 is Outcome.Success -> {
                     call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = "Review submitted"))
@@ -294,6 +300,100 @@ fun Route.specialistRoutes(
                     call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Failed to update shifts"))
                 }
             }
+        }
+
+        get("/{id}/shifts") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val result = availabilityRepository.getShifts(id)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = result))
+        }
+
+        // --- Absence Management ---
+        get("/{id}/absences") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val userId = call.getUserId()
+            val specialist = specialistRepository.findById(id)
+            val isOwner = specialist is SpecialistFetchResult.Success && specialist.specialist.userId == userId
+            
+            if (!call.isAdmin() && !isOwner) {
+                return@get call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
+            }
+
+            val absences = availabilityRepository.getAbsences(id)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = absences))
+        }
+
+        post("/{id}/absences") {
+            val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val userId = call.getUserId()
+            val specialist = specialistRepository.findById(id)
+            val isOwner = specialist is SpecialistFetchResult.Success && specialist.specialist.userId == userId
+            
+            if (!call.isAdmin() && !isOwner) {
+                return@post call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
+            }
+
+            data class AddAbsenceRequest(val startTime: Long, val endTime: Long, val reason: String?)
+            val req = call.receive<AddAbsenceRequest>()
+            availabilityRepository.addAbsence(id, req.startTime, req.endTime, req.reason)
+            call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = "Absence added"))
+        }
+
+        delete("/absences/{absenceId}") {
+            call.ensureAdmin() // Simple admin-only for now or complex ownership check
+            val absenceId = call.parameters["absenceId"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            availabilityRepository.deleteAbsence(absenceId)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Absence removed"))
+        }
+
+        // --- Client Notes Management ---
+        get("/{id}/clients/{clientId}/notes") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val clientId = call.parameters["clientId"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val userId = call.getUserId()
+            
+            // Only the specialist or admin can see client notes
+            val specialist = specialistRepository.findById(id)
+            val isOwner = specialist is SpecialistFetchResult.Success && specialist.specialist.userId == userId
+            
+            if (!call.isAdmin() && !isOwner) {
+                return@get call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
+            }
+
+            val notes = clientNotesRepository.getNotes(id, clientId)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = notes))
+        }
+
+        post("/{id}/clients/{clientId}/notes") {
+            val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val clientId = call.parameters["clientId"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val userId = call.getUserId()
+            
+            val specialist = specialistRepository.findById(id)
+            val isOwner = specialist is SpecialistFetchResult.Success && specialist.specialist.userId == userId
+            
+            if (!call.isAdmin() && !isOwner) {
+                return@post call.respond(HttpStatusCode.Forbidden, ApiResponse<Unit>(success = false, error = "Access denied"))
+            }
+
+            data class AddNoteRequest(val note: String)
+            val req = call.receive<AddNoteRequest>()
+            clientNotesRepository.addNote(id, clientId, req.note)
+            call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = "Note added"))
+        }
+
+        put("/notes/{noteId}") {
+            val noteId = call.parameters["noteId"] ?: return@put call.respond(HttpStatusCode.BadRequest)
+            data class UpdateNoteRequest(val note: String)
+            val req = call.receive<UpdateNoteRequest>()
+            clientNotesRepository.updateNote(noteId, req.note)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Note updated"))
+        }
+
+        delete("/notes/{noteId}") {
+            val noteId = call.parameters["noteId"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            clientNotesRepository.deleteNote(noteId)
+            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Note deleted"))
         }
     }
 }

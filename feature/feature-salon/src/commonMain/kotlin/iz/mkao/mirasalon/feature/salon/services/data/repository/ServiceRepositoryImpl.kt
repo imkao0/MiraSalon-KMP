@@ -12,7 +12,6 @@ import iz.mkao.mirasalon.core.domain.repository.ServiceRepository
 import iz.mkao.mirasalon.core.network.mapper.toOutcome
 import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.result.NetworkResult
-import iz.mkao.mirasalon.core.realtime.RealtimeGateway
 import iz.mkao.mirasalon.feature.salon.services.data.mappers.toDomain
 import iz.mkao.mirasalon.feature.salon.services.data.mappers.toEntity
 import iz.mkao.mirasalon.feature.salon.services.data.network.api.ServicesApi
@@ -28,7 +27,6 @@ class ServiceRepositoryImpl(
     private val api: ServicesApi,
     private val serviceDao: ServiceDao,
     private val categoryDao: ServiceCategoryDao,
-    private val realtimeGateway: RealtimeGateway,
     private val repositoryScope: CoroutineScope
 ) : ServiceRepository {
 
@@ -85,7 +83,7 @@ class ServiceRepositoryImpl(
     }
 
     override suspend fun submitReview(serviceId: String, rating: Int, comment: String, userId: String?): Outcome<Unit> = withContext(Dispatchers.Default) {
-        Napier.d(tag = "ServiceRepositoryImpl") { "submitReview: serviceId=$serviceId, rating=$rating" }
+        Napier.d(tag = "ServiceRepositoryImpl") { "submitReview: serviceId=$serviceId, rating=$rating, userId=$userId" }
         try {
             val response = api.submitReview(
                 serviceId, 
@@ -125,8 +123,7 @@ class ServiceRepositoryImpl(
 
     private suspend fun fetchServices(filter: ServiceFilter): Outcome<List<Service>> {
         return try {
-            val response = api.fetchServices(filter.categoryId, filter.searchQuery)
-            when (response) {
+            when (val response = api.fetchServices(filter.categoryId, filter.searchQuery)) {
                 is NetworkResult.Success -> {
                     val dtos = response.data
                     serviceDao.upsertServices(dtos.map { it.toEntity() })

@@ -4,10 +4,10 @@ import io.micrometer.core.instrument.MeterRegistry
 import iz.mkao.mirasalon.core.domain.model.Service
 import iz.mkao.mirasalon.core.domain.model.Specialist
 import iz.mkao.mirasalon.core.domain.model.SpecialistReview
-import iz.mkao.mirasalon.core.domain.model.UserRole
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.network.model.dto.CreateSpecialistRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistDto
@@ -15,25 +15,22 @@ import iz.mkao.mirasalon.core.network.model.dto.SpecialistPerformanceDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistShiftDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateSpecialistRequestDto
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
 import iz.mkao.mirasalon.server.data.tables.ReviewsTable
 import iz.mkao.mirasalon.server.data.tables.ServicesTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistServicesTable
-import iz.mkao.mirasalon.server.data.tables.SpecialistShiftsTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
-import iz.mkao.mirasalon.server.service.StreamSyncService
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
@@ -41,7 +38,6 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
-import org.slf4j.LoggerFactory
 import java.util.UUID
 import iz.mkao.mirasalon.core.domain.repository.SpecialistRepository as CoreSpecialistRepository
 
@@ -69,10 +65,8 @@ sealed class SpecialistStatusUpdateResult {
 
 class SpecialistRepository(
     private val outboxRepository: OutboxRepository,
-    private val streamSyncService: StreamSyncService,
-    private val json: Json,
-    private val meterRegistry: MeterRegistry,
-    private val repositoryScope: CoroutineScope
+    private val availabilityRepository: SpecialistAvailabilityRepository,
+    private val meterRegistry: MeterRegistry
 ) : CoreSpecialistRepository {
 
     fun registerMetrics() {
@@ -97,56 +91,88 @@ class SpecialistRepository(
 
     override suspend fun getSpecialists(): Outcome<List<Specialist>> {
         return Outcome.Success(transaction {
-            SpecialistsTable.selectAll()
+            val rows = SpecialistsTable.selectAll()
                 .where { SpecialistsTable.isDeleted eq false }
                 .orderBy(SpecialistsTable.createdAt to SortOrder.ASC)
-                .map { it.toSpecialist() }
+                .toList()
+            
+            val ids = rows.map { it[SpecialistsTable.id] }
+            val servicesMap = fetchServicesBatch(ids)
+            val reviewsMap = fetchReviewsBatch(ids)
+            val countsMap = fetchCustomerCountsBatch(ids)
+            
+            rows.map { row ->
+                val id = row[SpecialistsTable.id]
+                mapToSpecialist(
+                    row = row,
+                    services = servicesMap[id] ?: emptyList(),
+                    reviews = reviewsMap[id] ?: emptyList(),
+                    customerCount = countsMap[id] ?: 0
+                )
+            }
         })
     }
 
     override suspend fun getSpecialist(id: String): Outcome<Specialist> {
         return transaction {
-            SpecialistsTable.selectAll().where { (SpecialistsTable.id eq id) and (SpecialistsTable.isDeleted eq false) }
-                .map { Outcome.Success(it.toSpecialist()) }
-                .singleOrNull() ?: Outcome.Error(Failure.ServerError(404, "Specialist not found"))
+            val row = SpecialistsTable.selectAll().where { (SpecialistsTable.id eq id) and (SpecialistsTable.isDeleted eq false) }
+                .singleOrNull() ?: return@transaction Outcome.Error(Failure.ServerError(404, "Specialist not found"))
+            
+            val servicesMap = fetchServicesBatch(listOf(id))
+            val reviewsMap = fetchReviewsBatch(listOf(id))
+            val countsMap = fetchCustomerCountsBatch(listOf(id))
+            
+            Outcome.Success(mapToSpecialist(
+                row = row,
+                services = servicesMap[id] ?: emptyList(),
+                reviews = reviewsMap[id] ?: emptyList(),
+                customerCount = countsMap[id] ?: 0
+            ))
         }
     }
 
     override suspend fun refresh() {
-        // Implementation for refreshing data if cached
+        // Implementation for refreshing data for cached
     }
 
-    override suspend fun submitReview(specialistId: String, rating: Int, comment: String): Outcome<Unit> = transaction {
+    override suspend fun submitReview(specialistId: String, rating: Int, comment: String, userId: String?): Outcome<Unit> = transaction {
         try {
+            val finalUserId = userId ?: return@transaction Outcome.Error(Failure.ClientError(401, "Authentication required"))
+
+            // Business Rule: Check if user has had a completed appointment with this specialist
+            val appointmentCount = AppointmentsTable.selectAll().where {
+                (AppointmentsTable.userId eq finalUserId) and
+                (AppointmentsTable.specialistId eq specialistId) and
+                (AppointmentsTable.status eq "COMPLETED")
+            }.count()
+
+            if (appointmentCount == 0L) {
+                return@transaction Outcome.Error(Failure.ServerError(403, "You can only review specialists you have had a completed appointment with."))
+            }
+
+            // Business Rule: Prevent more reviews than completed appointments
+            val reviewCount = ReviewsTable.selectAll().where {
+                (ReviewsTable.userId eq finalUserId) and
+                (ReviewsTable.targetId eq specialistId) and
+                (ReviewsTable.targetType eq "SPECIALIST")
+            }.count()
+
+            if (reviewCount >= appointmentCount) {
+                return@transaction Outcome.Error(Failure.ServerError(409, "You have already submitted reviews for all your recent appointments with this specialist."))
+            }
+
             val reviewId = UUID.randomUUID().toString()
-            val userId = UsersTable.selectAll().limit(1).map { it[UsersTable.id] }.singleOrNull() ?: "guest"
             
             ReviewsTable.insert {
                 it[ReviewsTable.id] = reviewId
-                it[ReviewsTable.userId] = userId
+                it[ReviewsTable.userId] = finalUserId
                 it[ReviewsTable.targetId] = specialistId
                 it[ReviewsTable.targetType] = "SPECIALIST"
                 it[ReviewsTable.rating] = rating
                 it[ReviewsTable.comment] = comment
                 it[ReviewsTable.createdAt] = System.currentTimeMillis()
             }
-            
-            val user = UsersTable.selectAll().where { UsersTable.id eq userId }.singleOrNull()
-            
-            val event = DomainEvent.ReviewSubmitted(
-                eventId = UUID.randomUUID().toString(),
-                timestamp = System.currentTimeMillis(),
-                actorId = userId,
-                message = "Review submitted for specialist $specialistId",
-                reviewId = reviewId,
-                targetId = specialistId,
-                targetType = "SPECIALIST",
-                rating = rating,
-                userName = user?.get(UsersTable.name),
-                userAvatarUrl = user?.get(UsersTable.avatarUrl)
-            )
-            outboxRepository.save(userId, json.encodeToString(event))
-            
+
             Outcome.Success(Unit)
         } catch (e: Exception) {
             val message = e.message ?: "Failed to submit review"
@@ -160,9 +186,43 @@ class SpecialistRepository(
     }
 
     fun findById(id: String): SpecialistFetchResult = transaction {
-        SpecialistsTable.selectAll().where { (SpecialistsTable.id eq id) and (SpecialistsTable.isDeleted eq false) }
-            .map { it.toSpecialistDto() }
-            .singleOrNull()?.let { SpecialistFetchResult.Success(it) } ?: SpecialistFetchResult.NotFound
+        val row = SpecialistsTable.selectAll().where { (SpecialistsTable.id eq id) and (SpecialistsTable.isDeleted eq false) }
+            .singleOrNull() ?: return@transaction SpecialistFetchResult.NotFound
+
+        val servicesMap = fetchServicesDtoBatch(listOf(id))
+        val reviewsMap = fetchReviewsDtoBatch(listOf(id))
+        val countsMap = fetchCustomerCountsBatch(listOf(id))
+
+        SpecialistFetchResult.Success(mapToSpecialistDto(
+            row = row,
+            services = servicesMap[id] ?: emptyList(),
+            reviews = reviewsMap[id] ?: emptyList(),
+            customerCount = countsMap[id] ?: 0
+        ))
+    }
+
+    /**
+     * Finds a specialist by their *linked user account* id ([SpecialistsTable.userId]).
+     * Chat partitions are sometimes keyed by the specialist's user UUID (or a "user-…"
+     * id) rather than the "spec-…" row id, so this lets the chat layer resolve the real
+     * specialist record regardless of which identifier the client used.
+     */
+    fun findByUserId(userId: String): SpecialistFetchResult = transaction {
+        val row = SpecialistsTable.selectAll()
+            .where { (SpecialistsTable.userId eq userId) and (SpecialistsTable.isDeleted eq false) }
+            .singleOrNull() ?: return@transaction SpecialistFetchResult.NotFound
+
+        val id = row[SpecialistsTable.id]
+        val servicesMap = fetchServicesDtoBatch(listOf(id))
+        val reviewsMap = fetchReviewsDtoBatch(listOf(id))
+        val countsMap = fetchCustomerCountsBatch(listOf(id))
+
+        SpecialistFetchResult.Success(mapToSpecialistDto(
+            row = row,
+            services = servicesMap[id] ?: emptyList(),
+            reviews = reviewsMap[id] ?: emptyList(),
+            customerCount = countsMap[id] ?: 0
+        ))
     }
 
     fun findAll(salonId: String?, page: Int, pageSize: Int, query: String? = null): List<SpecialistDto> = transaction {
@@ -180,12 +240,25 @@ class SpecialistRepository(
             }
         }
 
-        val items = baseQuery
+        val rows = baseQuery
             .orderBy(SpecialistsTable.createdAt to SortOrder.ASC)
             .limit(pageSize).offset(((page - 1) * pageSize).toLong())
-            .map { it.toSpecialistDto() }
+            .toList()
+            
+        val ids = rows.map { it[SpecialistsTable.id] }
+        val servicesMap = fetchServicesDtoBatch(ids)
+        val reviewsMap = fetchReviewsDtoBatch(ids)
+        val countsMap = fetchCustomerCountsBatch(ids)
 
-        items
+        rows.map { row ->
+            val id = row[SpecialistsTable.id]
+            mapToSpecialistDto(
+                row = row,
+                services = servicesMap[id] ?: emptyList(),
+                reviews = reviewsMap[id] ?: emptyList(),
+                customerCount = countsMap[id] ?: 0
+            )
+        }
     }
 
     fun findOnlineBySalon(salonId: String?, page: Int, pageSize: Int): List<SpecialistDto> = transaction {
@@ -196,14 +269,43 @@ class SpecialistRepository(
             query.andWhere { SpecialistsTable.salonId eq salonId }
         }
         
-        val items = query.limit(pageSize).offset(((page - 1) * pageSize).toLong())
-            .map { it.toSpecialistDto() }
-        
-        items
+        val rows = query.limit(pageSize).offset(((page - 1) * pageSize).toLong())
+            .toList()
+            
+        val ids = rows.map { it[SpecialistsTable.id] }
+        val servicesMap = fetchServicesDtoBatch(ids)
+        val reviewsMap = fetchReviewsDtoBatch(ids)
+        val countsMap = fetchCustomerCountsBatch(ids)
+
+        rows.map { row ->
+            val id = row[SpecialistsTable.id]
+            mapToSpecialistDto(
+                row = row,
+                services = servicesMap[id] ?: emptyList(),
+                reviews = reviewsMap[id] ?: emptyList(),
+                customerCount = countsMap[id] ?: 0
+            )
+        }
     }
 
     fun create(request: CreateSpecialistRequestDto): SpecialistCreateResult = transaction {
         val id = UUID.randomUUID().toString()
+
+        // Ensure the linked user exists to satisfy foreign key constraint
+        request.userId?.let { userId ->
+            val userExists = UsersTable.selectAll().where { UsersTable.id eq userId }.any()
+            if (!userExists) {
+                UsersTable.insert {
+                    it[UsersTable.id] = userId
+                    it[UsersTable.name] = request.name
+                    it[UsersTable.email] = "specialist.${userId}@mirasalon.com"
+                    it[UsersTable.passwordHash] = "PLACEHOLDER" // Specialist should reset password via "Forgot Password" or admin
+                    it[UsersTable.role] = "SPECIALIST"
+                    it[UsersTable.createdAt] = System.currentTimeMillis()
+                }
+            }
+        }
+
         SpecialistsTable.insert {
             it[SpecialistsTable.id] = id
             it[SpecialistsTable.salonId] = request.salonId
@@ -227,19 +329,15 @@ class SpecialistRepository(
 
         findById(id).let { 
             if (it is SpecialistFetchResult.Success) {
-                // Sync new specialist to Stream
-                repositoryScope.launch {
-                    try {
-                        streamSyncService.syncUser(
-                            userId = it.specialist.id,
-                            name = it.specialist.name,
-                            role = UserRole.SPECIALIST,
-                            avatarUrl = it.specialist.imageUrl
-                        )
-                    } catch (e: Exception) {
-                        LoggerFactory.getLogger("SpecialistRepository").error("Failed to sync new specialist to Stream", e)
-                    }
-                }
+                // Dispatch Realtime Event
+                val event = DomainEvent.SpecialistCreated(
+                    eventId = UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    actorId = null, 
+                    message = "New specialist created: ${it.specialist.name}",
+                    specialistId = it.specialist.id
+                )
+                outboxRepository.save(null, DomainEventCodec.encode(event))
                 SpecialistCreateResult.Success(it.specialist)
             }
             else SpecialistCreateResult.Failure("Failed to retrieve created specialist")
@@ -277,12 +375,12 @@ class SpecialistRepository(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = id,
-                    message = "Specialist $id updated",
+                    message = "Specialist ${specialist[SpecialistsTable.name]} profile updated",
                     specialistId = id,
                     isAvailable = specialist[SpecialistsTable.isActive] && statusStr == "ONLINE",
                     status = statusStr
                 )
-                outboxRepository.save(null, json.encodeToString(event))
+                outboxRepository.save(null, DomainEventCodec.encode(event))
             }
             SpecialistUpdateResult.Success
         } else SpecialistUpdateResult.NotFound
@@ -299,12 +397,12 @@ class SpecialistRepository(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = id,
-                    message = "Specialist $id status updated to $status",
+                    message = "Specialist ${specialist[SpecialistsTable.name]} is now $status",
                     specialistId = id,
                     isAvailable = specialist[SpecialistsTable.isActive] && status == "ONLINE",
                     status = status
                 )
-                outboxRepository.save(null, json.encodeToString(event))
+                outboxRepository.save(null, DomainEventCodec.encode(event))
             }
             SpecialistStatusUpdateResult.Success
         } else SpecialistStatusUpdateResult.NotFound
@@ -323,12 +421,13 @@ class SpecialistRepository(
                 eventId = UUID.randomUUID().toString(),
                 timestamp = System.currentTimeMillis(),
                 actorId = id,
-                message = "Specialist $id deleted",
+                message = "Specialist $id has been removed",
                 specialistId = id,
                 isAvailable = false,
                 status = "AWAY"
             )
-            outboxRepository.save(id, json.encodeToString(event))
+            // Specialists are not in users table, pass null for userId
+            outboxRepository.save(null, DomainEventCodec.encode(event))
             SpecialistStatusUpdateResult.Success
         } else SpecialistStatusUpdateResult.NotFound
     }
@@ -345,12 +444,12 @@ class SpecialistRepository(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = id,
-                    message = "Specialist $id active status updated to $isActive",
+                    message = "Specialist ${specialist[SpecialistsTable.name]} status changed to ${if (isActive) "Active" else "Inactive"}",
                     specialistId = id,
                     isAvailable = isActive && statusStr == "ONLINE",
                     status = statusStr
                 )
-                outboxRepository.save(null, json.encodeToString(event))
+                outboxRepository.save(null, DomainEventCodec.encode(event))
             }
             meterRegistry.counter("specialists_status_changes_total", "active", isActive.toString()).increment()
             SpecialistStatusUpdateResult.Success
@@ -416,17 +515,7 @@ class SpecialistRepository(
     }
 
     fun updateShifts(id: String, shifts: List<SpecialistShiftDto>): SpecialistStatusUpdateResult = transaction {
-        SpecialistShiftsTable.deleteWhere { specialistId eq id }
-        shifts.forEach { shift ->
-            SpecialistShiftsTable.insert {
-                it[SpecialistShiftsTable.id] = UUID.randomUUID().toString()
-                it[SpecialistShiftsTable.specialistId] = id
-                it[SpecialistShiftsTable.dayOfWeek] = shift.dayOfWeek
-                it[SpecialistShiftsTable.startTime] = shift.startTime
-                it[SpecialistShiftsTable.endTime] = shift.endTime
-                it[SpecialistShiftsTable.isActive] = shift.isWorkingDay
-            }
-        }
+        availabilityRepository.updateShifts(id, shifts)
 
         val specialist = SpecialistsTable.selectAll().where { SpecialistsTable.id eq id }.singleOrNull()
         if (specialist != null) {
@@ -434,12 +523,13 @@ class SpecialistRepository(
                 eventId = UUID.randomUUID().toString(),
                 timestamp = System.currentTimeMillis(),
                 actorId = id,
-                message = "Specialist $id shifts updated",
+                message = "Specialist ${specialist[SpecialistsTable.name]} availability updated",
                 specialistId = id,
                 isAvailable = specialist[SpecialistsTable.isActive],
                 status = specialist[SpecialistsTable.status]
             )
-            outboxRepository.save(id, json.encodeToString(event))
+            // Specialists are not in users table, pass null for userId
+            outboxRepository.save(null, DomainEventCodec.encode(event))
         }
 
         SpecialistStatusUpdateResult.Success
@@ -459,66 +549,162 @@ class SpecialistRepository(
             .singleOrNull()?.getOrNull(index)
     }
 
-    private fun ResultRow.toSpecialistDto() = transaction {
-        val id = this@toSpecialistDto[SpecialistsTable.id]
-        
-        val services = (SpecialistServicesTable innerJoin ServicesTable)
-            .selectAll().where { SpecialistServicesTable.specialistId eq id }
-            .map { 
-                ServiceDto(
-                    id = it[ServicesTable.id],
-                    name = it[ServicesTable.name],
-                    description = it[ServicesTable.description],
-                    price = it[ServicesTable.price],
-                    durationMinutes = it[ServicesTable.durationMinutes],
-                    imageUrl = it[ServicesTable.imageUrl],
-                    categoryId = it[ServicesTable.categoryId],
-                    subCategory = it[ServicesTable.subCategory],
-                    rating = it[ServicesTable.rating],
-                    isActive = it[ServicesTable.isActive]
-                )
-            }
+    private fun fetchServicesDtoBatch(ids: List<String>): Map<String, List<ServiceDto>> {
+        if (ids.isEmpty()) return emptyMap()
+        return (SpecialistServicesTable innerJoin ServicesTable)
+            .selectAll().where { SpecialistServicesTable.specialistId inList ids }
+            .map { it[SpecialistServicesTable.specialistId] to it.toServiceDto() }
+            .groupBy({ it.first }, { it.second })
+    }
 
+    private fun fetchServicesBatch(ids: List<String>): Map<String, List<Service>> {
+        if (ids.isEmpty()) return emptyMap()
+        return (SpecialistServicesTable innerJoin ServicesTable)
+            .selectAll().where { SpecialistServicesTable.specialistId inList ids }
+            .map { it[SpecialistServicesTable.specialistId] to it.toService() }
+            .groupBy({ it.first }, { it.second })
+    }
+
+    private fun fetchReviewsDtoBatch(ids: List<String>): Map<String, List<SpecialistReviewDto>> {
+        if (ids.isEmpty()) return emptyMap()
         val directReviews = (ReviewsTable innerJoin UsersTable)
             .selectAll().where { 
-                (ReviewsTable.targetId eq id) and 
+                (ReviewsTable.targetId inList ids) and 
                 (ReviewsTable.targetType eq "SPECIALIST") and
                 (ReviewsTable.isVisible eq true)
             }
-            .map { it.toSpecialistReviewDto() }
+            .map { it[ReviewsTable.targetId] to it.toSpecialistReviewDto() }
 
         val appointmentReviews = (ReviewsTable innerJoin UsersTable)
             .join(AppointmentsTable, JoinType.INNER, ReviewsTable.targetId, AppointmentsTable.id)
             .selectAll().where {
                 (ReviewsTable.targetType eq "APPOINTMENT") and
-                (AppointmentsTable.specialistId eq id) and
+                (AppointmentsTable.specialistId inList ids) and
                 (ReviewsTable.isVisible eq true)
             }
-            .map { it.toSpecialistReviewDto() }
+            .map { it[AppointmentsTable.specialistId] to it.toSpecialistReviewDto() }
 
-        val reviews = (directReviews + appointmentReviews).sortedByDescending { it.createdAtEpochSeconds }
+        return (directReviews + appointmentReviews)
+            .groupBy({ it.first }, { it.second })
+            .mapValues { entry -> entry.value.sortedByDescending { it.createdAtEpochSeconds } }
+    }
 
+    private fun fetchReviewsBatch(ids: List<String>): Map<String, List<SpecialistReview>> {
+        if (ids.isEmpty()) return emptyMap()
+        val directReviews = (ReviewsTable innerJoin UsersTable)
+            .selectAll().where { 
+                (ReviewsTable.targetId inList ids) and 
+                (ReviewsTable.targetType eq "SPECIALIST") and
+                (ReviewsTable.isVisible eq true)
+            }
+            .map { it[ReviewsTable.targetId] to it.toSpecialistReview() }
+
+        val appointmentReviews = (ReviewsTable innerJoin UsersTable)
+            .join(AppointmentsTable, JoinType.INNER, ReviewsTable.targetId, AppointmentsTable.id)
+            .selectAll().where {
+                (ReviewsTable.targetType eq "APPOINTMENT") and
+                (AppointmentsTable.specialistId inList ids) and
+                (ReviewsTable.isVisible eq true)
+            }
+            .map { it[AppointmentsTable.specialistId] to it.toSpecialistReview() }
+
+        return (directReviews + appointmentReviews)
+            .groupBy({ it.first }, { it.second })
+            .mapValues { entry -> entry.value.sortedByDescending { it.createdAtEpochSeconds } }
+    }
+
+    private fun fetchCustomerCountsBatch(ids: List<String>): Map<String, Int> {
+        if (ids.isEmpty()) return emptyMap()
+        val countColumn = AppointmentsTable.id.count()
+        return AppointmentsTable
+            .select(AppointmentsTable.specialistId, countColumn)
+            .where {
+                (AppointmentsTable.specialistId inList ids) and
+                (AppointmentsTable.status inList listOf("COMPLETED", "CONFIRMED"))
+            }
+            .groupBy(AppointmentsTable.specialistId)
+            .associate { it[AppointmentsTable.specialistId] to it[countColumn].toInt() }
+    }
+
+    private fun mapToSpecialistDto(
+        row: ResultRow,
+        services: List<ServiceDto>,
+        reviews: List<SpecialistReviewDto>,
+        customerCount: Int
+    ): SpecialistDto {
         val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating }.average() else 0.0
-
-        SpecialistDto(
-            id = id,
-            userId = this@toSpecialistDto[SpecialistsTable.userId],
-            name = this@toSpecialistDto[SpecialistsTable.name],
-            role = this@toSpecialistDto[SpecialistsTable.role],
-            imageUrl = this@toSpecialistDto[SpecialistsTable.imageUrl],
-            bio = this@toSpecialistDto[SpecialistsTable.bio],
+        return SpecialistDto(
+            id = row[SpecialistsTable.id],
+            userId = row[SpecialistsTable.userId],
+            name = row[SpecialistsTable.name],
+            role = row[SpecialistsTable.role],
+            imageUrl = row[SpecialistsTable.imageUrl],
+            bio = row[SpecialistsTable.bio],
             rating = avgRating,
-            salonId = this@toSpecialistDto[SpecialistsTable.salonId],
-            status = this@toSpecialistDto[SpecialistsTable.status],
-            isActive = this@toSpecialistDto[SpecialistsTable.isActive],
-            customersServed = countCustomersServed(id),
-            yearsOfExperience = this@toSpecialistDto[SpecialistsTable.yearsOfExperience],
-            isVerified = this@toSpecialistDto[SpecialistsTable.isVerified],
+            salonId = row[SpecialistsTable.salonId],
+            status = row[SpecialistsTable.status],
+            isActive = row[SpecialistsTable.isActive],
+            customersServed = customerCount,
+            yearsOfExperience = row[SpecialistsTable.yearsOfExperience],
+            isVerified = row[SpecialistsTable.isVerified],
             services = services,
             reviews = reviews,
-            isOnline = this@toSpecialistDto[SpecialistsTable.status] == "ONLINE"
+            isOnline = row[SpecialistsTable.status] == "ONLINE"
         )
     }
+
+    private fun mapToSpecialist(
+        row: ResultRow,
+        services: List<Service>,
+        reviews: List<SpecialistReview>,
+        customerCount: Int
+    ): Specialist {
+        val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
+        return Specialist(
+            id = row[SpecialistsTable.id],
+            name = row[SpecialistsTable.name],
+            role = row[SpecialistsTable.role],
+            salonId = row[SpecialistsTable.salonId],
+            rating = avgRating,
+            imageUrl = row[SpecialistsTable.imageUrl],
+            isOnline = row[SpecialistsTable.status] == "ONLINE",
+            isVerified = row[SpecialistsTable.isVerified],
+            bio = row[SpecialistsTable.bio] ?: "",
+            customersCount = customerCount,
+            yearsOfExperience = row[SpecialistsTable.yearsOfExperience],
+            services = services,
+            reviews = reviews,
+            userId = row[SpecialistsTable.userId]
+        )
+    }
+
+    private fun ResultRow.toServiceDto() = ServiceDto(
+        id = this[ServicesTable.id],
+        name = this[ServicesTable.name],
+        description = this[ServicesTable.description],
+        price = this[ServicesTable.price],
+        durationMinutes = this[ServicesTable.durationMinutes],
+        imageUrl = "/v1/api/services/${this[ServicesTable.id]}/image",
+        categoryId = this[ServicesTable.categoryId],
+        subCategory = this[ServicesTable.subCategory],
+        rating = this[ServicesTable.rating],
+        isActive = this[ServicesTable.isActive]
+    )
+
+    private fun ResultRow.toService() = Service(
+        id = this[ServicesTable.id],
+        name = this[ServicesTable.name],
+        description = this[ServicesTable.description],
+        durationMinutes = this[ServicesTable.durationMinutes],
+        price = this[ServicesTable.price],
+        categoryId = this[ServicesTable.categoryId],
+        imageUrl = this[ServicesTable.imageUrl] ?: ApiEndpoints.getServicePlaceholder(this[ServicesTable.name])
+    )
+
+    /**
+     * Real number of customers this specialist has served, derived from
+     * completed/confirmed appointments rather than the static seeded column.
+     */
 
     private fun ResultRow.toSpecialistReviewDto() = SpecialistReviewDto(
         id = this[ReviewsTable.id],
@@ -528,74 +714,6 @@ class SpecialistRepository(
         comment = this[ReviewsTable.comment] ?: "",
         createdAtEpochSeconds = this[ReviewsTable.createdAt] / 1000
     )
-
-    /**
-     * Real number of customers this specialist has served, derived from
-     * completed/confirmed appointments rather than the static seeded column.
-     */
-    private fun countCustomersServed(specialistId: String): Int =
-        AppointmentsTable.selectAll().where {
-            (AppointmentsTable.specialistId eq specialistId) and
-                (AppointmentsTable.status inList listOf(
-                    AppointmentStatus.COMPLETED.name,
-                    AppointmentStatus.CONFIRMED.name
-                ))
-        }.count().toInt()
-
-    private fun ResultRow.toSpecialist() = transaction {
-        val id = this@toSpecialist[SpecialistsTable.id]
-
-        val services = (SpecialistServicesTable innerJoin ServicesTable)
-            .selectAll().where { SpecialistServicesTable.specialistId eq id }
-            .map { 
-                Service(
-                    id = it[ServicesTable.id],
-                    name = it[ServicesTable.name],
-                    description = it[ServicesTable.description],
-                    durationMinutes = it[ServicesTable.durationMinutes],
-                    price = it[ServicesTable.price],
-                    categoryId = it[ServicesTable.categoryId],
-                    imageUrl = it[ServicesTable.imageUrl]
-                )
-            }
-
-        val directReviews = (ReviewsTable innerJoin UsersTable)
-            .selectAll().where { 
-                (ReviewsTable.targetId eq id) and 
-                (ReviewsTable.targetType eq "SPECIALIST") and
-                (ReviewsTable.isVisible eq true)
-            }
-            .map { it.toSpecialistReview() }
-
-        val appointmentReviews = (ReviewsTable innerJoin UsersTable)
-            .join(AppointmentsTable, JoinType.INNER, ReviewsTable.targetId, AppointmentsTable.id)
-            .selectAll().where {
-                (ReviewsTable.targetType eq "APPOINTMENT") and
-                (AppointmentsTable.specialistId eq id) and
-                (ReviewsTable.isVisible eq true)
-            }
-            .map { it.toSpecialistReview() }
-
-        val reviews = (directReviews + appointmentReviews).sortedByDescending { it.createdAtEpochSeconds }
-
-        val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
-
-        Specialist(
-            id = id,
-            name = this@toSpecialist[SpecialistsTable.name],
-            role = this@toSpecialist[SpecialistsTable.role],
-            salonId = this@toSpecialist[SpecialistsTable.salonId],
-            rating = avgRating,
-            imageUrl = this@toSpecialist[SpecialistsTable.imageUrl],
-            isOnline = this@toSpecialist[SpecialistsTable.status] == "ONLINE",
-            isVerified = this@toSpecialist[SpecialistsTable.isVerified],
-            bio = this@toSpecialist[SpecialistsTable.bio] ?: "",
-            customersCount = countCustomersServed(id),
-            yearsOfExperience = this@toSpecialist[SpecialistsTable.yearsOfExperience],
-            services = services,
-            reviews = reviews
-        )
-    }
 
     private fun ResultRow.toSpecialistReview() = SpecialistReview(
         id = this[ReviewsTable.id],

@@ -6,27 +6,31 @@ import iz.mkao.mirasalon.core.domain.model.ServiceFilter
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.network.model.dto.CreateServiceRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceCategoryDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateServiceRequestDto
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
+import iz.mkao.mirasalon.server.data.tables.PromotionsTable
 import iz.mkao.mirasalon.server.data.tables.ReviewsTable
 import iz.mkao.mirasalon.server.data.tables.ServiceCategoriesTable
 import iz.mkao.mirasalon.server.data.tables.ServicesTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -68,8 +72,7 @@ sealed class CategoryDeleteResult {
 }
 
 class ServiceRepository(
-    private val outboxRepository: OutboxRepository,
-    private val json: Json
+    private val outboxRepository: OutboxRepository
 ) : CoreServiceRepository {
 
     override fun observeCategories(): Flow<Outcome<List<ServiceCategory>>> = flow {
@@ -110,7 +113,8 @@ class ServiceRepository(
             filter.maxPrice?.let { max ->
                 dbQuery.andWhere { ServicesTable.price lessEq max }
             }
-            dbQuery.map { it.toService() }
+            dbQuery.orderBy(ServicesTable.createdAt to SortOrder.DESC)
+                .map { it.toService() }
         })
     }
 
@@ -122,37 +126,42 @@ class ServiceRepository(
         }
     }
 
-    override suspend fun submitReview(serviceId: String, rating: Int, comment: String): Outcome<Unit> = transaction {
+    override suspend fun submitReview(serviceId: String, rating: Int, comment: String, userId: String?): Outcome<Unit> = transaction {
         try {
-            val reviewId = UUID.randomUUID().toString()
-            val userId = UsersTable.selectAll().limit(1).map { it[UsersTable.id] }.singleOrNull() ?: "guest"
-            
+            val finalUserId = userId ?: return@transaction Outcome.Error(Failure.ClientError(401, "Authentication required"))
+
+            // Check if user has had a completed appointment for this service
+            val appointmentCount = AppointmentsTable.selectAll().where {
+                (AppointmentsTable.userId eq finalUserId) and
+                (AppointmentsTable.servicesJson like "%$serviceId%") and
+                (AppointmentsTable.status eq "COMPLETED")
+            }.count()
+
+            if (appointmentCount == 0L) {
+                return@transaction Outcome.Error(Failure.ServerError(403, "You can only review services you have already completed."))
+            }
+
+            // Check for existing review
+            val reviewCount = ReviewsTable.selectAll().where {
+                (ReviewsTable.userId eq finalUserId) and
+                (ReviewsTable.targetId eq serviceId) and
+                (ReviewsTable.targetType eq "SERVICE")
+            }.count()
+
+            if (reviewCount >= appointmentCount) {
+                return@transaction Outcome.Error(Failure.ServerError(409, "You have already submitted reviews for all your recent completions of this service."))
+            }
+
             ReviewsTable.insert {
-                it[ReviewsTable.id] = reviewId
-                it[ReviewsTable.userId] = userId
+                it[ReviewsTable.id] = UUID.randomUUID().toString()
+                it[ReviewsTable.userId] = finalUserId
                 it[ReviewsTable.targetId] = serviceId
                 it[ReviewsTable.targetType] = "SERVICE"
                 it[ReviewsTable.rating] = rating
                 it[ReviewsTable.comment] = comment
                 it[ReviewsTable.createdAt] = System.currentTimeMillis()
             }
-            
-            val user = UsersTable.selectAll().where { UsersTable.id eq userId }.singleOrNull()
-            
-            val event = DomainEvent.ReviewSubmitted(
-                eventId = UUID.randomUUID().toString(),
-                timestamp = System.currentTimeMillis(),
-                actorId = userId,
-                message = "Review submitted for service $serviceId",
-                reviewId = reviewId,
-                targetId = serviceId,
-                targetType = "SERVICE",
-                rating = rating,
-                userName = user?.get(UsersTable.name),
-                userAvatarUrl = user?.get(UsersTable.avatarUrl)
-            )
-            outboxRepository.save(userId, json.encodeToString(event))
-            
+
             Outcome.Success(Unit)
         } catch (e: Exception) {
             Outcome.Error(Failure.ServerError(500, e.message ?: "Failed to submit review"))
@@ -208,7 +217,9 @@ class ServiceRepository(
             ServicesTable.selectAll()
         }
         
-        val items = query.limit(pageSize).offset(((page - 1) * pageSize).toLong())
+        val items = query
+            .orderBy(ServicesTable.createdAt to SortOrder.DESC)
+            .limit(pageSize).offset(((page - 1) * pageSize).toLong())
             .map { it.toServiceDto() }
         
         items
@@ -259,7 +270,7 @@ class ServiceRepository(
                     message = "Service $id updated",
                     serviceId = id
                 )
-                outboxRepository.save(null, json.encodeToString(event))
+                outboxRepository.save(null, DomainEventCodec.encode(event))
                 ServiceUpdateResult.Success
             } else ServiceUpdateResult.NotFound
         } catch (e: Exception) {
@@ -278,7 +289,7 @@ class ServiceRepository(
                     message = "Service $id deleted",
                     serviceId = id
                 )
-                outboxRepository.save(null, json.encodeToString(event))
+                outboxRepository.save(null, DomainEventCodec.encode(event))
                 ServiceDeleteResult.Success
             } else ServiceDeleteResult.NotFound
         } catch (e: Exception) {
@@ -287,10 +298,12 @@ class ServiceRepository(
     }
 
     fun getImagePath(id: String): String? = transaction {
-        ServicesTable.select(ServicesTable.imageUrl)
+        val result = ServicesTable.select(ServicesTable.name, ServicesTable.imageUrl)
             .where { ServicesTable.id eq id }
-            .map { it[ServicesTable.imageUrl] }
+            .map { it[ServicesTable.name] to it[ServicesTable.imageUrl] }
             .singleOrNull()
+            
+        result?.second ?: ApiEndpoints.getServicePlaceholder(result?.first)
     }
 
     fun getCategoryImagePath(categoryId: String): String? = transaction {
@@ -359,7 +372,13 @@ class ServiceRepository(
 
     private fun ResultRow.toService() = transaction {
         val id = this@toService[ServicesTable.id]
-        
+        val categoryId = this@toService[ServicesTable.categoryId]
+
+        val categoryName = ServiceCategoriesTable.select(ServiceCategoriesTable.name)
+            .where { ServiceCategoriesTable.id eq categoryId }
+            .map { it[ServiceCategoriesTable.name] }
+            .singleOrNull() ?: ""
+
         val directReviews = ReviewsTable.join(UsersTable, JoinType.INNER, ReviewsTable.userId, UsersTable.id)
             .selectAll().where { 
                 (ReviewsTable.targetId eq id) and 
@@ -380,17 +399,45 @@ class ServiceRepository(
         val reviews = (directReviews + appointmentReviews).sortedByDescending { it.createdAtEpochSeconds }
         val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
 
+        // Calculate automatic discount from category
+        val autoDiscountPercent = getBestAutomaticDiscountPercent(categoryName, this@toService[ServicesTable.price])
+
         Service(
             id = id,
             name = this@toService[ServicesTable.name],
             description = this@toService[ServicesTable.description],
             durationMinutes = this@toService[ServicesTable.durationMinutes],
             price = this@toService[ServicesTable.price],
-            categoryId = this@toService[ServicesTable.categoryId],
-            imageUrl = this@toService[ServicesTable.imageUrl],
+            categoryId = categoryId,
+            discountPercent = autoDiscountPercent,
+            imageUrl = this@toService[ServicesTable.imageUrl] ?: ApiEndpoints.getServicePlaceholder(this@toService[ServicesTable.name]),
             reviews = reviews,
             rating = avgRating
         )
+    }
+
+    private fun getBestAutomaticDiscountPercent(categoryName: String, itemPrice: Double): Int {
+        if (categoryName.isBlank()) return 0
+        val now = System.currentTimeMillis()
+        return transaction {
+            PromotionsTable.selectAll().where {
+                (PromotionsTable.status eq "ACTIVE") and
+                // Allow "welcome" promo to be automatic if the user wants it to be "auto"
+                (PromotionsTable.code.isNull() or (PromotionsTable.code eq "welcome")) and
+                (PromotionsTable.discountType eq "PERCENTAGE") and
+                (PromotionsTable.validFrom.isNull() or (PromotionsTable.validFrom lessEq now)) and
+                (PromotionsTable.validUntil.isNull() or (PromotionsTable.validUntil greaterEq now))
+            }.mapNotNull { row ->
+                val categories = row[PromotionsTable.applicableCategories]
+                    ?.split(",")
+                    ?.map { it.trim().lowercase() } ?: emptyList()
+                val minVal = row[PromotionsTable.minOrderValue] ?: 0.0
+                
+                if (categoryName.trim().lowercase() in categories && itemPrice >= minVal) {
+                    row[PromotionsTable.discountValue].toInt()
+                } else null
+            }.maxOrNull() ?: 0
+        }
     }
 
     private fun ResultRow.toDomainReview() = iz.mkao.mirasalon.core.domain.model.Review(
@@ -404,7 +451,13 @@ class ServiceRepository(
 
     private fun ResultRow.toServiceDto() = transaction {
         val id = this@toServiceDto[ServicesTable.id]
-        
+        val categoryId = this@toServiceDto[ServicesTable.categoryId]
+
+        val categoryName = ServiceCategoriesTable.select(ServiceCategoriesTable.name)
+            .where { ServiceCategoriesTable.id eq categoryId }
+            .map { it[ServiceCategoriesTable.name] }
+            .singleOrNull() ?: ""
+
         val directReviews = ReviewsTable.join(UsersTable, JoinType.INNER, ReviewsTable.userId, UsersTable.id)
             .selectAll().where { 
                 (ReviewsTable.targetId eq id) and 
@@ -425,15 +478,18 @@ class ServiceRepository(
         val reviews = (directReviews + appointmentReviews).sortedByDescending { it.createdAtEpochSeconds }
         val avgRating = if (reviews.isNotEmpty()) reviews.map { it.rating.toDouble() }.average() else 0.0
 
+        val autoDiscountPercent = getBestAutomaticDiscountPercent(categoryName, this@toServiceDto[ServicesTable.price])
+
         ServiceDto(
             id = id,
             name = this@toServiceDto[ServicesTable.name],
             description = this@toServiceDto[ServicesTable.description],
             price = this@toServiceDto[ServicesTable.price],
             durationMinutes = this@toServiceDto[ServicesTable.durationMinutes],
-            imageUrl = if (this@toServiceDto[ServicesTable.imageUrl] != null) "/v1/api/services/${this@toServiceDto[ServicesTable.id]}/image" else null,
-            categoryId = this@toServiceDto[ServicesTable.categoryId],
+            imageUrl = "/v1/api/services/${this@toServiceDto[ServicesTable.id]}/image",
+            categoryId = categoryId,
             subCategory = this@toServiceDto[ServicesTable.subCategory],
+            discountPercent = autoDiscountPercent,
             rating = avgRating,
             reviews = reviews,
             isActive = this@toServiceDto[ServicesTable.isActive]

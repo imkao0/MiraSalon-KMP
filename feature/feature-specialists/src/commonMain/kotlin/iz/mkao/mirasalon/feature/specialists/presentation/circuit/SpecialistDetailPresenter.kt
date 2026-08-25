@@ -60,7 +60,7 @@ class SpecialistDetailPresenter(
             error = error,
             showReviewSheet = showReviewSheet,
             onReviewSubmit = { rating, comment ->
-                val result = repository.submitReview(screen.specialistId, rating, comment)
+                val result = repository.submitReview(screen.specialistId, rating, comment, null)
                 if (result is Outcome.Success) {
                     loadSpecialist()
                     Result.success(Unit)
@@ -97,7 +97,8 @@ class SpecialistDetailPresenter(
                                 ChatRoute.ChatDetail(
                                     conversationId = deterministicId,
                                     participantName = event.specialist.name,
-                                    participantAvatarUrl = event.specialist.imageUrl
+                                    participantAvatarUrl = event.specialist.imageUrl,
+                                    participantId = event.specialist.id
                                 )
                             )
                         }

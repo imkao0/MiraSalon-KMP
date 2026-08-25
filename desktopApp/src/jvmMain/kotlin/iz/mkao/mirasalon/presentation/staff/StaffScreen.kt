@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +25,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.ContentCut
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.MoreVert
@@ -37,6 +37,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,12 +68,8 @@ import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
 import iz.mkao.mirasalon.core.domain.model.AdminSpecialist
 import iz.mkao.mirasalon.presentation.DesktopScreen
 import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
-import iz.mkao.mirasalon.presentation.LocalProfileClick
-import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
-import iz.mkao.mirasalon.presentation.LocalToggleSidebar
 import iz.mkao.mirasalon.presentation.components.DesktopLoadingState
-import iz.mkao.mirasalon.presentation.dashboard.components.DashboardHeader
-import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 
 val VelvetaCoral = Color(0xFFF06A6A)
 
@@ -80,10 +77,7 @@ val VelvetaCoral = Color(0xFFF06A6A)
 fun StaffScreenUi(
     state: StaffUiState,
     modifier: Modifier = Modifier,
-    onNavigate: (String) -> Unit,
-    isSidebarExpanded: Boolean,
-    onToggleSidebar: () -> Unit,
-    onProfileClick: () -> Unit
+    onNavigate: (String) -> Unit
 ) {
     val staffMembers = state.staff
     val isLoading = state.isLoading
@@ -101,7 +95,7 @@ fun StaffScreenUi(
                 state.eventSink(StaffEvent.UploadImage(bytes, name, onResult))
             },
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, role, years, services, imageUrl ->
+            onConfirm = { name, role, bio, years, services, imageUrl ->
                 state.eventSink(
                     StaffEvent.CreateStaff(
                         AdminSpecialist(
@@ -109,6 +103,7 @@ fun StaffScreenUi(
                             salonId = "main-salon",
                             name = name,
                             role = role,
+                            bio = bio,
                             yearsOfExperience = years,
                             services = services,
                             imageUrl = imageUrl
@@ -129,6 +124,7 @@ fun StaffScreenUi(
             onDismiss = { selectedStaffForDetail = null },
             onUpdateShifts = { shifts ->
                 state.eventSink(StaffEvent.UpdateShifts(staff.id, shifts))
+                selectedStaffForDetail = null
             },
             onUploadImage = { bytes, name, onResult ->
                 state.eventSink(StaffEvent.UploadImage(bytes, name, onResult))
@@ -141,101 +137,89 @@ fun StaffScreenUi(
         )
     }
 
-    Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Staff",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 280.dp else 80.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(horizontal = 40.dp, vertical = 24.dp)) {
-            DashboardHeader(
-                title = "Staff",
-                onProfileClick = onProfileClick
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    DesktopShell(
+        title = "Staff",
+        subtitle = "Manage specialists and schedules",
+        selectedRoute = "Staff"
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.width(400.dp).height(40.dp),
+                color = Color(0xFFF9F9F9),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFFE0E0E0))
             ) {
-                Surface(
-                    modifier = Modifier.width(400.dp).height(40.dp),
-                    color = Color(0xFFF9F9F9),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0))
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp), tint = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        BasicTextField(
-                            value = state.searchQuery,
-                            onValueChange = { state.eventSink(StaffEvent.Search(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(fontSize = 14.sp, color = MiraTextPrimary),
-                            singleLine = true,
-                            decorationBox = { innerTextField ->
-                                if (state.searchQuery.isEmpty()) {
-                                    Text("Search", fontSize = 14.sp, color = Color.Gray)
-                                }
-                                innerTextField()
+                    Icon(Icons.Outlined.Search, null, modifier = Modifier.size(18.dp), tint = Color.Gray)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    BasicTextField(
+                        value = state.searchQuery,
+                        onValueChange = { state.eventSink(StaffEvent.Search(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(fontSize = 14.sp, color = MiraTextPrimary),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            if (state.searchQuery.isEmpty()) {
+                                Text("Search", fontSize = 14.sp, color = Color.Gray)
                             }
-                        )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    HeaderAction(icon = Icons.Outlined.FilterList, label = "Filters")
-                    Spacer(modifier = Modifier.width(12.dp))
-                    HeaderAction(icon = Icons.Outlined.FileDownload, label = "Export")
-                    Spacer(modifier = Modifier.width(20.dp))
-                    Button(
-                        onClick = { showAddDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = VelvetaCoral),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
-                    ) {
-                        Text("Add Staff", fontWeight = FontWeight.Bold)
-                    }
+                            innerTextField()
+                        }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (isLoading && staffMembers.isEmpty()) {
-                DesktopLoadingState()
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    modifier = Modifier.fillMaxSize()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HeaderAction(icon = Icons.Outlined.FilterList, label = "Filters")
+                Spacer(modifier = Modifier.width(12.dp))
+                HeaderAction(icon = Icons.Outlined.FileDownload, label = "Export")
+                Spacer(modifier = Modifier.width(20.dp))
+                Button(
+                    onClick = { showAddDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = VelvetaCoral),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
                 ) {
-                    items(staffMembers.distinctBy { it.id }, key = { it.id }) { staff ->
-                        StaffCard(
-                            staff = staff,
-                            onStatusChange = { isAvailable ->
-                                state.eventSink(StaffEvent.SetAvailability(staff.id, isAvailable))
-                            },
-                            onClick = {
-                                selectedStaffForDetail = staff
-                                state.eventSink(StaffEvent.LoadStats(staff.id))
-                            },
-                            onMessageClick = {
-                                val sessionId = ChatUtils.getDeterministicChatId("admin", staff.id)
-                                onNavigate("Chat/$sessionId")
-                            }
-                        )
-                    }
+                    Text("Add Staff", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        if (isLoading && staffMembers.isEmpty()) {
+            DesktopLoadingState()
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(staffMembers.distinctBy { it.id }, key = { it.id }) { staff ->
+                    StaffCard(
+                        staff = staff,
+                        onStatusChange = { isAvailable ->
+                            state.eventSink(StaffEvent.SetAvailability(staff.id, isAvailable))
+                        },
+                        onDeleteClick = {
+                            state.eventSink(StaffEvent.DeleteStaff(staff.id))
+                        },
+                        onClick = {
+                            selectedStaffForDetail = staff
+                            state.eventSink(StaffEvent.LoadStats(staff.id))
+                        },
+                        onMessageClick = {
+                            val sessionId = ChatUtils.getDeterministicChatId("admin", staff.id)
+                            onNavigate("Chat/$sessionId")
+                        }
+                    )
                 }
             }
         }
@@ -265,6 +249,7 @@ fun HeaderAction(icon: ImageVector, label: String) {
 fun StaffCard(
     staff: AdminSpecialist,
     onStatusChange: (Boolean) -> Unit,
+    onDeleteClick: () -> Unit,
     onClick: () -> Unit,
     onMessageClick: () -> Unit
 ) {
@@ -289,7 +274,8 @@ fun StaffCard(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFF5F5F5))
+                            .background(Color(0xFFF5F5F5)),
+                        contentAlignment = Alignment.Center
                     ) {
                         if (!staff.imageUrl.isNullOrBlank()) {
                             AsyncImage(
@@ -430,6 +416,22 @@ fun StaffCard(
                                             )
                                         }
                                     )
+
+                                    DropdownMenuItem(
+                                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            onDeleteClick()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -483,14 +485,10 @@ fun StaffCard(
 /** Circuit [Ui.Factory] binding [DesktopScreen.Staff] to [StaffScreenUi]. */
 class StaffUiFactory : Ui.Factory {
     override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
-        is DesktopScreen.Staff -> ui<StaffUiState> { state, modifier ->
+        is DesktopScreen.Staff -> ui<StaffUiState> { state, _ ->
             StaffScreenUi(
                 state = state,
-                modifier = modifier,
-                onNavigate = LocalDesktopNavigate.current,
-                isSidebarExpanded = LocalSidebarExpanded.current,
-                onToggleSidebar = LocalToggleSidebar.current,
-                onProfileClick = LocalProfileClick.current
+                onNavigate = LocalDesktopNavigate.current
             )
         }
         else -> null

@@ -69,12 +69,26 @@ fun SpecialistItem(
 
         val imageUrl = ApiEndpoints.resolveImageUrl(specialist.imageUrl)
 
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = specialist.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = specialist.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = specialist.name,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(64.dp)
+                )
+            }
+        }
 
         // Rating badge at top-right
         Box(
