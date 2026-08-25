@@ -69,7 +69,7 @@ class NotificationService(
             val event = DomainEvent.AppointmentReminder(
                 eventId = UUID.randomUUID().toString(),
                 timestamp = now,
-                message = "Your appointment with $specialistName is in 30 minutes!",
+                message = "Appointment in 30 minutes",
                 appointmentId = appointmentId,
                 appointmentTime = appointmentTime,
                 reminderType = "30_MINUTES",
@@ -96,17 +96,22 @@ class NotificationService(
         senderName: String,
         senderAvatarUrl: String? = null,
         messageText: String? = null,
-        conversationId: String? = null
+        conversationId: String? = null,
+        messageId: String? = null,
+        isInternal: Boolean = false,
+        audience: String = "CLIENT"
     ) = newSuspendedTransaction(Dispatchers.IO) {
-        val displayMessage = messageText ?: "New message from $senderName"
+        if (isInternal) return@newSuspendedTransaction
+        val displayMessage = messageText ?: "Sent you a message"
         val event = DomainEvent.NotificationReceived(
             eventId = UUID.randomUUID().toString(),
             timestamp = clock.millis(),
             message = displayMessage,
-            type = "CHAT_MESSAGE",
+            notificationType = "MESSAGE", // Changed from CHAT_MESSAGE to match NotificationType enum
             referenceId = conversationId,
             senderName = senderName,
-            senderAvatarUrl = senderAvatarUrl
+            senderAvatarUrl = senderAvatarUrl,
+            messageId = messageId
         )
         OutboxTable.insert {
             it[eventId] = event.eventId
@@ -114,6 +119,7 @@ class NotificationService(
             it[payload] = DomainEventCodec.encode(event)
             it[createdAt] = event.timestamp
             it[dispatched] = false
+            it[OutboxTable.audience] = audience
         }
     }
 

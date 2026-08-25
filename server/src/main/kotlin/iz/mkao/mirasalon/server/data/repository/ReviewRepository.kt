@@ -1,14 +1,16 @@
 package iz.mkao.mirasalon.server.data.repository
 
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.core.network.model.PagedResponse
 import iz.mkao.mirasalon.core.network.model.dto.AdminReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
-import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
+import iz.mkao.mirasalon.server.data.tables.OrderItemsTable
+import iz.mkao.mirasalon.server.data.tables.OrdersTable
+import iz.mkao.mirasalon.server.data.tables.OutboxAudience
 import iz.mkao.mirasalon.server.data.tables.ReviewsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -36,8 +38,7 @@ sealed class AdminReplyResult {
 }
 
 class ReviewRepository(
-    private val outboxRepository: OutboxRepository,
-    private val json: Json
+    private val outboxRepository: OutboxRepository
 ) {
 
     fun findByTarget(targetId: String, targetType: String): List<ReviewDto> = transaction {
@@ -98,50 +99,88 @@ class ReviewRepository(
             .map { it.toReviewDto() }
     }
 
-    fun create(userId: String, request: SubmitReviewRequest): ReviewDto = transaction {
-        val id = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
-        ReviewsTable.insert {
-            it[ReviewsTable.id] = id
-            it[ReviewsTable.userId] = userId
-            it[ReviewsTable.targetId] = request.targetId
-            it[ReviewsTable.targetType] = request.targetType
-            it[ReviewsTable.rating] = request.rating
-            it[ReviewsTable.comment] = request.comment
-            it[ReviewsTable.createdAt] = now
-        }
-        
-        val user = UsersTable.selectAll().where { UsersTable.id eq userId }.singleOrNull()
-        
-        val event = DomainEvent.ReviewSubmitted(
-            eventId = UUID.randomUUID().toString(),
-            timestamp = now,
-            actorId = userId,
-            message = "Review submitted for ${request.targetType} ${request.targetId}",
-            reviewId = id,
-            targetId = request.targetId,
-            targetType = request.targetType,
-            rating = request.rating,
-            userName = user?.get(UsersTable.name),
-            userAvatarUrl = user?.get(UsersTable.avatarUrl)
-        )
-        outboxRepository.save(userId, json.encodeToString(event))
-        
-        if (request.targetType == "APPOINTMENT") {
-            AppointmentsTable.update({ AppointmentsTable.id eq request.targetId }) {
-                it[isReviewed] = true
-            }
-        }
-
-        (ReviewsTable innerJoin UsersTable)
-            .selectAll()
-            .where { ReviewsTable.id eq id }
-            .map { it.toReviewDto() }
-            .single()
-    }
-
     fun createReview(userId: String, targetId: String, targetType: String, rating: Int, comment: String?, imageUrl: String?): ReviewCreationResult = transaction {
         try {
+            // Business Rule: Check eligibility and allow repeat reviews for repeat purchases
+            when (targetType.uppercase()) {
+                "APPOINTMENT" -> {
+                    val app = AppointmentsTable.selectAll().where { AppointmentsTable.id eq targetId }.singleOrNull()
+                        ?: return@transaction ReviewCreationResult.Error("Appointment not found")
+                    if (app[AppointmentsTable.status] != "COMPLETED") 
+                        return@transaction ReviewCreationResult.Error("Only completed appointments can be reviewed")
+                    if (app[AppointmentsTable.userId] != userId) 
+                        return@transaction ReviewCreationResult.Error("Unauthorized")
+                    
+                    // Check if this specific appointment was already reviewed
+                    val exists = ReviewsTable.selectAll().where {
+                        (ReviewsTable.userId eq userId) and (ReviewsTable.targetId eq targetId) and (ReviewsTable.targetType eq "APPOINTMENT")
+                    }.any()
+                    if (exists) return@transaction ReviewCreationResult.Error("You have already reviewed this appointment.")
+                }
+                "PRODUCT" -> {
+                    val twoMonthsAgo = System.currentTimeMillis() - (60L * 24 * 60 * 60 * 1000)
+                    // Count total separate purchases of this product in delivered orders within the last 2 months
+                    val purchaseCount = (OrdersTable innerJoin OrderItemsTable).selectAll().where {
+                        (OrdersTable.userId eq userId) and
+                        (OrdersTable.status eq "DELIVERED") and
+                        (OrderItemsTable.productId eq targetId) and
+                        (OrdersTable.createdAt greaterEq twoMonthsAgo)
+                    }.count()
+
+                    if (purchaseCount == 0L) {
+                        return@transaction ReviewCreationResult.Error("You can only review products you have purchased and received within the last 2 months.")
+                    }
+
+                    // Count existing reviews for this product for these purchases
+                    val reviewCount = ReviewsTable.selectAll().where {
+                        (ReviewsTable.userId eq userId) and (ReviewsTable.targetId eq targetId) and (ReviewsTable.targetType eq "PRODUCT") and
+                        (ReviewsTable.createdAt greaterEq twoMonthsAgo)
+                    }.count()
+
+                    if (reviewCount >= purchaseCount) {
+                        return@transaction ReviewCreationResult.Error("You have already submitted reviews for all your recent purchases of this product.")
+                    }
+                }
+                "SPECIALIST" -> {
+                    val appointmentCount = AppointmentsTable.selectAll().where {
+                        (AppointmentsTable.userId eq userId) and
+                        (AppointmentsTable.specialistId eq targetId) and
+                        (AppointmentsTable.status eq "COMPLETED")
+                    }.count()
+
+                    if (appointmentCount == 0L) {
+                        return@transaction ReviewCreationResult.Error("You can only review specialists you have had a completed appointment with.")
+                    }
+
+                    val reviewCount = ReviewsTable.selectAll().where {
+                        (ReviewsTable.userId eq userId) and (ReviewsTable.targetId eq targetId) and (ReviewsTable.targetType eq "SPECIALIST")
+                    }.count()
+
+                    if (reviewCount >= appointmentCount) {
+                        return@transaction ReviewCreationResult.Error("You have already reviewed this specialist for your recent appointments.")
+                    }
+                }
+                "SERVICE" -> {
+                    val appointmentCount = AppointmentsTable.selectAll().where {
+                        (AppointmentsTable.userId eq userId) and
+                        (AppointmentsTable.status eq "COMPLETED") and
+                        (AppointmentsTable.servicesJson like "%$targetId%")
+                    }.count()
+
+                    if (appointmentCount == 0L) {
+                        return@transaction ReviewCreationResult.Error("You can only review services you have received in a completed appointment.")
+                    }
+
+                    val reviewCount = ReviewsTable.selectAll().where {
+                        (ReviewsTable.userId eq userId) and (ReviewsTable.targetId eq targetId) and (ReviewsTable.targetType eq "SERVICE")
+                    }.count()
+
+                    if (reviewCount >= appointmentCount) {
+                        return@transaction ReviewCreationResult.Error("You have already reviewed this service for your recent appointments.")
+                    }
+                }
+            }
+
             val id = UUID.randomUUID().toString()
             val now = System.currentTimeMillis()
             ReviewsTable.insert {
@@ -169,23 +208,19 @@ class ReviewRepository(
                 userName = user?.get(UsersTable.name),
                 userAvatarUrl = user?.get(UsersTable.avatarUrl)
             )
-            outboxRepository.save(userId, json.encodeToString(event))
+            // Reviews are back-office signals - route to the admin desktop
+            // dashboard only, never to the client's own notification feed.
+            outboxRepository.save(null, DomainEventCodec.encode(event), OutboxAudience.ADMIN)
 
             if (targetType == "APPOINTMENT") {
-                val updated = AppointmentsTable.update({ AppointmentsTable.id eq targetId }) {
+                AppointmentsTable.update({ AppointmentsTable.id eq targetId }) {
                     it[isReviewed] = true
                 }
-                org.slf4j.LoggerFactory.getLogger("ReviewRepo").info("Updated appointment {} isReviewed to true, rows affected: {}", targetId, updated)
             }
             
             ReviewCreationResult.Success(id)
         } catch (e: Exception) {
-            val message = e.message ?: "Unknown error"
-            if (message.contains("idx_reviews_user_target")) {
-                ReviewCreationResult.Error("You have already submitted a review for this item.")
-            } else {
-                ReviewCreationResult.Error(message)
-            }
+            ReviewCreationResult.Error(e.message ?: "Unknown error")
         }
     }
 
@@ -245,6 +280,7 @@ class ReviewRepository(
         id = this[ReviewsTable.id],
         userId = this[ReviewsTable.userId],
         userName = this[UsersTable.name],
+        userAvatarUrl = this[UsersTable.avatarUrl],
         targetId = this[ReviewsTable.targetId],
         targetType = this[ReviewsTable.targetType],
         targetName = "",

@@ -28,13 +28,21 @@ class NotificationApi(private val httpClient: HttpClient) {
         httpClient.delete(Endpoints.NOTIFICATIONS)
     }
 
-    suspend fun notifyChatReply(userId: String, senderName: String, conversationId: String): NetworkResult<Unit> = safeApiCall {
+    suspend fun notifyChatReply(
+        userId: String,
+        senderName: String,
+        message: String,
+        conversationId: String,
+        senderAvatar: String? = null
+    ): NetworkResult<Unit> = safeApiCall {
         httpClient.post(Endpoints.NOTIFY_REPLY) {
-            setBody(mapOf(
-                "userId" to userId,
-                "senderName" to senderName,
-                "conversationId" to conversationId
-            ))
+            setBody(buildMap {
+                put("userId", userId)
+                put("senderName", senderName)
+                put("message", message)
+                put("conversationId", conversationId)
+                senderAvatar?.let { put("senderAvatar", it) }
+            })
             contentType(ContentType.Application.Json)
         }
     }

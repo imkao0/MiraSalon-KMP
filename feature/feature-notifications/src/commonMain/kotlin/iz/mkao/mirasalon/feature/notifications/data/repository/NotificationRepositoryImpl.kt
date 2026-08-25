@@ -38,7 +38,9 @@ class NotificationRepositoryImpl(
                     is DomainEvent.BookingUpdated,
                     is DomainEvent.BookingCreated,
                     is DomainEvent.NotificationReceived,
-                    is DomainEvent.AppointmentReminder -> {
+                    is DomainEvent.AppointmentReminder,
+                    is DomainEvent.ChatMessageReceived,
+                    is DomainEvent.PromotionChanged -> {
                         fetchNotifications()
                     }
                     else -> {}
@@ -88,12 +90,12 @@ class NotificationRepositoryImpl(
         }
     }
 
-    override suspend fun notifyChatReply(targetUserId: String, senderName: String, conversationId: String?) {
+    override suspend fun notifyChatReply(targetUserId: String, senderName: String, message: String, conversationId: String?, senderAvatar: String?) {
         desktopNotifier?.showNotification(
-            title = "New Message",
-            message = "$senderName sent you a message"
+            title = "New Message from $senderName",
+            message = message
         )
-        api.notifyChatReply(targetUserId, senderName, conversationId ?: "")
+        api.notifyChatReply(targetUserId, senderName, message, conversationId ?: "", senderAvatar)
     }
 }
 

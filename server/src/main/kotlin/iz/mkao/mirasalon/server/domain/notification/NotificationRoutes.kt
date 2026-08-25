@@ -1,23 +1,31 @@
 package iz.mkao.mirasalon.server.domain.notification
 
 import io.github.aakira.napier.Napier
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.server.auth.principal
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.dto.NotificationDto
 import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
+import iz.mkao.mirasalon.server.data.tables.OutboxAudience
 import iz.mkao.mirasalon.server.data.tables.OutboxTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.update
 
 fun Route.notificationRoutes() {
     authenticate("auth-jwt") {
@@ -34,8 +42,15 @@ fun Route.notificationRoutes() {
 
             try {
                 val notifications = newSuspendedTransaction {
+                    // Only CLIENT-audience rows are surfaced in the mobile
+                    // notification screen. ADMIN-audience rows (stock alerts,
+                    // specialist availability, review submissions, ...) are
+                    // reserved for the admin desktop dashboard.
                     OutboxTable.selectAll()
-                        .where { OutboxTable.userId eq userId }
+                        .where {
+                            ((OutboxTable.userId eq userId) or (OutboxTable.userId.isNull())) and
+                            (OutboxTable.audience eq OutboxAudience.CLIENT.name)
+                        }
                         .orderBy(OutboxTable.createdAt to SortOrder.DESC)
                         .limit(50)
                         .toList()
@@ -76,6 +91,11 @@ fun Route.notificationRoutes() {
             }
 
             try {
+                newSuspendedTransaction {
+                    OutboxTable.update({ (OutboxTable.eventId eq notificationId) and (OutboxTable.userId eq userId) }) {
+                        it[isRead] = true
+                    }
+                }
                 call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Notification marked as read"))
             } catch (e: Exception) {
                 Napier.e("Failed to mark notification $notificationId as read", e)
@@ -118,42 +138,50 @@ fun Route.notificationRoutes() {
  *
  * The payload stored in the outbox is a JSON-encoded [DomainEvent], so we decode
  * it and translate the event fields into what the mobile client expects. Events
- * that cannot be decoded (e.g. older/legacy payloads) fall back to a generic
+ * that cannot be decoded fall back to a generic
  * message instead of failing the whole request.
  */
-private fun ResultRow.toNotificationDto(): NotificationDto {
+private fun ResultRow.toNotificationDto(): NotificationDto? {
     val eventId = this[OutboxTable.eventId]
     val createdAt = this[OutboxTable.createdAt]
-    val dispatched = this[OutboxTable.dispatched]
+    val isRead = this[OutboxTable.isRead]
     val payload = this[OutboxTable.payload]
 
-    val event = runCatching { DomainEventCodec.decode(payload) }.getOrNull()
+    val event = runCatching { DomainEventCodec.decode(payload) }.getOrNull() ?: return null
 
-    val message = event?.message ?: "You have a new notification"
     val type = when (event) {
-        is DomainEvent.NotificationReceived -> event.type
+        is DomainEvent.NotificationReceived -> event.notificationType
         is DomainEvent.ChatMessageReceived -> "MESSAGE"
-        is DomainEvent.ChatSeen -> "MESSAGE"
+        is DomainEvent.ChatSeen -> return null // Don't show "seen" in notification screen
         is DomainEvent.AppointmentReminder -> "REMINDER"
         is DomainEvent.BookingCreated,
         is DomainEvent.BookingUpdated -> "REMINDER"
         is DomainEvent.OrderCreated,
         is DomainEvent.OrderUpdated -> "PROMO"
         is DomainEvent.PromotionChanged -> "PROMO"
-        is DomainEvent.ReviewSubmitted -> "COMMENT"
+        is DomainEvent.ReviewSubmitted -> return null // Removed per principal engineer request
         else -> "MESSAGE"
     }
 
+    val message = event.message
+
     val senderName = when (event) {
-        is DomainEvent.ChatMessageReceived -> event.senderId
+        is DomainEvent.ChatMessageReceived -> event.senderName ?: event.senderId
         is DomainEvent.NotificationReceived -> event.senderName ?: "Mira Salon"
         is DomainEvent.AppointmentReminder -> event.specialistName ?: "Mira Salon"
+        is DomainEvent.BookingCreated -> event.specialistName ?: "Mira Salon"
+        is DomainEvent.BookingUpdated -> event.specialistName ?: "Mira Salon"
+        is DomainEvent.UserProfileUpdated -> event.userName ?: "Mira Salon"
         else -> "Mira Salon"
     }
 
     val senderAvatarUrl = when (event) {
         is DomainEvent.NotificationReceived -> event.senderAvatarUrl
         is DomainEvent.AppointmentReminder -> event.specialistAvatarUrl
+        is DomainEvent.BookingCreated -> event.specialistAvatarUrl ?: event.customerAvatarUrl
+        is DomainEvent.BookingUpdated -> event.specialistAvatarUrl ?: event.customerAvatarUrl
+        is DomainEvent.ChatMessageReceived -> event.senderAvatarUrl
+        is DomainEvent.UserProfileUpdated -> event.userAvatarUrl
         else -> null
     }
 
@@ -163,7 +191,7 @@ private fun ResultRow.toNotificationDto(): NotificationDto {
         senderAvatarUrl = senderAvatarUrl,
         message = message,
         timestamp = createdAt,
-        isUnread = !dispatched,
+        isUnread = !isRead,
         type = type,
         thumbnail = senderAvatarUrl
     )

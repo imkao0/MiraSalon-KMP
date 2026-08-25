@@ -1,6 +1,7 @@
 package iz.mkao.mirasalon.feature.notifications.presentation.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,13 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -52,8 +54,8 @@ import com.slack.circuit.runtime.ui.ui
 import iz.mkao.mirasalon.core.designsystem.components.MiraCenterAlignedTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.MiraEmptyState
 import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
+import iz.mkao.mirasalon.core.designsystem.theme.MiraGreen
 import iz.mkao.mirasalon.core.designsystem.theme.ProfileAvatarSize
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
@@ -61,9 +63,12 @@ import iz.mkao.mirasalon.core.designsystem.theme.SpacingTiny
 import iz.mkao.mirasalon.core.designsystem.theme.StrokeThin
 import iz.mkao.mirasalon.core.domain.model.NotificationType
 import iz.mkao.mirasalon.core.navigation.NotificationRoute
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.feature.notifications.presentation.circuit.NotificationEvent
 import iz.mkao.mirasalon.feature.notifications.presentation.circuit.NotificationItem
 import iz.mkao.mirasalon.feature.notifications.presentation.circuit.NotificationState
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,9 +130,19 @@ fun NotificationScreen(
                     icon = Icons.Outlined.Notifications
                 )
             } else {
-                val unreadCount = state.notifications.count { it.isUnread }
+                val tz = remember { TimeZone.currentSystemDefault() }
+                val now = remember(state.currentTimeMillis) { 
+                    kotlin.time.Instant.fromEpochMilliseconds(state.currentTimeMillis).toLocalDateTime(tz).date
+                }
+                
+                val todayNotifications = state.notifications.filter { 
+                    kotlin.time.Instant.fromEpochMilliseconds(it.timestamp).toLocalDateTime(tz).date == now
+                }
+                val earlierNotifications = state.notifications.filter { it !in todayNotifications }
+                
+                val todayCount = todayNotifications.size
                 Text(
-                    text = "You have $unreadCount Notifications today.",
+                    text = "You have $todayCount Notifications today.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = SpacingLarge, vertical = SpacingTiny)
@@ -139,11 +154,21 @@ fun NotificationScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = SpacingLarge)
                 ) {
-
-                    val todayNotifications = state.notifications.filter { it.time.contains("ago") }
                     if (todayNotifications.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Today",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = SpacingLarge, vertical = SpacingLarge)
+                            )
+                        }
+
                         items(todayNotifications) { item ->
-                            NotificationRow(item)
+                            NotificationRow(
+                                item = item,
+                                onClick = { state.eventSink(NotificationEvent.NotificationClicked(item.id)) }
+                            )
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = SpacingLarge),
                                 thickness = StrokeThin,
@@ -152,24 +177,27 @@ fun NotificationScreen(
                         }
                     }
 
-                    item {
-                        Text(
-                            text = "This Week",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = SpacingLarge, vertical = SpacingLarge)
-                        )
-                    }
+                    if (earlierNotifications.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "This Week",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = SpacingLarge, vertical = SpacingLarge)
+                            )
+                        }
 
-
-                    val earlierNotifications = state.notifications.filter { !it.time.contains("ago") }
-                    items(earlierNotifications) { item ->
-                        NotificationRow(item)
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = SpacingLarge),
-                            thickness = StrokeThin,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
+                        items(earlierNotifications) { item ->
+                            NotificationRow(
+                                item = item,
+                                onClick = { state.eventSink(NotificationEvent.NotificationClicked(item.id)) }
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = SpacingLarge),
+                                thickness = StrokeThin,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
                     }
                 }
             }
@@ -178,10 +206,14 @@ fun NotificationScreen(
 }
 
 @Composable
-fun NotificationRow(item: NotificationItem) {
+fun NotificationRow(
+    item: NotificationItem,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(horizontal = SpacingMedium, vertical = SpacingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -192,7 +224,7 @@ fun NotificationRow(item: NotificationItem) {
                     modifier = Modifier
                         .size(SpacingSmall)
                         .clip(CircleShape)
-                        .background(Color.Red)
+                        .background(MiraGreen)
                         .align(Alignment.Center)
                 )
             }
@@ -200,20 +232,37 @@ fun NotificationRow(item: NotificationItem) {
 
 
         Box(modifier = Modifier.size(ProfileAvatarSize)) {
-            AsyncImage(
-                model = item.senderAvatarUrl ?: "https://api.dicebear.com/7.x/avataaars/svg?seed=${item.senderName}",
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            if (item.type == NotificationType.PROMO && item.senderAvatarUrl == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Email,
+                        contentDescription = null,
+                        modifier = Modifier.size(SpacingLarge),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            } else {
+                AsyncImage(
+                    model = ApiEndpoints.resolveImageUrl(item.senderAvatarUrl) ?: "https://api.dicebear.com/7.x/avataaars/svg?seed=${item.senderName}",
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             val icon = when (item.type) {
                 NotificationType.COMMENT -> Icons.Outlined.ChatBubbleOutline
-                NotificationType.PROMO -> Icons.Outlined.Email // Outlined envelop as requested
+                NotificationType.PROMO -> Icons.Outlined.Email
                 NotificationType.MESSAGE -> Icons.AutoMirrored.Outlined.Message
-                NotificationType.REMINDER -> Icons.Outlined.Notifications // Bell icon as requested
+                NotificationType.REMINDER -> Icons.Outlined.Notifications
             }
             
             val iconColor = when (item.type) {
@@ -225,9 +274,11 @@ fun NotificationRow(item: NotificationItem) {
             Box(
                 modifier = Modifier
                     .size(20.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 2.dp, y = 2.dp)
+                    .shadow(elevation = 1.dp, shape = CircleShape)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .align(Alignment.BottomEnd),
+                    .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -243,18 +294,20 @@ fun NotificationRow(item: NotificationItem) {
 
 
         Column(modifier = Modifier.weight(1f)) {
-            Row {
+            Row(verticalAlignment = Alignment.Top) {
                 Text(
                     text = item.senderName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
                 Spacer(modifier = Modifier.width(SpacingTiny))
                 Text(
                     text = item.message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
             Text(
@@ -271,18 +324,6 @@ fun NotificationRow(item: NotificationItem) {
                     fontWeight = FontWeight.SemiBold
                 )
             }
-        }
-
-
-        if (item.thumbnail != null) {
-            AsyncImage(
-                model = item.thumbnail,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(ProfileAvatarSize)
-                    .clip(RoundedCornerShape(RadiusSmall)),
-                contentScale = ContentScale.Crop
-            )
         }
     }
 }

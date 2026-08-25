@@ -44,19 +44,22 @@ struct NotificationsView: View {
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
-                            let unreadCount = state.notifications.filter { $0.isUnread }.count
-                            Text("You have \(unreadCount) Notifications today.")
-                                .font(MiraType.bodyMedium)
-                                .foregroundColor(MiraTheme.onSurfaceVariant)
-                                .padding(.horizontal, MiraTheme.spacingLarge)
-                                .padding(.vertical, MiraTheme.spacingTiny)
-
-                            Spacer().frame(height: MiraTheme.spacingLarge)
-
-                            let todayNotifications = state.notifications.filter { $0.time.contains("ago") }
-                            let earlierNotifications = state.notifications.filter { !$0.time.contains("ago") }
+                            // Extract dates for grouping (simplified for Swift)
+                            let todayNotifications = state.notifications.filter { item in
+                                let date = Date(timeIntervalSince1970: TimeInterval(item.timestamp / 1000))
+                                return Calendar.current.isDateInToday(date)
+                            }
+                            let earlierNotifications = state.notifications.filter { item in
+                                !todayNotifications.contains(where: { $0.id == item.id })
+                            }
 
                             if !todayNotifications.isEmpty {
+                                Text("Today")
+                                    .font(MiraType.titleLarge.weight(.bold))
+                                    .foregroundColor(MiraTheme.onSurface)
+                                    .padding(.horizontal, MiraTheme.spacingLarge)
+                                    .padding(.vertical, MiraTheme.spacingLarge)
+
                                 ForEach(todayNotifications, id: \.id) { item in
                                     NotificationRowView(item: item) {
                                         state.eventSink(NotificationEventNotificationClicked(id: item.id))
@@ -112,31 +115,44 @@ private struct NotificationRowView: View {
                 ZStack {
                     if item.isUnread {
                         Circle()
-                            .fill(Color.red)
+                            .fill(MiraTheme.success)
                             .frame(width: MiraTheme.spacingSmall, height: MiraTheme.spacingSmall)
                     }
                 }
                 .frame(width: MiraTheme.spacingLarge)
 
                 // Avatar + Icon Overlay
-                ZStack(alignment: .topTrailing) {
-                    let avatarUrl = item.senderAvatarUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=\(item.senderName)"
-                    let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: avatarUrl)
-                    AsyncImage(url: URL(string: resolvedUrl ?? "")) { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Circle().fill(MiraTheme.surfaceVariant)
+                ZStack(alignment: .bottomTrailing) {
+                    if item.type == .promo && item.senderAvatarUrl == nil {
+                        Circle()
+                            .fill(MiraTheme.primaryContainer)
+                            .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
+                            .overlay(
+                                Image(systemName: "envelope")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(MiraTheme.onPrimaryContainer)
+                            )
+                    } else {
+                        let avatarUrl = item.senderAvatarUrl ?? "https://api.dicebear.com/7.x/avataaars/svg?seed=\(item.senderName)"
+                        let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: avatarUrl)
+                        AsyncImage(url: URL(string: resolvedUrl ?? "")) { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle().fill(MiraTheme.surfaceVariant)
+                        }
+                        .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
+                        .clipShape(Circle())
                     }
-                    .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
-                    .clipShape(Circle())
 
-                    Text(iconForType(item.type))
-                        .font(.system(size: 10))
-                        .frame(width: MiraTheme.iconSizeMedium, height: MiraTheme.iconSizeMedium)
+                    Image(systemName: systemIconForType(item.type))
+                        .font(.system(size: 8))
+                        .foregroundColor(iconColorForType(item.type))
+                        .frame(width: 20, height: 20)
                         .background(MiraTheme.surface)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(MiraTheme.surfaceVariant, lineWidth: 0.5))
+                        .shadow(radius: 1)
+                        .offset(x: 2, y: 2)
                 }
 
                 Spacer().frame(width: MiraTheme.spacingMedium)
@@ -144,7 +160,9 @@ private struct NotificationRowView: View {
                 // Text content
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: MiraTheme.spacingTiny) {
-                        Text(item.senderName)
+                        let displaySender = item.senderName.lowercased() == "mira salon" || item.senderName.lowercased() == "staff" ? "Mira Salon" : item.senderName
+
+                        Text(displaySender)
                             .font(MiraType.bodyMedium.weight(.bold))
                             .foregroundColor(MiraTheme.primary)
                         
@@ -165,19 +183,6 @@ private struct NotificationRowView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Thumbnail
-                if let thumbnailUrl = item.thumbnail {
-                    let resolvedThumbnail = ApiEndpoints.shared.resolveImageUrl(imagePath: thumbnailUrl)
-                    AsyncImage(url: URL(string: resolvedThumbnail ?? "")) { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).fill(MiraTheme.surfaceVariant)
-                    }
-                    .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
-                    .cornerRadius(MiraTheme.radiusSmall)
-                }
             }
             .padding(.horizontal, MiraTheme.spacingMedium)
             .padding(.vertical, MiraTheme.spacingMedium)
@@ -185,13 +190,21 @@ private struct NotificationRowView: View {
         .buttonStyle(.plain)
     }
     
-    private func iconForType(_ type: NotificationType) -> String {
+    private func systemIconForType(_ type: NotificationType) -> String {
         switch type {
         case NotificationType.comment: return "bubble.left.fill"
-        case NotificationType.promo: return "tag.fill"
-        case NotificationType.message: return "envelope.fill"
+        case NotificationType.promo: return "envelope.fill"
+        case NotificationType.message: return "message.fill"
         case NotificationType.reminder: return "bell.fill"
         default: return "bell.fill"
+        }
+    }
+
+    private func iconColorForType(_ type: NotificationType) -> Color {
+        switch type {
+        case NotificationType.promo: return Color(red: 255/255, green: 112/255, blue: 67/255) // MiraCoral
+        case NotificationType.reminder: return Color.orange
+        default: return MiraTheme.primary
         }
     }
 }
