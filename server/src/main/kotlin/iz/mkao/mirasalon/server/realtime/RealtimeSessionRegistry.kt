@@ -1,5 +1,6 @@
 package iz.mkao.mirasalon.server.realtime
 
+import io.github.aakira.napier.Napier
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.send
 import iz.mkao.mirasalon.core.domain.model.UserRole
@@ -28,10 +29,12 @@ class RealtimeSessionRegistry {
     }
 
     fun registerChat(chatId: String, session: DefaultWebSocketServerSession) {
+        Napier.d("[SessionRegistry] Registering chat session for partition: $chatId")
         chatSessions.getOrPut(chatId) { mutableSetOf() }.add(session)
     }
 
     fun unregisterChat(chatId: String, session: DefaultWebSocketServerSession) {
+        Napier.d("[SessionRegistry] Unregistering chat session for partition: $chatId")
         chatSessions[chatId]?.remove(session)
     }
 
@@ -48,16 +51,35 @@ class RealtimeSessionRegistry {
     suspend fun dispatch(event: DomainEvent, targetChatId: String? = null) {
         val payload = DomainEventCodec.encode(event)
         if (targetChatId != null) {
-            chatSessions[targetChatId]?.forEach { session ->
+            val sessions = chatSessions[targetChatId]
+            Napier.d("[SessionRegistry] Dispatching event to $targetChatId. Active sessions: ${sessions?.size ?: 0}")
+            sessions?.forEach { session ->
                 try {
                     session.send(payload)
-                } catch (e: Exception) { }
+                } catch (e: Exception) {
+                    Napier.w("[SessionRegistry] Failed to send to a session in $targetChatId", e)
+                }
+            }
+        }
+    }
+
+    suspend fun broadcastToClients(payload: String) = mutex.withLock {
+        sessions.forEach { (userId, userSessions) ->
+            userSessions.forEach { session ->
+                if (!adminSessions.contains(session)) {
+                    try {
+                        session.send(payload)
+                    } catch (e: Exception) {
+                        // Session closed
+                    }
+                }
             }
         }
     }
 
     suspend fun broadcastToAdmins(event: DomainEvent) {
         val payload = DomainEventCodec.encode(event)
+        io.github.aakira.napier.Napier.d("[SessionRegistry] Broadcasting event to admins. Active admin sessions: ${adminSessions.size}")
         broadcastToAdmins(payload)
     }
 

@@ -5,6 +5,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.CustomerRepository
+import iz.mkao.mirasalon.server.data.repository.MessageRepository
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
 import iz.mkao.mirasalon.server.data.repository.OutboxRepository
 import iz.mkao.mirasalon.server.data.repository.ProductRepository
@@ -19,7 +20,6 @@ import iz.mkao.mirasalon.server.data.repository.SpecialistRepository
 import iz.mkao.mirasalon.server.data.repository.UserRepository
 import iz.mkao.mirasalon.server.service.NotificationService
 import iz.mkao.mirasalon.server.service.OutboxDispatcher
-import iz.mkao.mirasalon.server.service.StreamSyncService
 import iz.mkao.mirasalon.server.storage.LocalStorageService
 import iz.mkao.mirasalon.server.storage.StorageService
 import iz.mkao.mirasalon.server.util.AppConfig
@@ -104,15 +104,14 @@ val serverModule = module {
     }
 
     singleOf(::UserRepository)
+    singleOf(::MessageRepository)
     singleOf(::RefreshTokenRepository)
     singleOf(::SalonRepository)
     singleOf(::AppointmentRepository)
     singleOf(::ProductRepository)
     singleOf(::PromotionRepository)
     singleOf(::ServiceRepository)
-    single { 
-        SpecialistRepository(get(), get(), get(), get(), get())
-    }
+    single { SpecialistRepository(get(), get(), get()) }
     singleOf(::SpecialistAvailabilityRepository)
     singleOf(::SpecialistClientNotesRepository)
     single { CustomerRepository(get()) }
@@ -120,14 +119,6 @@ val serverModule = module {
     singleOf(::OrderRepository)
 
     singleOf(::NotificationService)
-
-    single {
-        val config = get<AppConfig>()
-        StreamSyncService(
-            apiKey = config.streamApiKey,
-            apiSecret = config.streamApiSecret
-        )
-    }
 
     single<StorageService> {
         val config = get<AppConfig>()
@@ -137,8 +128,9 @@ val serverModule = module {
     single {
         StartupTasks(
             appConfig = get(),
-            streamSyncService = get(),
-            orderRepository = get()
+            orderRepository = get(),
+            specialistRepository = get(),
+            userRepository = get()
         )
     }
 }

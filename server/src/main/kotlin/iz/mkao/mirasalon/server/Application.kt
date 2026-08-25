@@ -1,5 +1,7 @@
 package iz.mkao.mirasalon.server
 
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
@@ -12,6 +14,7 @@ import io.ktor.server.routing.routing
 import io.micrometer.core.instrument.MeterRegistry
 import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.CustomerRepository
+import iz.mkao.mirasalon.server.data.repository.MessageRepository
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
 import iz.mkao.mirasalon.server.data.repository.ProductRepository
 import iz.mkao.mirasalon.server.data.repository.PromotionRepository
@@ -20,6 +23,7 @@ import iz.mkao.mirasalon.server.data.repository.ReviewRepository
 import iz.mkao.mirasalon.server.data.repository.SalonRepository
 import iz.mkao.mirasalon.server.data.repository.ServiceRepository
 import iz.mkao.mirasalon.server.data.repository.SpecialistAvailabilityRepository
+import iz.mkao.mirasalon.server.data.repository.SpecialistClientNotesRepository
 import iz.mkao.mirasalon.server.data.repository.SpecialistRepository
 import iz.mkao.mirasalon.server.data.repository.UserRepository
 import iz.mkao.mirasalon.server.di.serverModule
@@ -27,6 +31,7 @@ import iz.mkao.mirasalon.server.domain.admin.adminStaffRoutes
 import iz.mkao.mirasalon.server.domain.analytics.analyticsRoutes
 import iz.mkao.mirasalon.server.domain.auth.authRoutes
 import iz.mkao.mirasalon.server.domain.booking.bookingRoutes
+import iz.mkao.mirasalon.server.domain.chat.chatRoutes
 import iz.mkao.mirasalon.server.domain.customer.customerRoutes
 import iz.mkao.mirasalon.server.domain.customer.profileRoutes
 import iz.mkao.mirasalon.server.domain.notification.notificationRoutes
@@ -37,7 +42,6 @@ import iz.mkao.mirasalon.server.domain.review.reviewRoutes
 import iz.mkao.mirasalon.server.domain.salon.salonRoutes
 import iz.mkao.mirasalon.server.domain.salon.serviceRoutes
 import iz.mkao.mirasalon.server.domain.salon.specialistRoutes
-import iz.mkao.mirasalon.server.domain.stream.streamRoutes
 import iz.mkao.mirasalon.server.domain.upload.uploadRoutes
 import iz.mkao.mirasalon.server.plugins.configureAuthentication
 import iz.mkao.mirasalon.server.plugins.configureCORS
@@ -52,7 +56,6 @@ import iz.mkao.mirasalon.server.plugins.configureWebSockets
 import iz.mkao.mirasalon.server.realtime.RealtimeSessionRegistry
 import iz.mkao.mirasalon.server.service.NotificationService
 import iz.mkao.mirasalon.server.service.OutboxDispatcher
-import iz.mkao.mirasalon.server.service.StreamSyncService
 import iz.mkao.mirasalon.server.storage.StorageService
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.DatabaseFactory
@@ -73,6 +76,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    Napier.base(DebugAntilog())
+    
     install(Koin) {
         modules(serverModule)
     }
@@ -108,6 +113,7 @@ fun Application.module() {
     val promotionRepository by inject<PromotionRepository>()
     val serviceRepository by inject<ServiceRepository>()
     val specialistRepository by inject<SpecialistRepository>()
+    val specialistClientNotesRepository by inject<SpecialistClientNotesRepository>()
     
     // Register metrics after DB init
     productRepository.registerMetrics()
@@ -118,7 +124,7 @@ fun Application.module() {
     val orderRepository by inject<OrderRepository>()
     val storageService by inject<StorageService>()
 
-    val streamSyncService by inject<StreamSyncService>()
+    val messageRepository by inject<MessageRepository>()
     val notificationService by inject<NotificationService>()
     val outboxDispatcher by inject<OutboxDispatcher>()
     val realtimeRegistry by inject<RealtimeSessionRegistry>()
@@ -130,12 +136,12 @@ fun Application.module() {
         staticFiles("/uploads", File(config.uploadDir))
 
         route("/v1/api") {
-            route("/auth") { authRoutes(userRepository, jwtConfig, streamSyncService, refreshTokenRepository) }
+            route("/auth") { authRoutes(userRepository, jwtConfig, refreshTokenRepository) }
             route("/salon") { salonRoutes(salonRepository, appointmentRepository, orderRepository, specialistRepository, serviceRepository, promotionRepository, config) }
             route("/services") { serviceRoutes(serviceRepository, config) }
             route("/bookings") { bookingRoutes(appointmentRepository) }
             route("/specialists") {
-                specialistRoutes(specialistRepository, specialistAvailabilityRepository, config)
+                specialistRoutes(specialistRepository, specialistAvailabilityRepository, specialistClientNotesRepository, config)
             }
 
             route("/admin") {
@@ -144,7 +150,16 @@ fun Application.module() {
                 }
             }
 
-            route("/analytics") { analyticsRoutes(appointmentRepository, orderRepository, specialistRepository, serviceRepository, meterRegistry) }
+            route("/analytics") { 
+                analyticsRoutes(
+                    appointmentRepository = appointmentRepository,
+                    orderRepository = orderRepository,
+                    specialistRepository = specialistRepository,
+                    serviceRepository = serviceRepository,
+                    productRepository = productRepository,
+                    meterRegistry = meterRegistry
+                ) 
+            }
             route("/customers") { customerRoutes(customerRepository, userRepository, config) }
             route("/notifications") { notificationRoutes() }
             route("/profile") { profileRoutes(userRepository, storageService, config) }
@@ -152,17 +167,12 @@ fun Application.module() {
             route("/products") { productRoutes(productRepository, config) }
             route("/promotions") { promotionRoutes(promotionRepository, config) }
             route("/reviews") { reviewRoutes(reviewRepository) }
-            route("/stream") {
-                streamRoutes(
-                    streamApiKey = config.streamApiKey,
-                    streamApiSecret = config.streamApiSecret,
-                    streamAppId = config.streamAppId,
-                    userRepository = userRepository,
-                    specialistRepository = specialistRepository,
-                    streamSyncService = streamSyncService,
-                    notificationService = notificationService
-                )
-            }
+            chatRoutes(
+                userRepository = userRepository,
+                specialistRepository = specialistRepository,
+                messageRepository = messageRepository,
+                notificationService = notificationService
+            )
             route("/upload") {
                 uploadRoutes(storageService)
             }
@@ -171,10 +181,10 @@ fun Application.module() {
         notificationWebSocket(realtimeRegistry)
         chatWebSocket(
             registry = realtimeRegistry,
-            streamSyncService = streamSyncService,
             userRepository = userRepository,
             specialistRepository = specialistRepository,
-            notificationService = notificationService
+            notificationService = notificationService,
+            messageRepository = messageRepository
         )
     }
 

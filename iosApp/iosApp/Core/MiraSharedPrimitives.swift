@@ -123,7 +123,7 @@ struct MiraAvatar: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(Circle())
+        .clipShape(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall))
         .onAppear {
             if let resolved = resolved {
                 print("MiraAvatar: Attempting to load \(resolved)")

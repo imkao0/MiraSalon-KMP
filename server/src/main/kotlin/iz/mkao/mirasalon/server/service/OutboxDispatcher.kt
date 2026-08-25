@@ -1,6 +1,7 @@
 package iz.mkao.mirasalon.server.service
 
 import iz.mkao.mirasalon.server.data.repository.OutboxRepository
+import iz.mkao.mirasalon.server.data.tables.OutboxAudience
 import iz.mkao.mirasalon.server.realtime.RealtimeSessionRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,10 +31,18 @@ class OutboxDispatcher(
                     val pending = outboxRepository.fetchUndispatched()
                     if (pending.isNotEmpty()) {
                         pending.forEach { record ->
-                            if (record.targetUserId != null) {
-                                realtimeRegistry.dispatch(record.targetUserId, record.event)
-                            } else {
-                                realtimeRegistry.broadcastToAdmins(record.event)
+                            when {
+                                // Admin-only events (stock alerts, specialist availability,
+                                // review submissions, etc.) go exclusively to admin sessions,
+                                // i.e. the desktop dashboard - never to iOS/Android clients.
+                                record.audience == OutboxAudience.ADMIN ->
+                                    realtimeRegistry.broadcastToAdmins(record.event)
+                                // Client events with a specific recipient.
+                                record.targetUserId != null ->
+                                    realtimeRegistry.dispatch(record.targetUserId, record.event)
+                                // Client events without a recipient (e.g. new promotions)
+                                // are broadcast to every connected client app.
+                                else -> realtimeRegistry.broadcastToClients(record.event)
                             }
                         }
                         outboxRepository.markDispatched(pending.map { it.id })

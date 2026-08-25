@@ -148,7 +148,6 @@ private struct HomeContent: View {
                                 state.eventSink(SalonEventPromotionClicked(id: bannerId))
                             },
                             onViewAll: {
-                                // onViewAll removed as promotions/banners are same
                             },
                             usedPromotionIds: Set(state.usedPromotionIds.map { String($0) })
                         )

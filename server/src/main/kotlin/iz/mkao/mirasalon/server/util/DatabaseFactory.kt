@@ -60,7 +60,8 @@ object DatabaseFactory {
                 PromotionUsagesTable, 
                 OutboxTable,
                 UserAddressesTable, 
-                UserNotificationPreferencesTable
+                UserNotificationPreferencesTable,
+                MessagesTable
             )
             
             // This is the safest way to ensure the schema is up to date during development

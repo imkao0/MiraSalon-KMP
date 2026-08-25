@@ -1,6 +1,5 @@
 package iz.mkao.mirasalon.di
 
-import coil3.annotation.ExperimentalCoilApi
 import com.russhwolf.settings.PreferencesSettings
 import com.russhwolf.settings.Settings
 import com.slack.circuit.foundation.Circuit
@@ -82,7 +81,6 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import java.util.prefs.Preferences
 
-@OptIn(ExperimentalCoilApi::class)
 val desktopModule = module {
 
     single<DispatcherProvider> { DefaultDispatcherProvider() }

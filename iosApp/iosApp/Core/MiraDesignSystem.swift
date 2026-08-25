@@ -52,40 +52,40 @@ enum MiraBrand {
 enum MiraTheme {
 
     // --- Colors (M3 dynamic scheme) ---
-    static let primary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.primaryLightHex, dark: DesignSystemBridge.shared.primaryDarkHex)
-    static let onPrimary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onPrimaryLightHex, dark: DesignSystemBridge.shared.onPrimaryDarkHex)
-    static let primaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.primaryContainerLightHex, dark: DesignSystemBridge.shared.primaryContainerDarkHex)
-    static let onPrimaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onPrimaryContainerLightHex, dark: DesignSystemBridge.shared.onPrimaryContainerDarkHex)
+    static let primary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.primaryLight, dark: DesignSystemBridge.Colors.shared.primaryDark)
+    static let onPrimary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onPrimaryLight, dark: DesignSystemBridge.Colors.shared.onPrimaryDark)
+    static let primaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.primaryContainerLight, dark: DesignSystemBridge.Colors.shared.primaryContainerDark)
+    static let onPrimaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onPrimaryContainerLight, dark: DesignSystemBridge.Colors.shared.onPrimaryContainerDark)
 
-    static let secondary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.secondaryLightHex, dark: DesignSystemBridge.shared.secondaryDarkHex)
-    static let onSecondary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onSecondaryLightHex, dark: DesignSystemBridge.shared.onSecondaryDarkHex)
-    static let secondaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.secondaryContainerLightHex, dark: DesignSystemBridge.shared.secondaryContainerDarkHex)
-    static let onSecondaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onSecondaryContainerLightHex, dark: DesignSystemBridge.shared.onSecondaryContainerDarkHex)
+    static let secondary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.secondaryLight, dark: DesignSystemBridge.Colors.shared.secondaryDark)
+    static let onSecondary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onSecondaryLight, dark: DesignSystemBridge.Colors.shared.onSecondaryDark)
+    static let secondaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.secondaryContainerLight, dark: DesignSystemBridge.Colors.shared.secondaryContainerDark)
+    static let onSecondaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onSecondaryContainerLight, dark: DesignSystemBridge.Colors.shared.onSecondaryContainerDark)
 
-    static let tertiary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.tertiaryLightHex, dark: DesignSystemBridge.shared.tertiaryDarkHex)
-    static let onTertiary = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onTertiaryLightHex, dark: DesignSystemBridge.shared.onTertiaryDarkHex)
-    static let tertiaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.tertiaryContainerLightHex, dark: DesignSystemBridge.shared.tertiaryContainerDarkHex)
-    static let onTertiaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onTertiaryContainerLightHex, dark: DesignSystemBridge.shared.onTertiaryContainerDarkHex)
+    static let tertiary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.tertiaryLight, dark: DesignSystemBridge.Colors.shared.tertiaryDark)
+    static let onTertiary = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onTertiaryLight, dark: DesignSystemBridge.Colors.shared.onTertiaryDark)
+    static let tertiaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.tertiaryContainerLight, dark: DesignSystemBridge.Colors.shared.tertiaryContainerDark)
+    static let onTertiaryContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onTertiaryContainerLight, dark: DesignSystemBridge.Colors.shared.onTertiaryContainerDark)
 
-    static let background = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.backgroundLightHex, dark: DesignSystemBridge.shared.backgroundDarkHex)
-    static let onBackground = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onBackgroundLightHex, dark: DesignSystemBridge.shared.onBackgroundDarkHex)
-    static let surface = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.surfaceLightHex, dark: DesignSystemBridge.shared.surfaceDarkHex)
-    static let onSurface = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onSurfaceLightHex, dark: DesignSystemBridge.shared.onSurfaceDarkHex)
-    static let surfaceVariant = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.surfaceVariantLightHex, dark: DesignSystemBridge.shared.surfaceVariantDarkHex)
-    static let onSurfaceVariant = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onSurfaceVariantLightHex, dark: DesignSystemBridge.shared.onSurfaceVariantDarkHex)
+    static let background = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.backgroundLight, dark: DesignSystemBridge.Colors.shared.backgroundDark)
+    static let onBackground = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onBackgroundLight, dark: DesignSystemBridge.Colors.shared.onBackgroundDark)
+    static let surface = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.surfaceLight, dark: DesignSystemBridge.Colors.shared.surfaceDark)
+    static let onSurface = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onSurfaceLight, dark: DesignSystemBridge.Colors.shared.onSurfaceDark)
+    static let surfaceVariant = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.surfaceVariantLight, dark: DesignSystemBridge.Colors.shared.surfaceVariantDark)
+    static let onSurfaceVariant = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onSurfaceVariantLight, dark: DesignSystemBridge.Colors.shared.onSurfaceVariantDark)
 
-    static let error = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.errorLightHex, dark: DesignSystemBridge.shared.errorDarkHex)
-    static let onError = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onErrorLightHex, dark: DesignSystemBridge.shared.onErrorDarkHex)
-    static let errorContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.errorContainerLightHex, dark: DesignSystemBridge.shared.errorContainerDarkHex)
-    static let onErrorContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.shared.onErrorContainerLightHex, dark: DesignSystemBridge.shared.onErrorContainerDarkHex)
+    static let error = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.errorLight, dark: DesignSystemBridge.Colors.shared.errorDark)
+    static let onError = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onErrorLight, dark: DesignSystemBridge.Colors.shared.onErrorDark)
+    static let errorContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.errorContainerLight, dark: DesignSystemBridge.Colors.shared.errorContainerDark)
+    static let onErrorContainer = SwiftUI.Color.dynamic(light: DesignSystemBridge.Colors.shared.onErrorContainerLight, dark: DesignSystemBridge.Colors.shared.onErrorContainerDark)
 
     static let outline = MiraBrand.slate400
     static let outlineVariant = MiraBrand.slate200
     static let scrim = SwiftUI.Color.black
     
     // --- Semantic status tokens ---
-    static let success = SwiftUI.Color(hex: DesignSystemBridge.shared.successHex)
-    static let cancelled = SwiftUI.Color(hex: DesignSystemBridge.shared.cancelledHex)
+    static let success = SwiftUI.Color(hex: DesignSystemBridge.Colors.shared.success)
+    static let cancelled = SwiftUI.Color(hex: DesignSystemBridge.Colors.shared.cancelled)
 
     // --- Semantic component aliases (Color.kt section 2) ---
     static let miraBorder = SwiftUI.Color.dynamic(light: 0xFFE2ECEB, dark: 0xFF1E2E2C) // slate200 / outlineDark
@@ -98,57 +98,57 @@ enum MiraTheme {
     static let chatTimeText = onSurfaceVariant
 
     // --- Spacing scale (Spacing.kt) ---
-    static let spacingNone: CGFloat = CGFloat(DesignSystemBridge.shared.spacingNone)
-    static let spacingTiny: CGFloat = CGFloat(DesignSystemBridge.shared.spacingTiny)
-    static let spacingSmall: CGFloat = CGFloat(DesignSystemBridge.shared.spacingSmall)
-    static let spacingMedium: CGFloat = CGFloat(DesignSystemBridge.shared.spacingMedium)
-    static let spacingLarge: CGFloat = CGFloat(DesignSystemBridge.shared.spacingLarge)
-    static let spacingExtraLarge: CGFloat = CGFloat(DesignSystemBridge.shared.spacingExtraLarge)
-    static let spacingDefault: CGFloat = CGFloat(DesignSystemBridge.shared.spacingDefault)
-    static let spacingIntermediate: CGFloat = CGFloat(DesignSystemBridge.shared.spacingIntermediate)
-    static let spacingSection: CGFloat = CGFloat(DesignSystemBridge.shared.spacingSection)
+    static let spacingNone: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.none)
+    static let spacingTiny: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.tiny)
+    static let spacingSmall: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.small)
+    static let spacingMedium: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.medium)
+    static let spacingLarge: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.large)
+    static let spacingExtraLarge: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.extraLarge)
+    static let spacingDefault: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.default)
+    static let spacingIntermediate: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.intermediate)
+    static let spacingSection: CGFloat = CGFloat(DesignSystemBridge.Spacing.shared.section)
 
     // --- Icon sizes (Spacing.kt) ---
-    static let iconSizeTiny: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeTiny)
-    static let iconSizeSmall: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeSmall)
-    static let iconSizeMedium: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeMedium)
-    static let iconSizeIntermediate: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeIntermediate)
-    static let iconSizeLarge: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeLarge)
-    static let iconSizeExtraLarge: CGFloat = CGFloat(DesignSystemBridge.shared.iconSizeExtraLarge)
+    static let iconSizeTiny: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconTiny)
+    static let iconSizeSmall: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconSmall)
+    static let iconSizeMedium: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconMedium)
+    static let iconSizeIntermediate: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconIntermediate)
+    static let iconSizeLarge: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconLarge)
+    static let iconSizeExtraLarge: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.iconExtraLarge)
 
     // --- Component metrics (Spacing.kt) ---
-    static let avatarSize: CGFloat = CGFloat(DesignSystemBridge.shared.avatarSize)
-    static let profileAvatarSize: CGFloat = CGFloat(DesignSystemBridge.shared.profileAvatarSize)
-    static let buttonHeight: CGFloat = CGFloat(DesignSystemBridge.shared.buttonHeight)
-    static let cardWidthLarge: CGFloat = CGFloat(DesignSystemBridge.shared.cardWidthLarge)
-    static let cardImageHeight: CGFloat = CGFloat(DesignSystemBridge.shared.cardImageHeight)
-    static let offerCardWidth: CGFloat = CGFloat(DesignSystemBridge.shared.offerCardWidth)
-    static let offerCardHeight: CGFloat = CGFloat(DesignSystemBridge.shared.offerCardHeight)
-    static let bannerHeight: CGFloat = CGFloat(DesignSystemBridge.shared.bannerHeight)
-    static let categorySize: CGFloat = CGFloat(DesignSystemBridge.shared.categorySize)
-    static let categoryIconSize: CGFloat = CGFloat(DesignSystemBridge.shared.categoryIconSize)
+    static let avatarSize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.avatarSize)
+    static let profileAvatarSize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.profileAvatarSize)
+    static let buttonHeight: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.buttonHeight)
+    static let cardWidthLarge: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.cardWidthLarge)
+    static let cardImageHeight: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.cardImageHeight)
+    static let offerCardWidth: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.offerCardWidth)
+    static let offerCardHeight: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.offerCardHeight)
+    static let bannerHeight: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.bannerHeight)
+    static let categorySize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.categorySize)
+    static let categoryIconSize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.categoryIconSize)
     static let snackbarMaxWidth: CGFloat = 320
     static let snackbarVerticalPadding: CGFloat = 10
     static let textFieldHeightLarge: CGFloat = 120
-    static let stepperButtonSize: CGFloat = CGFloat(DesignSystemBridge.shared.stepperButtonSize)
-    static let starSize: CGFloat = CGFloat(DesignSystemBridge.shared.starSize)
-    static let starSizeSmall: CGFloat = CGFloat(DesignSystemBridge.shared.starSizeSmall)
+    static let stepperButtonSize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.stepperButtonSize)
+    static let starSize: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.starSize)
+    static let starSizeSmall: CGFloat = CGFloat(DesignSystemBridge.Metrics.shared.starSizeSmall)
     static let promoBannerButtonMinWidth: CGFloat = 120
     static let bottomNavHeight: CGFloat = 75
     static let bottomNavIconSize: CGFloat = 24
 
     // --- Corner radii (Spacing.kt + Shape.kt) ---
-    static let radiusTiny: CGFloat = CGFloat(DesignSystemBridge.shared.radiusTiny)
-    static let radiusExtraSmall: CGFloat = CGFloat(DesignSystemBridge.shared.radiusExtraSmall)
-    static let radiusSmall: CGFloat = CGFloat(DesignSystemBridge.shared.radiusSmall)
-    static let radiusDefault: CGFloat = CGFloat(DesignSystemBridge.shared.radiusDefault)
-    static let radiusMedium: CGFloat = CGFloat(DesignSystemBridge.shared.radiusMedium)
-    static let radiusLarge: CGFloat = CGFloat(DesignSystemBridge.shared.radiusLarge)
-    static let radiusExtraLarge: CGFloat = CGFloat(DesignSystemBridge.shared.radiusExtraLarge)
-    static let radiusProfileCard: CGFloat = CGFloat(DesignSystemBridge.shared.radiusProfileCard)
-    static let radiusFull: CGFloat = CGFloat(DesignSystemBridge.shared.radiusFull)
-    static let radiusPromo: CGFloat = CGFloat(DesignSystemBridge.shared.radiusPromo)
-    static let radiusPromoInner: CGFloat = CGFloat(DesignSystemBridge.shared.radiusPromoInner)
+    static let radiusTiny: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.tiny)
+    static let radiusExtraSmall: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.extraSmall)
+    static let radiusSmall: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.small)
+    static let radiusDefault: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.default)
+    static let radiusMedium: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.medium)
+    static let radiusLarge: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.large)
+    static let radiusExtraLarge: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.extraLarge)
+    static let radiusProfileCard: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.profileCard)
+    static let radiusFull: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.full)
+    static let radiusPromo: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.promo)
+    static let radiusPromoInner: CGFloat = CGFloat(DesignSystemBridge.Radii.shared.promoInner)
 
     // --- Strokes & thickness (Spacing.kt) ---
     static let strokeThin: CGFloat = 1

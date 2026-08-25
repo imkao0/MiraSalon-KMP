@@ -4,9 +4,9 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.domain.model.UserRole
 import iz.mkao.mirasalon.server.data.repository.OrderRepository
-import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
+import iz.mkao.mirasalon.server.data.repository.SpecialistRepository
+import iz.mkao.mirasalon.server.data.repository.UserRepository
 import iz.mkao.mirasalon.server.data.tables.UsersTable
-import iz.mkao.mirasalon.server.service.StreamSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -20,11 +20,12 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class StartupTasks(
     private val appConfig: AppConfig,
-    private val streamSyncService: StreamSyncService,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val specialistRepository: SpecialistRepository,
+    private val userRepository: UserRepository
 ) {
     private companion object {
-        const val ADMIN_AVATAR_URL = "/uploads/specialists/sarah.jpeg"
+        const val ADMIN_AVATAR_URL = "/uploads/images/avatars/066c3f4a-1460-4009-8f1c-0ee720cccc1d.jpg"
     }
 
     fun run(scope: CoroutineScope) {
@@ -32,9 +33,6 @@ class StartupTasks(
         scope.launch(Dispatchers.IO) {
             try {
                 ensureAdminUser()
-                syncUsersToStream()
-                syncSpecialistsToStream()
-
                 Napier.i("All startup tasks completed successfully.")
             } catch (e: Exception) {
                 Napier.e("StartupTasks critical failure", e)
@@ -88,53 +86,6 @@ class StartupTasks(
                     it[role] = UserRole.ADMIN.name
                     it[avatarUrl] = ADMIN_AVATAR_URL
                 }
-            }
-        }
-    }
-
-    private suspend fun syncUsersToStream() {
-        val usersToSync = newSuspendedTransaction(Dispatchers.IO) {
-            UsersTable.selectAll().where { UsersTable.isActive eq true }
-                .map {
-                    Triple(it[UsersTable.id], it[UsersTable.name], it[UsersTable.role]) to it[UsersTable.avatarUrl]
-                }
-        }
-
-        Napier.d("Syncing ${usersToSync.size} users to Stream...")
-        for ((data, avatarUrl) in usersToSync) {
-            val (userId, name, roleStr) = data
-            try {
-                streamSyncService.syncUser(
-                    userId = userId,
-                    name = name,
-                    role = UserRole.fromString(roleStr),
-                    avatarUrl = avatarUrl
-                )
-            } catch (e: Exception) {
-                Napier.w("Failed to sync user $userId to Stream", e)
-            }
-        }
-    }
-
-    private suspend fun syncSpecialistsToStream() {
-        val specialistsToSync = newSuspendedTransaction(Dispatchers.IO) {
-            SpecialistsTable.selectAll().where { SpecialistsTable.isDeleted eq false }
-                .map {
-                    Triple(it[SpecialistsTable.id], it[SpecialistsTable.name], it[SpecialistsTable.imageUrl])
-                }
-        }
-
-        Napier.d("Syncing ${specialistsToSync.size} specialists to Stream...")
-        for ((id, name, imageUrl) in specialistsToSync) {
-            try {
-                streamSyncService.syncUser(
-                    userId = id,
-                    name = name,
-                    role = UserRole.SPECIALIST,
-                    avatarUrl = imageUrl
-                )
-            } catch (e: Exception) {
-                Napier.e("Failed to sync specialist $id to Stream", e)
             }
         }
     }
