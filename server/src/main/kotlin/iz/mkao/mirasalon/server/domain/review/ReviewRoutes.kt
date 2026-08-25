@@ -11,6 +11,9 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import iz.mkao.mirasalon.core.network.model.ApiResponse
+import iz.mkao.mirasalon.core.network.model.PagedResponse
+import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
+import iz.mkao.mirasalon.core.network.model.dto.AdminReviewDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdateReviewVisibilityRequest
 import iz.mkao.mirasalon.server.data.repository.AdminReplyResult
 import iz.mkao.mirasalon.server.data.repository.ReviewCreationResult
@@ -67,7 +70,7 @@ fun Route.reviewRoutes(
         )
         call.respond(
             HttpStatusCode.OK,
-            ApiResponse(
+            ApiResponse<PagedResponse<ReviewDto>>(
                 success = true,
                 data = pagedReviews
             )
@@ -93,7 +96,7 @@ fun Route.reviewRoutes(
             pageSize = pageSize
         )
 
-        call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
+        call.respond(HttpStatusCode.OK, ApiResponse<PagedResponse<ReviewDto>>(success = true, data = pagedReviews))
     }
 
     authenticate("auth-jwt") {
@@ -108,12 +111,13 @@ fun Route.reviewRoutes(
             val userId = call.getUserId()
                 ?: throw UnauthorizedException("Authentication required")
             val request = call.receive<CreateReviewRequest>()
+            val targetType = request.targetType.uppercase()
 
-            log.info("Review creation requested by user $userId for target ${request.targetType}:${request.targetId}")
+            log.info("Review creation requested by user $userId for target $targetType:${request.targetId}")
 
             validate {
                 requireNotBlank("targetId", request.targetId)
-                requireOneOf("targetType", request.targetType, listOf("APPOINTMENT", "PRODUCT", "SERVICE"))
+                requireOneOf("targetType", targetType, listOf("APPOINTMENT", "PRODUCT", "SERVICE", "SPECIALIST"))
                 if (request.rating !in 1..5) addError("Rating must be between 1 and 5")
             }
 
@@ -121,7 +125,7 @@ fun Route.reviewRoutes(
                 val result = reviewRepository.createReview(
                     userId = userId,
                     targetId = request.targetId,
-                    targetType = request.targetType,
+                    targetType = targetType,
                     rating = request.rating,
                     comment = request.comment,
                     imageUrl = request.imageUrl
@@ -130,7 +134,7 @@ fun Route.reviewRoutes(
                 when (result) {
                     is ReviewCreationResult.Success -> {
                         log.info("Review created: ${result.reviewId} by user $userId")
-                        call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = result.reviewId))
+                        call.respond(HttpStatusCode.Created, ApiResponse<String>(success = true, data = result.reviewId))
                     }
                     is ReviewCreationResult.Error -> {
                         log.warn("Review creation failed: ${result.message} for user $userId")
@@ -155,7 +159,7 @@ fun Route.reviewRoutes(
             try {
                 val pagedReviews = reviewRepository.findAllPaginated(page, pageSize, query)
                 log.info("Admin ${call.getUserId()} fetched all reviews (page $page, size $pageSize, query $query)")
-                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
+                call.respond(HttpStatusCode.OK, ApiResponse<PagedResponse<AdminReviewDto>>(success = true, data = pagedReviews))
             } catch (e: Exception) {
                 log.error("Error fetching all reviews", e)
                 throw GeneralDomainException("Failed to fetch reviews", HttpStatusCode.InternalServerError)
@@ -211,7 +215,7 @@ fun Route.reviewRoutes(
             val request = call.receive<UpdateReviewVisibilityRequest>()
 
             reviewRepository.updateVisibility(id, request.isVisible)
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = Unit))
+            call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true, data = Unit))
         }
 
         /**
@@ -225,7 +229,7 @@ fun Route.reviewRoutes(
             val id = call.parameters["id"] ?: throw GeneralDomainException("Review ID required", HttpStatusCode.BadRequest)
 
             reviewRepository.deleteReview(id)
-            call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = Unit))
+            call.respond(HttpStatusCode.OK, ApiResponse<Unit>(success = true, data = Unit))
         }
 
         // ── Admin‑only endpoints ──
@@ -243,7 +247,7 @@ fun Route.reviewRoutes(
 
                 val pagedReviews = reviewRepository.findAllPaginated(page, pageSize)
                 log.info("Admin ${call.getUserId()} fetched all reviews (page $page, size $pageSize)")
-                call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = pagedReviews))
+                call.respond(HttpStatusCode.OK, ApiResponse<PagedResponse<AdminReviewDto>>(success = true, data = pagedReviews))
             }
         }
     }

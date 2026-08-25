@@ -16,9 +16,9 @@ import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.core.domain.model.Notification
 import iz.mkao.mirasalon.core.domain.model.NotificationType
 import iz.mkao.mirasalon.core.domain.repository.NotificationRepository
+import iz.mkao.mirasalon.core.navigation.BottomNavKey
 import iz.mkao.mirasalon.core.navigation.NotificationRoute
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -41,12 +41,20 @@ class NotificationPresenter(
 
         return NotificationState(
             notifications = notifications.map { it.toUiModel() },
+            isLoading = false,
+            currentTimeMillis = Clock.System.now().toEpochMilliseconds(),
             selectedFilter = selectedFilter,
             eventSink = { event ->
                 when (event) {
                     NotificationEvent.BackClicked -> navigator.pop()
                     is NotificationEvent.NotificationClicked -> {
-                        scope.launch { repository.markAsRead(event.id) }
+                        scope.launch { 
+                            repository.markAsRead(event.id)
+                            val notification = notifications.find { it.id == event.id }
+                            if (notification?.type == NotificationType.REMINDER) {
+                                navigator.resetRoot(BottomNavKey.Booking())
+                            }
+                        }
                     }
                     is NotificationEvent.FilterChanged -> {
                         selectedFilter = event.type
@@ -60,28 +68,22 @@ class NotificationPresenter(
     }
 
     private fun Notification.toUiModel(): NotificationItem {
-        val meaningfulMessage = if (message.contains("Mira salon you have a new notification", ignoreCase = true) || 
-            message.contains("You have a new notification", ignoreCase = true)) {
-            when (type) {
-                NotificationType.MESSAGE -> "sent you a message"
-                NotificationType.PROMO -> "shared a new promotion with you"
-                NotificationType.REMINDER -> "Reminder: Your appointment is coming up"
-                NotificationType.COMMENT -> "commented on your post"
-            }
-        } else message
+        val displaySender = senderName.takeIf { 
+            it.isNotBlank() && it.lowercase() != "mira salon" && it.lowercase() != "staff" 
+        } ?: "Mira Salon"
 
         return NotificationItem(
             id = id,
-            senderName = senderName,
+            senderName = displaySender,
             senderAvatarUrl = senderAvatarUrl,
-            message = meaningfulMessage,
+            message = message,
             time = formatTime(timestamp),
             isUnread = isUnread,
+            timestamp = timestamp,
             type = type,
             thumbnail = thumbnail,
             reminderTimeDetails = if (type == NotificationType.REMINDER) {
-                // Try extracting from original message first, then meaningful one
-                extractReminderTimeDetails(message, timestamp) ?: extractReminderTimeDetails(meaningfulMessage, timestamp)
+                extractReminderTimeDetails(message, timestamp)
             } else null
         )
     }
@@ -99,7 +101,7 @@ class NotificationPresenter(
             else -> return null
         }
 
-        val eventTime = Instant.fromEpochMilliseconds(timestamp) + duration
+        val eventTime = kotlin.time.Instant.fromEpochMilliseconds(timestamp) + duration
         val formattedTime = DateUtils.formatTime(eventTime.epochSeconds)
 
         return when {

@@ -7,6 +7,7 @@ import iz.mkao.mirasalon.core.domain.model.NotificationType
 data class NotificationState(
     val notifications: List<NotificationItem> = emptyList(),
     val isLoading: Boolean = false,
+    val currentTimeMillis: Long = 0L,
     val selectedFilter: NotificationType? = null,
     val eventSink: (NotificationEvent) -> Unit = {}
 ) : CircuitUiState
@@ -25,6 +26,7 @@ data class NotificationItem(
     val message: String,
     val time: String,
     val isUnread: Boolean,
+    val timestamp: Long,
     val type: NotificationType,
     val thumbnail: String? = null,
     val reminderTimeDetails: String? = null,
