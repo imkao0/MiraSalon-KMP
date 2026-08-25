@@ -13,11 +13,11 @@ import iz.mkao.mirasalon.core.network.result.apiCall
 
 class KtorSpecialistsApi(private val httpClient: HttpClient) : SpecialistsApi {
 
-    override suspend fun fetchSpecialists(): Outcome<List<SpecialistDto>> = apiCall {
+    override suspend fun fetchSpecialists(): Outcome<List<SpecialistDto>> = apiCall<List<SpecialistDto>> {
         httpClient.get(Endpoints.SPECIALISTS)
     }
 
-    override suspend fun fetchSpecialist(id: String): Outcome<SpecialistDto> = apiCall {
+    override suspend fun fetchSpecialist(id: String): Outcome<SpecialistDto> = apiCall<SpecialistDto> {
         httpClient.get(Endpoints.specialist(id))
     }
 

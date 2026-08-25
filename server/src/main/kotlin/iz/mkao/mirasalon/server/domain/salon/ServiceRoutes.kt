@@ -14,9 +14,11 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.network.model.ApiResponse
 import iz.mkao.mirasalon.core.network.model.dto.CreateServiceCategoryRequest
 import iz.mkao.mirasalon.core.network.model.dto.CreateServiceRequestDto
+import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateServiceCategoryRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateServiceRequestDto
 import iz.mkao.mirasalon.server.data.repository.CategoryDeleteResult
@@ -29,6 +31,7 @@ import iz.mkao.mirasalon.server.data.repository.ServiceUpdateResult
 import iz.mkao.mirasalon.server.error.ForbiddenException
 import iz.mkao.mirasalon.server.error.GeneralDomainException
 import iz.mkao.mirasalon.server.error.ResourceNotFoundException
+import iz.mkao.mirasalon.server.error.UnauthorizedException
 import iz.mkao.mirasalon.server.util.AppConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.getUserId
@@ -216,6 +219,21 @@ fun Route.serviceRoutes(
                 is ServiceDeleteResult.Failure -> {
                     throw GeneralDomainException(result.message, HttpStatusCode.InternalServerError)
                 }
+            }
+        }
+
+        post("/{id}/reviews") {
+            val userId = call.getUserId() ?: throw UnauthorizedException("Authentication required")
+            val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val request = call.receive<SubmitReviewRequest>()
+
+            val result = serviceRepository.submitReview(id, request.rating, request.comment, userId)
+            when (result) {
+                is Outcome.Success -> {
+                    call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = "Review submitted"))
+                }
+                is Outcome.Error -> call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = result.failure.toString()))
+                else -> {}
             }
         }
     }

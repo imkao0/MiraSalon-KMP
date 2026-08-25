@@ -11,7 +11,6 @@ import iz.mkao.mirasalon.core.network.model.dto.ServiceCategoryDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceListResponseDto
 import iz.mkao.mirasalon.core.network.model.dto.SubmitReviewRequest
-import iz.mkao.mirasalon.core.network.model.dto.ReviewDto
 import iz.mkao.mirasalon.core.network.result.NetworkResult
 import iz.mkao.mirasalon.core.network.result.safeApiCall
 
@@ -32,7 +31,7 @@ class KtorServicesApi(private val httpClient: HttpClient) : ServicesApi {
         httpClient.get("/v1/api/services/$id")
     }
 
-    override suspend fun submitReview(serviceId: String, request: SubmitReviewRequest): NetworkResult<ReviewDto> = safeApiCall {
+    override suspend fun submitReview(serviceId: String, request: SubmitReviewRequest): NetworkResult<String> = safeApiCall {
         httpClient.post("/v1/api/reviews") {
             contentType(ContentType.Application.Json)
             setBody(request.copy(targetId = serviceId, targetType = "SERVICE"))

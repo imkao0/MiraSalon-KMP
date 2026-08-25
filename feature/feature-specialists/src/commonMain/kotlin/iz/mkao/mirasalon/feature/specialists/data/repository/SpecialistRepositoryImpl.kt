@@ -36,10 +36,10 @@ class SpecialistRepositoryImpl(
     private fun observeRealtimeEvents() {
         realtimeGateway.events
             .onEach { event ->
-                if (event is DomainEvent.SpecialistStatusChanged) {
-                    if (event.specialistId.isEmpty()) {
+                if (event is DomainEvent.SpecialistStatusChanged || event is DomainEvent.SpecialistCreated) {
+                    if (event is DomainEvent.SpecialistCreated || (event is DomainEvent.SpecialistStatusChanged && event.specialistId.isEmpty())) {
                         refresh()
-                    } else {
+                    } else if (event is DomainEvent.SpecialistStatusChanged) {
                         refreshSingleSpecialist(event.specialistId)
                     }
                 }

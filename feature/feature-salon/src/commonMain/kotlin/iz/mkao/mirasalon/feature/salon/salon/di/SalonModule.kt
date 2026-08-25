@@ -35,7 +35,7 @@ val salonModule = module {
     single<ServicesApi> { KtorServicesApi(get()) }
     single<ServiceRepository> {
         val db: MiraDatabase = get()
-        ServiceRepositoryImpl(get(), db.serviceDao(), db.serviceCategoryDao(), get(), get()) 
+        ServiceRepositoryImpl(get(), db.serviceDao(), db.serviceCategoryDao(), get())
     }
 
     single<PromoRepository> {
