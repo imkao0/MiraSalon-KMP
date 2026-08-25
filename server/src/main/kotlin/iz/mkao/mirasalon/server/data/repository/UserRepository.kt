@@ -2,8 +2,10 @@ package iz.mkao.mirasalon.server.data.repository
 
 import at.favre.lib.crypto.bcrypt.BCrypt
 import iz.mkao.mirasalon.core.domain.model.UserRole
+import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.network.model.dto.AuthResponse
 import iz.mkao.mirasalon.core.network.model.dto.RegisterRequest
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.insert
@@ -11,8 +13,7 @@ import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
-import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
-import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 data class User(
@@ -66,8 +67,7 @@ sealed class DeleteAccountResult {
 }
 
 class UserRepository(
-    private val outboxRepository: OutboxRepository,
-    private val json: Json
+    private val outboxRepository: OutboxRepository
 ) {
 
     fun findById(id: String): User? = transaction {
@@ -92,16 +92,21 @@ class UserRepository(
         val passwordHash = BCrypt.withDefaults().hashToString(12, request.password.toCharArray())
         val now = System.currentTimeMillis()
 
-        UsersTable.insert {
-            it[UsersTable.id] = id
-            it[UsersTable.name] = request.name
-            it[UsersTable.email] = emailLower
-            it[UsersTable.passwordHash] = passwordHash
-            it[UsersTable.role] = request.role.name
-            it[UsersTable.createdAt] = now
-            it[UsersTable.avatarUrl] = request.avatarUrl
-            it[UsersTable.address] = request.address
-            it[UsersTable.referralCode] = request.referralCode
+        try {
+            UsersTable.insert {
+                it[UsersTable.id] = id
+                it[UsersTable.name] = request.name
+                it[UsersTable.email] = emailLower
+                it[UsersTable.passwordHash] = passwordHash
+                it[UsersTable.role] = request.role.name
+                it[UsersTable.createdAt] = now
+                it[UsersTable.avatarUrl] = request.avatarUrl
+                it[UsersTable.address] = request.address
+                it[UsersTable.referralCode] = request.referralCode
+            }
+        } catch (e: Exception) {
+            LoggerFactory.getLogger(UserRepository::class.java).error("Failed to insert user: ${e.message}", e)
+            return@transaction RegisterResult.Failure("Database error: ${e.message}")
         }
 
         val authResponse = AuthResponse(
@@ -151,9 +156,11 @@ class UserRepository(
                     timestamp = System.currentTimeMillis(),
                     actorId = userId,
                     message = "Profile updated for ${user.name}",
-                    userId = userId
+                    userId = userId,
+                    userName = user.name,
+                    userAvatarUrl = user.avatarUrl
                 )
-                outboxRepository.save(userId, json.encodeToString(event))
+                outboxRepository.save(userId, DomainEventCodec.encode(event))
                 UpdateProfileResult.Success(user)
             } else UpdateProfileResult.NotFound
         } else {
@@ -173,7 +180,7 @@ class UserRepository(
                     dateOfBirth = it[UsersTable.dateOfBirth],
                     gender = it[UsersTable.gender],
                     createdAt = it[UsersTable.createdAt],
-                    allergies = it[UsersTable.allergies]
+                    allergies = it[UsersTable.allergies] ?: emptyList()
                 )
             }
             .singleOrNull()
@@ -214,6 +221,6 @@ class UserRepository(
         lastName = this[UsersTable.lastName],
         phone = this[UsersTable.phone],
         gender = this[UsersTable.gender],
-        allergies = this[UsersTable.allergies]
+        allergies = this[UsersTable.allergies] ?: emptyList()
     )
 }
