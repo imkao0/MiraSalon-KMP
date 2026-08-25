@@ -13,6 +13,7 @@ data class MyBookingsState(
     val reviewBookingId: String? = null,
     val onReviewSubmit: (suspend (Int, String) -> Result<Unit>)? = null,
     val currentTimeMillis: Long = 0L,
+    val errorMessage: String? = null,
     val eventSink: (MyBookingsEvent) -> Unit = {}
 ) : CircuitUiState {
     val filteredBookings: List<ConfirmedBooking>
@@ -28,5 +29,6 @@ sealed interface MyBookingsEvent : CircuitUiEvent {
     data class RebookClicked(val booking: ConfirmedBooking) : MyBookingsEvent
     data class AddReviewClicked(val id: String) : MyBookingsEvent
     data object DismissReviewSheet : MyBookingsEvent
+    data object DismissError : MyBookingsEvent
     data object Refresh : MyBookingsEvent
 }

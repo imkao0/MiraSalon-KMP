@@ -21,17 +21,20 @@ import iz.mkao.mirasalon.feature.booking.domain.model.ConfirmedBooking
 import iz.mkao.mirasalon.feature.profile.domain.model.UserProfile
 import iz.mkao.mirasalon.feature.profile.domain.repository.ProfileRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BookingRepositoryImpl(
     private val api: BookingApi,
     private val bookingDao: BookingDao,
@@ -42,10 +45,11 @@ class BookingRepositoryImpl(
 ) : BookingRepository {
 
     override val confirmedBookings: StateFlow<List<ConfirmedBooking>> =
-        flow {
-            val userId = tokenProvider.userId() ?: ""
-            emitAll(bookingDao.getAllBookingsWithServices(userId))
-        }
+        tokenProvider.observeUserId()
+            .flatMapLatest { userId ->
+                val actualUserId = userId ?: ""
+                bookingDao.getAllBookingsWithServices(actualUserId)
+            }
             .map { list ->
                 val bookings = list.map { it.toDomain() }
 
@@ -201,7 +205,11 @@ class BookingRepositoryImpl(
     override suspend fun cancelBooking(id: String): Result<Unit> {
         return when (val result = api.cancelAppointment(id)) {
             is Outcome.Success -> {
-
+                // Update local DB status so UI updates immediately
+                val booking = bookingDao.getBookingById(id)
+                if (booking != null) {
+                    bookingDao.upsertBooking(booking.booking.copy(status = "Cancelled"))
+                }
                 Result.success(Unit)
             }
             is Outcome.Error -> {

@@ -1,6 +1,7 @@
 package iz.mkao.mirasalon.feature.booking.presentation.circuit
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,7 +14,6 @@ import iz.mkao.mirasalon.core.navigation.BookingRoute
 import iz.mkao.mirasalon.feature.booking.data.repository.BookingRepository
 import iz.mkao.mirasalon.feature.booking.domain.model.BookingStatus
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 
 class MyBookingsPresenter(
     private val repository: BookingRepository,
@@ -27,7 +27,17 @@ class MyBookingsPresenter(
         var isLoading by remember { mutableStateOf(false) }
         var showReviewSheet by remember { mutableStateOf(false) }
         var reviewBookingId by remember { mutableStateOf<String?>(null) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
         val scope = rememberCoroutineScope()
+
+        // Auto-refresh bookings when screen is first loaded
+        LaunchedEffect(Unit) {
+            if (bookings.isEmpty()) {
+                isLoading = true
+            }
+            repository.refreshBookings()
+            isLoading = false
+        }
 
         return MyBookingsState(
             bookings = bookings,
@@ -35,7 +45,8 @@ class MyBookingsPresenter(
             isLoading = isLoading,
             showReviewSheet = showReviewSheet,
             reviewBookingId = reviewBookingId,
-            currentTimeMillis = Clock.System.now().toEpochMilliseconds(),
+            currentTimeMillis = kotlin.time.Clock.System.now().toEpochMilliseconds(),
+            errorMessage = errorMessage,
             onReviewSubmit = { rating, comment ->
                 val bookingId = reviewBookingId
                 if (bookingId != null) {
@@ -56,8 +67,18 @@ class MyBookingsPresenter(
                     is MyBookingsEvent.EReceiptClicked -> 
                         navigator.goTo(BookingRoute.EReceipt(event.id))
                     is MyBookingsEvent.CancelClicked -> {
-                        scope.launch {
-                            repository.cancelBooking(event.id)
+                        val booking = bookings.find { it.id == event.id }
+                        val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                        
+                        if (booking != null && !booking.canCancel(now)) {
+                            errorMessage = "Bookings can only be cancelled at least 48 hours in advance."
+                        } else {
+                            scope.launch {
+                                val result = repository.cancelBooking(event.id)
+                                if (result.isFailure) {
+                                    errorMessage = result.exceptionOrNull()?.message ?: "Failed to cancel booking"
+                                }
+                            }
                         }
                     }
                     is MyBookingsEvent.RebookClicked -> 
@@ -69,6 +90,9 @@ class MyBookingsPresenter(
                     MyBookingsEvent.DismissReviewSheet -> {
                         showReviewSheet = false
                         reviewBookingId = null
+                    }
+                    MyBookingsEvent.DismissError -> {
+                        errorMessage = null
                     }
                     MyBookingsEvent.Refresh -> {
                         scope.launch {

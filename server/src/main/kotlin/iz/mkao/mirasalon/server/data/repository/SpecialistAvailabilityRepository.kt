@@ -3,6 +3,7 @@ package iz.mkao.mirasalon.server.data.repository
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistAvailabilityDto
 import iz.mkao.mirasalon.core.network.model.dto.SpecialistShiftDto
 import iz.mkao.mirasalon.core.network.model.dto.TimeSlotDto
+import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
 import iz.mkao.mirasalon.server.data.tables.SalonsTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistAbsencesTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistShiftsTable
@@ -32,6 +33,8 @@ class SpecialistAvailabilityRepository {
             if (it == Calendar.SUNDAY) 7 else it - 1
         }
         
+        val startOfDay = calendar.timeInMillis
+
         val shift = SpecialistShiftsTable.selectAll().where { 
             (SpecialistShiftsTable.specialistId eq specialistId) and 
             (SpecialistShiftsTable.dayOfWeek eq dayOfWeek) and
@@ -69,36 +72,60 @@ class SpecialistAvailabilityRepository {
             set(Calendar.HOUR_OF_DAY, endHour)
             set(Calendar.MINUTE, endMinute)
         }
+
+        // Fetch existing appointments for this day to check overlaps
+        // Only exclude CANCELLED appointments; CONFIRMED and COMPLETED should block slots
+        val dayEnd = startOfDay + (24 * 60 * 60 * 1000)
+        val dayAppointments = AppointmentsTable.selectAll().where {
+            (AppointmentsTable.specialistId eq specialistId) and
+            (AppointmentsTable.status neq AppointmentStatus.CANCELLED.name) and
+            (AppointmentsTable.dateTime greaterEq startOfDay) and
+            (AppointmentsTable.dateTime less dayEnd)
+        }.map {
+            it[AppointmentsTable.dateTime] to it[AppointmentsTable.durationMinutes]
+        }
         
+        val now = System.currentTimeMillis()
         while (calendar.before(endCal)) {
             val slotStart = calendar.timeInMillis
             val slotEnd = slotStart + (duration * 60 * 1000)
             
+            // Skip slots that are in the past
+            if (slotStart < now) {
+                calendar.add(Calendar.MINUTE, duration)
+                continue
+            }
+
             // Check for absences
             val isAbsent = SpecialistAbsencesTable.selectAll().where {
                 (SpecialistAbsencesTable.specialistId eq specialistId) and
                 (SpecialistAbsencesTable.startTime less slotEnd) and
                 (SpecialistAbsencesTable.endTime greater slotStart)
             }.any()
-            
-            if (!isAbsent) {
-                val hour = calendar.get(Calendar.HOUR_OF_DAY)
-                val minute = calendar.get(Calendar.MINUTE)
-                val amPm = if (hour < 12) "AM" else "PM"
-                val hour12 = when {
-                    hour == 0 -> 12
-                    hour > 12 -> hour - 12
-                    else -> hour
-                }
-                val formatted = String.format(Locale.US, "%d:%02d %s", hour12, minute, amPm)
 
-                slots.add(TimeSlotDto(
-                    startTime = slotStart,
-                    endTime = slotEnd,
-                    isAvailable = true,
-                    formattedTime = formatted
-                ))
+            // Check for confirmed appointments
+            val isBooked = dayAppointments.any { (appStart, appDuration) ->
+                val appEnd = appStart + (appDuration * 60 * 1000)
+                slotStart < appEnd && slotEnd > appStart
             }
+            
+            val hour = calendar.get(Calendar.HOUR_OF_DAY)
+            val minute = calendar.get(Calendar.MINUTE)
+            val amPm = if (hour < 12) "AM" else "PM"
+            val hour12 = when {
+                hour == 0 -> 12
+                hour > 12 -> hour - 12
+                else -> hour
+            }
+            val formatted = String.format(Locale.US, "%d:%02d %s", hour12, minute, amPm)
+
+            slots.add(TimeSlotDto(
+                startTime = slotStart,
+                endTime = slotEnd,
+                isAvailable = !isAbsent && !isBooked,
+                formattedTime = formatted
+            ))
+            
             calendar.add(Calendar.MINUTE, duration)
         }
 
