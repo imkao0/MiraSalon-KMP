@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
@@ -54,19 +53,19 @@ import coil3.request.crossfade
 import io.github.aakira.napier.Napier
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.RectangularSwitch
-import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeIntermediate
 import iz.mkao.mirasalon.core.designsystem.theme.IconSizeMedium
 import iz.mkao.mirasalon.core.designsystem.theme.ProfileAvatarSize
-import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusProfileCard
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingDefault
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingExtraLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingLarge
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingMedium
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingSmall
 import iz.mkao.mirasalon.core.designsystem.theme.SpacingTiny
+import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.feature.profile.domain.model.AppTheme
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileEvent
 import iz.mkao.mirasalon.feature.profile.presentation.circuit.ProfileState
@@ -251,7 +250,7 @@ private fun ProfileHeader(name: String, email: String, avatarUrl: String?, onEdi
         Box(
             modifier = Modifier
                 .size(ProfileAvatarSize)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(RadiusSmall))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {

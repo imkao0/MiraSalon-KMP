@@ -2,42 +2,15 @@ package iz.mkao.mirasalon.presentation.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,26 +28,14 @@ import com.slack.circuit.runtime.screen.Screen
 import com.slack.circuit.runtime.ui.Ui
 import com.slack.circuit.runtime.ui.ui
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
-import iz.mkao.mirasalon.core.designsystem.theme.MiraBackground
-import iz.mkao.mirasalon.core.designsystem.theme.MiraBorder
-import iz.mkao.mirasalon.core.designsystem.theme.MiraCoral
-import iz.mkao.mirasalon.core.designsystem.theme.MiraTextPrimary
-import iz.mkao.mirasalon.core.designsystem.theme.MiraTextSecondary
-import iz.mkao.mirasalon.presentation.DesktopScreen
-import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
-import iz.mkao.mirasalon.presentation.LocalProfileClick
-import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
-import iz.mkao.mirasalon.presentation.LocalToggleSidebar
-import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
+import iz.mkao.mirasalon.core.designsystem.theme.*
+import iz.mkao.mirasalon.presentation.*
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 
 @Composable
 fun SettingsScreenUi(
     state: SettingsUiState,
-    modifier: Modifier = Modifier,
-    onNavigate: (String) -> Unit,
-    isSidebarExpanded: Boolean,
-    onToggleSidebar: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onProfileClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val salon = state.salon
     val isLoading = state.isLoading
@@ -94,36 +55,20 @@ fun SettingsScreenUi(
 
     val tabs = listOf("Account")
 
-    Row(modifier = modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Settings",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 280.dp else 80.dp)
-        )
-
+    DesktopShell(
+        title = "Settings",
+        selectedRoute = "Settings"
+    ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .background(MiraBackground)
-                .padding(40.dp)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Settings",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MiraTextPrimary
-                )
-
                 Row {
                     OutlinedButton(
                         onClick = { /* Discard */ },
@@ -372,14 +317,9 @@ fun SettingField(
 
 class SettingsUiFactory : Ui.Factory {
     override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
-        is DesktopScreen.Settings -> ui<SettingsUiState> { state, modifier ->
+        is DesktopScreen.Settings -> ui<SettingsUiState> { state, _ ->
             SettingsScreenUi(
-                state = state,
-                modifier = modifier,
-                onNavigate = LocalDesktopNavigate.current,
-                isSidebarExpanded = LocalSidebarExpanded.current,
-                onToggleSidebar = LocalToggleSidebar.current,
-                onProfileClick = LocalProfileClick.current
+                state = state
             )
         }
         else -> null

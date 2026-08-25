@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -54,6 +53,7 @@ import coil3.request.crossfade
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.PermissionRationaleDialog
 import iz.mkao.mirasalon.core.designsystem.components.ShimmerLoading
+import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
 import iz.mkao.mirasalon.core.designsystem.utils.rememberPermissionHandler
 import iz.mkao.mirasalon.core.network.config.ApiEndpoints
 import iz.mkao.mirasalon.feature.profile.domain.model.Gender
@@ -86,7 +86,7 @@ fun EditProfileScreenContent(
             }
         },
         onPermissionDenied = {
-            // Permission denied - in a real app, show a dialog explaining why we need it
+            showPermissionRationale = true
         }
     )
 
@@ -150,7 +150,7 @@ fun EditProfileScreenContent(
                     Box(
                         modifier = Modifier
                             .size(120.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(RadiusSmall))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {

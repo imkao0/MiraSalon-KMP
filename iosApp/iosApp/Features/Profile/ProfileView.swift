@@ -149,7 +149,7 @@ private struct ProfileHeader: View {
     var body: some View {
         HStack(spacing: MiraTheme.spacingMedium) {
             ZStack {
-                Circle().fill(MiraTheme.surfaceVariant).frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
+                RoundedRectangle(cornerRadius: MiraTheme.radiusSmall).fill(MiraTheme.surfaceVariant).frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
                 if let url = avatarUrl, !url.isEmpty {
                     let resolvedUrl = ApiEndpoints.shared.resolveImageUrl(imagePath: url)
                     AsyncImage(url: URL(string: resolvedUrl ?? "")) { phase in
@@ -166,7 +166,7 @@ private struct ProfileHeader: View {
                         }
                     }
                     .frame(width: MiraTheme.profileAvatarSize, height: MiraTheme.profileAvatarSize)
-                    .clipShape(Circle())
+                    .clipShape(RoundedRectangle(cornerRadius: MiraTheme.radiusSmall))
                     .onAppear {
                         if let resolvedUrl = resolvedUrl {
                             print("ProfileHeader: Attempting to load \(resolvedUrl)")

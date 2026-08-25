@@ -31,7 +31,6 @@ import iz.mkao.mirasalon.server.error.GeneralDomainException
 import iz.mkao.mirasalon.server.error.InvalidCredentialsException
 import iz.mkao.mirasalon.server.error.ResourceNotFoundException
 import iz.mkao.mirasalon.server.error.UnauthorizedException
-import iz.mkao.mirasalon.server.service.StreamSyncService
 import iz.mkao.mirasalon.server.util.JwtConfig
 import iz.mkao.mirasalon.server.util.ensureAdmin
 import iz.mkao.mirasalon.server.util.validate
@@ -42,7 +41,6 @@ private val log = LoggerFactory.getLogger("AuthRoutes")
 fun Route.authRoutes(
     userRepository: UserRepository,
     jwtConfig: JwtConfig,
-    streamSyncService: StreamSyncService? = null,
     refreshTokenRepository: RefreshTokenRepository
 ) {
 
@@ -70,17 +68,6 @@ fun Route.authRoutes(
             is RegisterResult.Success -> {
                 val authResponse = result.authResponse
         
-                try {
-                    streamSyncService?.syncUser(
-                        userId = authResponse.userId,
-                        name = authResponse.name,
-                        role = authResponse.role,
-                        avatarUrl = authResponse.avatarUrl
-                    )
-                } catch (e: Exception) {
-                    log.error("Failed to sync user {} to Stream on registration: {}", authResponse.userId, e.message)
-                }
-
                 val token = jwtConfig.generateToken(
                     authResponse.userId,
                     authResponse.email,
@@ -130,17 +117,6 @@ fun Route.authRoutes(
 
         if (!user.isActive) {
             throw ForbiddenException("Account disabled by administrator")
-        }
-
-        try {
-            streamSyncService?.syncUser(
-                userId = user.id,
-                name = user.name,
-                role = user.role,
-                avatarUrl = user.avatarUrl
-            )
-        } catch (e: Exception) {
-            log.error("Failed to sync user {} to Stream on login: {}", user.id, e.message)
         }
 
         val token = jwtConfig.generateToken(user.id, user.email, user.role, user.tokenVersion)
@@ -237,19 +213,6 @@ fun Route.authRoutes(
 
             when (result) {
                 is UpdateProfileResult.Success -> {
-                    // Sync updated profile to Stream (Non-blocking)
-                    try {
-                        userRepository.findById(userId)?.let { user ->
-                            streamSyncService?.syncUser(
-                                userId = user.id,
-                                name = user.name,
-                                role = user.role,
-                                avatarUrl = user.avatarUrl
-                            )
-                        }
-                    } catch (e: Exception) {
-                        log.error("Failed to sync user {} to Stream on profile update: {}", userId, e.message)
-                    }
                     call.respond(HttpStatusCode.OK, ApiResponse(success = true, data = "Profile updated"))
                 }
                 is UpdateProfileResult.NotFound -> {
@@ -300,16 +263,6 @@ fun Route.authRoutes(
                 is RegisterResult.Success -> {
                     val authResponse = result.authResponse
             
-                    try {
-                        streamSyncService?.syncUser(
-                            userId = authResponse.userId,
-                            name = authResponse.name,
-                            role = authResponse.role,
-                            avatarUrl = authResponse.avatarUrl
-                        )
-                    } catch (e: Exception) {
-                        log.error("Failed to sync user {} to Stream on staff registration: {}", authResponse.userId, e.message)
-                    }
                     call.respond(HttpStatusCode.Created, ApiResponse(success = true, data = authResponse))
                 }
                 is RegisterResult.Failure -> {
