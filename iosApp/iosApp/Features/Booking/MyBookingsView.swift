@@ -72,6 +72,15 @@ struct MyBookingsView: View {
                 }
             }
             .background(MiraTheme.background.ignoresSafeArea())
+            .alert(
+                "Notice",
+                isPresented: Binding(
+                    get: { state.errorMessage != nil },
+                    set: { if !$0 { state.eventSink(MyBookingsEventDismissError()) } }
+                ),
+                actions: { Button("OK", role: .cancel) { } },
+                message: { Text(state.errorMessage ?? "") }
+            )
         }
     }
 }
@@ -178,7 +187,7 @@ private struct BookingCard: View {
                 HStack(spacing: 12) {
                     BookingOutlineButton(
                         title: "Cancel",
-                        isEnabled: booking.canCancel(currentTimeMillis: currentTimeMillis),
+                        isEnabled: true,
                         action: onSecondaryAction
                     )
                     BookingFilledButton(title: "E-Receipt", action: onPrimaryAction)

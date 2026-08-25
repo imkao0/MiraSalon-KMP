@@ -1,14 +1,18 @@
 package iz.mkao.mirasalon.server.data.repository
 
 import io.micrometer.core.instrument.MeterRegistry
+import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
 import iz.mkao.mirasalon.core.network.model.PagedResponse
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentDto
 import iz.mkao.mirasalon.core.network.model.dto.AppointmentStatusDto
 import iz.mkao.mirasalon.core.network.model.dto.ServiceItemDto
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.server.data.tables.AppointmentsTable
 import iz.mkao.mirasalon.server.data.tables.SalonsTable
 import iz.mkao.mirasalon.server.data.tables.ServicesTable
+import iz.mkao.mirasalon.server.data.tables.SpecialistAbsencesTable
+import iz.mkao.mirasalon.server.data.tables.SpecialistShiftsTable
 import iz.mkao.mirasalon.server.data.tables.SpecialistsTable
 import iz.mkao.mirasalon.server.data.tables.UsersTable
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +37,9 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
@@ -133,6 +139,18 @@ class AppointmentRepository(
             .map { it.toAppointmentDto() }
     }
 
+    fun findByCreatedAtRange(start: Long, end: Long): List<AppointmentDto> = transaction {
+        AppointmentsTable
+            .join(SalonsTable, JoinType.INNER, AppointmentsTable.salonId, SalonsTable.id)
+            .join(SpecialistsTable, JoinType.INNER, AppointmentsTable.specialistId, SpecialistsTable.id)
+            .join(UsersTable, JoinType.INNER, AppointmentsTable.userId, UsersTable.id)
+            .selectAll().where {
+                (AppointmentsTable.createdAt greaterEq start) and
+                (AppointmentsTable.createdAt less end)
+            }
+            .map { it.toAppointmentDto() }
+    }
+
     fun hasAppointmentBefore(userId: String, timestamp: Long): Boolean = transaction {
         AppointmentsTable.selectAll().where {
             (AppointmentsTable.userId eq userId) and
@@ -214,6 +232,11 @@ class AppointmentRepository(
             val log = LoggerFactory.getLogger(AppointmentRepository::class.java)
             log.info("Creating appointment: user=$userId, salon=$salonId, specialist=$specialistId, services=$serviceIds")
 
+            // Past Check
+            if (dateTimeMillis < System.currentTimeMillis()) {
+                return@transaction BookingResult.Error.Generic("Cannot book in the past")
+            }
+
             // Fetch selected services to calculate total and build JSON
             val selectedServices = ServicesTable.selectAll()
                 .where { ServicesTable.id inList serviceIds }
@@ -233,7 +256,82 @@ class AppointmentRepository(
 
             val total = selectedServices.sumOf { it.price }
             val totalDuration = selectedServices.sumOf { it.durationMinutes }
+            val endMillis = dateTimeMillis + totalDuration * 60 * 1000
+
+            // Fetch Salon to get Timezone
+            val salon = SalonsTable.selectAll().where { SalonsTable.id eq salonId }.singleOrNull()
+                ?: return@transaction BookingResult.Error.SalonMismatch("Salon not found")
+            val zoneId = salon[SalonsTable.timezoneId]?.let { try { ZoneId.of(it) } catch (e: Exception) { ZoneId.systemDefault() } } ?: ZoneId.systemDefault()
+            
+            val zonedDateTime = Instant.ofEpochMilli(dateTimeMillis).atZone(zoneId)
+            val bookingDayOfWeek = zonedDateTime.dayOfWeek.value // 1 (Mon) to 7 (Sun)
+            val bookingStartTime = zonedDateTime.toLocalTime()
+            val bookingEndTime = Instant.ofEpochMilli(endMillis).atZone(zoneId).toLocalTime()
+
+            // Specialist Shift Check
+            val shifts = SpecialistShiftsTable.selectAll().where {
+                (SpecialistShiftsTable.specialistId eq specialistId) and 
+                (SpecialistShiftsTable.dayOfWeek eq bookingDayOfWeek) and
+                (SpecialistShiftsTable.isActive eq true)
+            }.toList()
+
+            if (shifts.isEmpty()) {
+                return@transaction BookingResult.Error.ShiftMismatch("Specialist does not work on this day")
+            }
+
+            val isWithinShift = shifts.any { shift ->
+                val shiftStart = LocalTime.parse(shift[SpecialistShiftsTable.startTime])
+                val shiftEnd = LocalTime.parse(shift[SpecialistShiftsTable.endTime])
+                !bookingStartTime.isBefore(shiftStart) && !bookingEndTime.isAfter(shiftEnd)
+            }
+
+            if (!isWithinShift) {
+                return@transaction BookingResult.Error.ShiftMismatch("Booking time is outside specialist's working hours")
+            }
+
+            // Specialist Absence Check
+            val hasAbsence = SpecialistAbsencesTable.selectAll().where {
+                (SpecialistAbsencesTable.specialistId eq specialistId) and
+                (SpecialistAbsencesTable.startTime less endMillis) and
+                (SpecialistAbsencesTable.endTime greater dateTimeMillis)
+            }.any()
+
+            if (hasAbsence) {
+                return@transaction BookingResult.Error.SpecialistAbsent("Specialist is absent during this time")
+            }
+
+            // Overlap Check (CONFIRMED or COMPLETED)
+            val hasOverlap = AppointmentsTable.selectAll().where {
+                (AppointmentsTable.specialistId eq specialistId) and
+                (AppointmentsTable.status neq AppointmentStatus.CANCELLED.name) and
+                (AppointmentsTable.dateTime less endMillis)
+            }.any { row ->
+                val appStart = row[AppointmentsTable.dateTime]
+                val appEnd = appStart + (row[AppointmentsTable.durationMinutes] * 60 * 1000)
+                dateTimeMillis < appEnd
+            }
+
+            if (hasOverlap) {
+                return@transaction BookingResult.Error.ScheduleOverlap("This specialist is already booked for the selected time slot")
+            }
+
             val servicesJsonStr = json.encodeToString(selectedServices)
+            val specialistRow = SpecialistsTable.select(SpecialistsTable.name, SpecialistsTable.imageUrl)
+                .where { SpecialistsTable.id eq specialistId }
+                .singleOrNull()
+            
+            val specialistName = specialistRow?.get(SpecialistsTable.name)
+            val specialistAvatarUrl = specialistRow?.get(SpecialistsTable.imageUrl)
+            
+            val customerRow = UsersTable.select(UsersTable.name, UsersTable.avatarUrl)
+                .where { UsersTable.id eq userId }
+                .singleOrNull()
+            
+            val customerName = customerRow?.get(UsersTable.name)
+            val customerAvatarUrl = customerRow?.get(UsersTable.avatarUrl)
+            
+            val primaryServiceName = selectedServices.firstOrNull()?.name
+
             val id = UUID.randomUUID().toString()
 
             AppointmentsTable.insert {
@@ -253,17 +351,23 @@ class AppointmentRepository(
 
             val created = findById(id)
             if (created != null) {
+                val formattedDate = DateUtils.formatUpcomingDate(dateTimeMillis, System.currentTimeMillis())
                 val event = DomainEvent.BookingCreated(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = userId,
-                    message = "New appointment scheduled",
+                    message = "You have scheduled an appointment with $specialistName, $primaryServiceName on $formattedDate",
                     bookingId = id,
                     specialistId = specialistId,
+                    specialistName = specialistName,
+                    specialistAvatarUrl = specialistAvatarUrl,
+                    customerName = customerName,
+                    customerAvatarUrl = customerAvatarUrl,
+                    serviceName = primaryServiceName,
                     startTime = dateTimeMillis,
                     appointmentId = id
                 )
-                outboxRepository.save(userId, json.encodeToString(event))
+                outboxRepository.save(userId, DomainEventCodec.encode(event))
                 meterRegistry.counter("appointments_booked_total", "salon_id", salonId).increment()
                 BookingResult.Success(created)
             } else {
@@ -289,16 +393,21 @@ class AppointmentRepository(
         if (updated > 0) {
             val appointment = findById(id)
             if (appointment != null) {
+                val formattedDate = DateUtils.formatUpcomingDate(appointment.dateTime, System.currentTimeMillis())
                 val event = DomainEvent.BookingUpdated(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     actorId = appointment.userId,
-                    message = "Appointment status updated to ${status.name}",
+                    message = "Your appointment with ${appointment.specialistName} on $formattedDate was updated to ${status.name}",
                     bookingId = id,
                     status = status.name,
+                    specialistName = appointment.specialistName,
+                    specialistAvatarUrl = appointment.specialistAvatarUrl,
+                    customerName = appointment.userName,
+                    customerAvatarUrl = appointment.userAvatarUrl,
                     appointmentId = id
                 )
-                outboxRepository.save(appointment.userId, json.encodeToString(event))
+                outboxRepository.save(appointment.userId, DomainEventCodec.encode(event))
                 AppointmentUpdateResult.Success(appointment)
             } else AppointmentUpdateResult.NotFound
         } else {
@@ -322,34 +431,56 @@ class AppointmentRepository(
         val appointment = AppointmentsTable.selectAll().where { AppointmentsTable.id eq id }.singleOrNull()
             ?: return@transaction CancelResult.NotFound
 
-        if (!isAdmin) {
+        // Authorization: Only admin or the user who booked the appointment can cancel
+        if (!isAdmin && appointment[AppointmentsTable.userId] != userId) {
             return@transaction CancelResult.Unauthorized
         }
 
-        if (appointment[AppointmentsTable.status] == "CANCELLED") {
+        val status = appointment[AppointmentsTable.status]
+        if (status == AppointmentStatus.CANCELLED.name) {
             return@transaction CancelResult.AlreadyCancelled
         }
 
+        if (status == AppointmentStatus.COMPLETED.name) {
+            return@transaction CancelResult.CannotCancelPast // Cannot cancel completed appointments
+        }
+
+        // Lead time check for non-admins (must cancel at least 48 hours before)
+        if (!isAdmin) {
+            val appointmentTime = appointment[AppointmentsTable.dateTime]
+            val now = System.currentTimeMillis()
+            val leadTimeMillis = 48 * 60 * 60 * 1000L // 48 hours
+            if (appointmentTime - now < leadTimeMillis) {
+                return@transaction CancelResult.TooLateToCancel
+            }
+        }
+
         AppointmentsTable.update({ AppointmentsTable.id eq id }) {
-            it[status] = AppointmentStatus.CANCELLED.name
+            it[this.status] = AppointmentStatus.CANCELLED.name
         }
         
+        val appDto = findById(id)
+        val formattedDate = appDto?.let { DateUtils.formatUpcomingDate(it.dateTime, System.currentTimeMillis()) } ?: "the scheduled date"
         val event = DomainEvent.BookingUpdated(
             eventId = UUID.randomUUID().toString(),
             timestamp = System.currentTimeMillis(),
             actorId = userId,
-            message = "Appointment cancelled",
+            message = "Your appointment with ${appDto?.specialistName ?: "specialist"} on $formattedDate was cancelled by ${if (isAdmin) "Admin" else "you"}",
             bookingId = id,
             status = "CANCELLED",
+            specialistName = appDto?.specialistName,
+            specialistAvatarUrl = appDto?.specialistAvatarUrl,
+            customerName = appDto?.userName,
+            customerAvatarUrl = appDto?.userAvatarUrl,
             appointmentId = id
         )
-        outboxRepository.save(userId, json.encodeToString(event))
+        outboxRepository.save(userId, DomainEventCodec.encode(event))
         
         CancelResult.Success
     }
 
-    fun delete(id: String): Boolean = transaction {
-        AppointmentsTable.deleteWhere { AppointmentsTable.id eq id } > 0
+    fun delete(appointmentId: String): Boolean = transaction {
+        AppointmentsTable.deleteWhere { id eq appointmentId } > 0
     }
 
     fun completePastDayBookings(defaultZoneId: ZoneId = ZoneId.systemDefault()): Int {
@@ -389,7 +520,6 @@ class AppointmentRepository(
             }
         }
     }
-
     fun stopAutoCompletionScheduler() {
         autoCompletionScope?.cancel()
         autoCompletionScope = null
@@ -406,12 +536,14 @@ class AppointmentRepository(
         }
 
         val isReviewedVal = this[AppointmentsTable.isReviewed]
-        log.debug("Mapping appointment {} to DTO, isReviewed: {}", this[AppointmentsTable.id], isReviewedVal)
+        val totalAmountVal = this[AppointmentsTable.totalAmount]
+        log.info("Mapping appointment {} to DTO, status: {}, amount: {}", this[AppointmentsTable.id], this[AppointmentsTable.status], totalAmountVal)
 
         return AppointmentDto(
             id = this[AppointmentsTable.id],
             userId = this[AppointmentsTable.userId],
             userName = this.getOrNull(UsersTable.name),
+            userAvatarUrl = this.getOrNull(UsersTable.avatarUrl),
             salonId = this[AppointmentsTable.salonId],
             salonName = this[SalonsTable.name],
             salonAddress = this[SalonsTable.address],
@@ -433,7 +565,7 @@ class AppointmentRepository(
             taxAmount = this[AppointmentsTable.taxAmount],
             discountAmount = this[AppointmentsTable.discountAmount],
             promoCode = this[AppointmentsTable.promoCode],
-            totalAmount = this[AppointmentsTable.totalAmount],
+            totalAmount = totalAmountVal,
             reminderEnabled = this[AppointmentsTable.reminderEnabled],
             isReviewed = isReviewedVal
         )

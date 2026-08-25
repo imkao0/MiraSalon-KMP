@@ -10,12 +10,16 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import iz.mkao.mirasalon.core.network.model.ApiResponse
+import iz.mkao.mirasalon.core.network.model.dto.CancelAppointmentResponse
+import iz.mkao.mirasalon.core.network.model.dto.SimpleMessageResponse
+import iz.mkao.mirasalon.core.network.model.dto.UpdateReminderRequest
 import iz.mkao.mirasalon.core.network.model.dto.CreateAppointmentRequest
 import iz.mkao.mirasalon.core.network.model.dto.UpdateAppointmentStatusRequest
 import iz.mkao.mirasalon.server.data.repository.AppointmentRepository
 import iz.mkao.mirasalon.server.data.repository.AppointmentStatus
 import iz.mkao.mirasalon.server.data.repository.AppointmentUpdateResult
 import iz.mkao.mirasalon.server.data.repository.BookingResult
+import iz.mkao.mirasalon.server.data.repository.CancelResult
 import iz.mkao.mirasalon.server.error.ForbiddenException
 import iz.mkao.mirasalon.server.error.GeneralDomainException
 import iz.mkao.mirasalon.server.error.ResourceNotFoundException
@@ -172,21 +176,29 @@ fun Route.bookingRoutes(
             val id = call.parameters["id"]
                 ?: throw GeneralDomainException("Missing appointment ID", HttpStatusCode.BadRequest)
 
-            if (!call.isAdmin()) {
-                throw ForbiddenException("Only admins can delete bookings")
-            }
+            val userId = call.getUserId() ?: throw UnauthorizedException("Authentication required")
+            val isAdmin = call.isAdmin()
 
-            val deleted = appointmentRepository.delete(id)
-            if (deleted) {
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse(
-                        success = true,
-                        data = mapOf("id" to id, "deletedAt" to System.currentTimeMillis())
+            val result = appointmentRepository.cancel(id, userId, isAdmin)
+            when (result) {
+                is CancelResult.Success -> {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        ApiResponse(
+                            success = true,
+                            data = CancelAppointmentResponse(id = id, cancelledAt = System.currentTimeMillis())
+                        )
                     )
+                }
+                is CancelResult.NotFound -> throw ResourceNotFoundException("Appointment not found")
+                is CancelResult.Unauthorized -> throw ForbiddenException("Access denied")
+                is CancelResult.AlreadyCancelled -> call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse(success = true, data = SimpleMessageResponse("Already cancelled"))
                 )
-            } else {
-                throw ResourceNotFoundException("Appointment not found")
+                is CancelResult.CannotCancelPast -> throw GeneralDomainException("Cannot cancel completed appointments", HttpStatusCode.BadRequest)
+                is CancelResult.TooLateToCancel -> throw ForbiddenException("Only admins can cancel bookings within 48 hours of the appointment")
+                is CancelResult.DatabaseError -> throw GeneralDomainException("Cancellation failed: ${result.cause}")
             }
         }
 
@@ -212,8 +224,3 @@ fun Route.bookingRoutes(
         }
     }
 }
-
-@kotlinx.serialization.Serializable
-data class UpdateReminderRequest(
-    val enabled: Boolean
-)

@@ -15,10 +15,9 @@ import iz.mkao.mirasalon.core.navigation.SpecialistRoute
 import iz.mkao.mirasalon.feature.appointments.domain.model.Appointment
 import iz.mkao.mirasalon.feature.appointments.domain.repository.AppointmentRepository
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 class AppointmentsPresenter(
     private val repository: AppointmentRepository,
@@ -52,7 +51,7 @@ class AppointmentsPresenter(
 
         val grouped = remember(appointments) {
             appointments.sortedByDescending { it.dateTime }.groupBy { appointment ->
-                val instant = Instant.fromEpochMilliseconds(appointment.dateTime)
+                val instant = kotlin.time.Instant.fromEpochMilliseconds(appointment.dateTime)
                 val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
                 val month = localDateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }
                 "$month ${localDateTime.year}"

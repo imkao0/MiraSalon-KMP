@@ -4,10 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,14 +22,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,19 +43,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.core.designsystem.components.MiraEmptyState
 import iz.mkao.mirasalon.core.designsystem.components.MiraTopAppBar
 import iz.mkao.mirasalon.core.designsystem.components.RectangularSwitch
 import iz.mkao.mirasalon.core.designsystem.components.ReviewBottomSheet
 import iz.mkao.mirasalon.core.designsystem.theme.RadiusSmall
-import iz.mkao.mirasalon.core.common.util.DateUtils
 import iz.mkao.mirasalon.feature.booking.domain.model.BookingStatus
 import iz.mkao.mirasalon.feature.booking.domain.model.ConfirmedBooking
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.MyBookingsEvent
 import iz.mkao.mirasalon.feature.booking.presentation.circuit.MyBookingsState
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +60,15 @@ fun MyBookingsUi(
     state: MyBookingsState,
     modifier: Modifier = Modifier,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            state.eventSink(MyBookingsEvent.DismissError)
+        }
+    }
+
     if (state.showReviewSheet && state.onReviewSubmit != null) {
         ReviewBottomSheet(
             onDismiss = { state.eventSink(MyBookingsEvent.DismissReviewSheet) },
@@ -66,6 +79,7 @@ fun MyBookingsUi(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             BookingsTopBar(
                 selectedStatus = state.selectedStatus,
@@ -76,46 +90,57 @@ fun MyBookingsUi(
     ) { padding ->
         val bookings = state.filteredBookings
 
-        if (bookings.isEmpty() && !state.isLoading) {
-            MiraEmptyState(
-                message = "No ${state.selectedStatus.name.lowercase()} bookings found",
-                description = "You don't have any ${state.selectedStatus.name.lowercase()} appointments yet.",
-                icon = Icons.Outlined.CalendarToday,
-                modifier = Modifier.padding(padding)
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = padding.calculateTopPadding() + 16.dp,
-                    bottom = padding.calculateBottomPadding() + 16.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(bookings.distinctBy { it.id }, key = { it.id }) { booking ->
-                    BookingCard(
-                        booking = booking,
-                        currentTimeMillis = state.currentTimeMillis,
-                        onReminderToggled = { enabled ->
-                            state.eventSink(MyBookingsEvent.ReminderToggled(booking.id, enabled))
-                        },
-                        onPrimaryActionClicked = {
-                            when (state.selectedStatus) {
-                                BookingStatus.Confirmed -> state.eventSink(MyBookingsEvent.EReceiptClicked(booking.id))
-                                BookingStatus.Completed -> state.eventSink(MyBookingsEvent.AddReviewClicked(booking.id))
-                                BookingStatus.Cancelled -> state.eventSink(MyBookingsEvent.RebookClicked(booking))
-                            }
-                        },
-                        onSecondaryActionClicked = {
-                            when (state.selectedStatus) {
-                                BookingStatus.Confirmed -> state.eventSink(MyBookingsEvent.CancelClicked(booking.id))
-                                BookingStatus.Completed -> state.eventSink(MyBookingsEvent.RebookClicked(booking))
-                                BookingStatus.Cancelled -> {}
-                            }
-                        }
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (bookings.isEmpty() && !state.isLoading) {
+                MiraEmptyState(
+                    message = "No ${state.selectedStatus.name.lowercase()} bookings found",
+                    description = "You don't have any ${state.selectedStatus.name.lowercase()} appointments yet.",
+                    icon = Icons.Outlined.CalendarToday,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (bookings.isEmpty() && state.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 16.dp,
+                        bottom = 16.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(bookings.distinctBy { it.id }, key = { it.id }) { booking ->
+                        BookingCard(
+                            booking = booking,
+                            currentTimeMillis = state.currentTimeMillis,
+                            onReminderToggled = { enabled ->
+                                state.eventSink(MyBookingsEvent.ReminderToggled(booking.id, enabled))
+                            },
+                            onPrimaryActionClicked = {
+                                when (state.selectedStatus) {
+                                    BookingStatus.Confirmed -> state.eventSink(MyBookingsEvent.EReceiptClicked(booking.id))
+                                    BookingStatus.Completed -> state.eventSink(MyBookingsEvent.AddReviewClicked(booking.id))
+                                    BookingStatus.Cancelled -> state.eventSink(MyBookingsEvent.RebookClicked(booking))
+                                }
+                            },
+                            onSecondaryActionClicked = {
+                                when (state.selectedStatus) {
+                                    BookingStatus.Confirmed -> state.eventSink(MyBookingsEvent.CancelClicked(booking.id))
+                                    BookingStatus.Completed -> state.eventSink(MyBookingsEvent.RebookClicked(booking))
+                                    BookingStatus.Cancelled -> {}
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -268,18 +293,16 @@ private fun BookingCard(
             BookingStatus.Confirmed -> Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val canCancel = booking.canCancel(currentTimeMillis)
                 OutlinedButton(
                     onClick = onSecondaryActionClicked,
-                    enabled = canCancel,
                     modifier = Modifier.weight(1f).height(44.dp),
                     shape = RoundedCornerShape(2.dp),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = if (canCancel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                        color = MaterialTheme.colorScheme.primary
                     ),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = if (canCancel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text("Cancel", fontWeight = FontWeight.SemiBold)

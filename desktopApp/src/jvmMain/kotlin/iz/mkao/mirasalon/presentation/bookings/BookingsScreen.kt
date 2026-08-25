@@ -65,6 +65,7 @@ import iz.mkao.mirasalon.presentation.LocalDesktopNavigate
 import iz.mkao.mirasalon.presentation.LocalProfileClick
 import iz.mkao.mirasalon.presentation.LocalSidebarExpanded
 import iz.mkao.mirasalon.presentation.LocalToggleSidebar
+import iz.mkao.mirasalon.presentation.components.DesktopShell
 import iz.mkao.mirasalon.presentation.dashboard.components.DashboardHeader
 import iz.mkao.mirasalon.presentation.dashboard.components.Sidebar
 import iz.mkao.mirasalon.core.common.util.ChatUtils
@@ -75,79 +76,58 @@ import java.util.Locale
 @Composable
 fun BookingsScreenUi(
     state: BookingsUiState,
-    modifier: Modifier = Modifier,
-    onNavigate: (String) -> Unit,
-    isSidebarExpanded: Boolean,
-    onToggleSidebar: () -> Unit,
-    onProfileClick: () -> Unit
+    onNavigate: (String) -> Unit
 ) {
-    Row(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        Sidebar(
-            isExpanded = isSidebarExpanded,
-            onToggle = onToggleSidebar,
-            selectedRoute = "Bookings",
-            onNavigate = onNavigate,
-            modifier = Modifier.fillMaxHeight().width(if (isSidebarExpanded) 280.dp else 80.dp)
+    DesktopShell(
+        title = "Appointments",
+        subtitle = "Manage salon bookings",
+        selectedRoute = "Bookings"
+    ) {
+        Text(
+            "Bookings",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
         )
 
-        Column(modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFFF9F9F9))) {
-            Box(modifier = Modifier.padding(horizontal = 40.dp, vertical = 24.dp)) {
-                DashboardHeader(
-                    title = "Welcome back",
-                    userName = state.userName,
-                    userAvatar = state.userAvatar,
-                    onProfileClick = onProfileClick
-                )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        BookingTabs(
+            selectedStatus = state.selectedStatus,
+            onStatusChange = { state.eventSink(BookingsEvent.StatusFilterChanged(it)) }
+        )
+
+        HorizontalDivider(color = MiraBorder.copy(alpha = 0.5f))
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (state.isLoading && state.bookings.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ShimmerLoading()
             }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(state.bookings) { booking ->
+                    BookingListItem(
+                        booking = booking,
+                        onStatusChange = { newStatus -> state.eventSink(BookingsEvent.UpdateBookingStatus(booking.id, newStatus)) },
+                        onNavigate = onNavigate
+                    )
+                }
 
-            Column(modifier = Modifier.padding(horizontal = 40.dp)) {
-                Text(
-                    "Bookings",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                BookingTabs(
-                    selectedStatus = state.selectedStatus,
-                    onStatusChange = { state.eventSink(BookingsEvent.StatusFilterChanged(it)) }
-                )
-
-                HorizontalDivider(color = MiraBorder.copy(alpha = 0.5f))
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (state.isLoading && state.bookings.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        ShimmerLoading()
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(state.bookings) { booking ->
-                            BookingListItem(
-                                booking = booking,
-                                onStatusChange = { newStatus -> state.eventSink(BookingsEvent.UpdateBookingStatus(booking.id, newStatus)) },
-                                onNavigate = onNavigate
-                            )
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(40.dp))
-                            Text(
-                                "No more results",
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                                color = Color.LightGray,
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.height(40.dp))
-                        }
-                    }
+                item {
+                    Spacer(modifier = Modifier.height(40.dp))
+                    Text(
+                        "No more results",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        color = Color.LightGray,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
         }
@@ -384,14 +364,10 @@ fun StatusBadge(status: AdminAppointmentStatus) {
 /** Circuit [Ui.Factory] binding [DesktopScreen.Bookings] to [BookingsScreenUi]. */
 class BookingsUiFactory : Ui.Factory {
     override fun create(screen: Screen, context: CircuitContext): Ui<*>? = when (screen) {
-        is DesktopScreen.Bookings -> ui<BookingsUiState> { state, modifier ->
+        is DesktopScreen.Bookings -> ui<BookingsUiState> { state, _ ->
             BookingsScreenUi(
                 state = state,
-                modifier = modifier,
-                onNavigate = LocalDesktopNavigate.current,
-                isSidebarExpanded = LocalSidebarExpanded.current,
-                onToggleSidebar = LocalToggleSidebar.current,
-                onProfileClick = LocalProfileClick.current
+                onNavigate = LocalDesktopNavigate.current
             )
         }
         else -> null
