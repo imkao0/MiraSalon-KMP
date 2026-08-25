@@ -24,7 +24,10 @@ class KtorAdminSpecialistRepository(
     }
 
     override suspend fun create(specialist: AdminSpecialist): Outcome<Unit> {
+        // Generate a consistent ID for the specialist
+        val specialistId = java.util.UUID.randomUUID().toString()
         val request = CreateSpecialistRequestDto(
+            userId = specialistId, // Use the same ID as the specialist for chat matching
             name = specialist.name,
             role = specialist.role,
             salonId = specialist.salonId.ifBlank { "main-salon" },

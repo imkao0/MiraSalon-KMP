@@ -31,6 +31,7 @@ fun DesktopShell(
     title: String,
     subtitle: String? = null,
     selectedRoute: String,
+    showCampaignAssistant: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val tokenManager: TokenManager = koinInject()
@@ -63,6 +64,7 @@ fun DesktopShell(
                 subtitle = subtitle,
                 userName = session.name,
                 userAvatar = session.avatarUrl,
+                showCampaignAssistant = showCampaignAssistant,
                 onProfileClick = onProfileClick
             )
             

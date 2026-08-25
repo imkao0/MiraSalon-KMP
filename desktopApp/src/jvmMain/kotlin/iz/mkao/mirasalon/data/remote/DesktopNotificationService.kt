@@ -44,11 +44,25 @@ class DesktopNotificationService(
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
                                 val text = frame.readText()
-                                _notifications.emit(text)
                                 
                                 runCatching {
                                     val event = DomainEventCodec.decode(text)
                                     _events.emit(event)
+                                    
+                                    // Extract user-friendly message for snackbars
+                                    val message = when (event) {
+                                        is DomainEvent.InventoryUpdated -> event.message
+                                        is DomainEvent.OrderCreated -> "New Order: ${event.orderId} ($${event.totalAmount})"
+                                        is DomainEvent.BookingCreated -> event.message
+                                        is DomainEvent.ReviewSubmitted -> "New review: ${event.rating} stars"
+                                        is DomainEvent.SpecialistStatusChanged -> event.message
+                                        is DomainEvent.PromotionChanged -> event.message
+                                        else -> null
+                                    }
+                                    message?.let { _notifications.emit(it) }
+                                }.onFailure {
+                                    // Fallback for non-JSON or legacy messages
+                                    _notifications.emit(text)
                                 }
                             }
                         }

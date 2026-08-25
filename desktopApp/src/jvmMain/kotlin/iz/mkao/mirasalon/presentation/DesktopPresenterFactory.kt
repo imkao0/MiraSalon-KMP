@@ -18,7 +18,7 @@ import iz.mkao.mirasalon.core.domain.repository.ProductRepository
 import iz.mkao.mirasalon.core.domain.repository.ReviewsRepository
 import iz.mkao.mirasalon.core.domain.repository.ServiceRepository
 import iz.mkao.mirasalon.core.domain.repository.SpecialistRepository
-import iz.mkao.mirasalon.core.domain.repository.StreamChatManager
+import iz.mkao.mirasalon.core.domain.repository.ChatManager
 import iz.mkao.mirasalon.core.domain.repository.UploadRepository
 import iz.mkao.mirasalon.core.realtime.RealtimeGateway
 import iz.mkao.mirasalon.data.local.TokenManager
@@ -51,7 +51,7 @@ class DesktopPresenterFactory(
     private val adminOrderRepository: AdminOrderRepository,
     private val reviewsRepository: ReviewsRepository,
     private val adminSalonRepository: AdminSalonRepository,
-    private val streamChatManager: StreamChatManager,
+    private val streamChatManager: ChatManager,
     private val notificationRepository: NotificationRepository,
     private val uploadRepository: UploadRepository,
     private val tokenManager: TokenManager,
@@ -68,7 +68,8 @@ class DesktopPresenterFactory(
             )
             is DesktopScreen.Analytics -> AnalyticsPresenter(
                 dashboardRepository,
-                realtimeGateway
+                realtimeGateway,
+                tokenManager
             )
             is DesktopScreen.Products -> ProductsPresenter(
                 productRepository,
@@ -115,7 +116,6 @@ class DesktopPresenterFactory(
             is DesktopScreen.Chat -> AdminChatPresenter(
                 streamChatManager,
                 specialistRepository,
-                notificationRepository,
                 tokenManager,
                 uploadRepository,
                 realtimeGateway,

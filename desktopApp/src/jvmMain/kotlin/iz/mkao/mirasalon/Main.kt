@@ -24,6 +24,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.svg.SvgDecoder
 import com.slack.circuit.foundation.Circuit
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.CircuitContent
@@ -69,6 +70,7 @@ fun main() {
         ImageLoader.Builder(it)
             .components {
                 add(KtorNetworkFetcherFactory(httpClient))
+                add(SvgDecoder.Factory())
             }
             .build()
     }

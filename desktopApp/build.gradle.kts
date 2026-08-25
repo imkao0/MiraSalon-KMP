@@ -68,6 +68,7 @@ kotlin {
                 // Image loading (JVM).
                 implementation(libs.coil.compose)
                 implementation(libs.coil.network.ktor)
+                implementation(libs.coil.svg)
 
                 // Settings-backed secure token storage + logging + calendar.
                 implementation(libs.multiplatform.settings)

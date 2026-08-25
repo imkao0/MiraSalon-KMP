@@ -8,12 +8,14 @@ import iz.mkao.mirasalon.core.domain.model.PromoValidation
 import iz.mkao.mirasalon.core.domain.model.Promotion
 import iz.mkao.mirasalon.core.domain.model.UsageLimit
 import iz.mkao.mirasalon.core.domain.model.event.DomainEvent
+import iz.mkao.mirasalon.core.network.model.event.DomainEventCodec
 import iz.mkao.mirasalon.core.domain.outcome.Failure
 import iz.mkao.mirasalon.core.domain.outcome.Outcome
 import iz.mkao.mirasalon.core.domain.util.PromotionValidator
 import iz.mkao.mirasalon.core.network.model.PagedResponse
 import iz.mkao.mirasalon.core.network.model.dto.CreatePromotionRequestDto
 import iz.mkao.mirasalon.core.network.model.dto.UpdatePromotionRequestDto
+import iz.mkao.mirasalon.server.data.tables.OutboxAudience
 import iz.mkao.mirasalon.server.data.tables.ProductsTable
 import iz.mkao.mirasalon.server.data.tables.PromotionUsagesTable
 import iz.mkao.mirasalon.server.data.tables.PromotionsTable
@@ -46,7 +48,6 @@ import iz.mkao.mirasalon.core.domain.repository.PromoRepository as CorePromoRepo
 
 class PromotionRepository(
     private val outboxRepository: OutboxRepository,
-    private val json: Json,
     private val clock: Clock
 ) : CorePromoRepository {
 
@@ -258,14 +259,22 @@ class PromotionRepository(
     }
 
     private fun broadcastChange(promotionId: String, actorId: String) {
+        val title = PromotionsTable.select(PromotionsTable.title)
+            .where { PromotionsTable.id eq promotionId }
+            .map { it[PromotionsTable.title] }
+            .singleOrNull()
+
         val event = DomainEvent.PromotionChanged(
             eventId = UUID.randomUUID().toString(),
             timestamp = clock.millis(),
             actorId = actorId,
-            message = "Promotion changed",
-            promotionId = promotionId
+            message = title?.let { "New offer: $it! Check it out" } ?: "New promotion available",
+            promotionId = promotionId,
+            promoTitle = title
         )
-        outboxRepository.save(null, json.encodeToString(event))
+        // Promotions are marketing content: broadcast to all connected clients
+        // (iOS/Android) and keep the admin dashboard informed as well.
+        outboxRepository.save(null, DomainEventCodec.encode(event), OutboxAudience.CLIENT)
     }
 
     suspend fun getImagePath(id: String): Outcome<String?> = try {

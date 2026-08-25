@@ -3,9 +3,11 @@ package iz.mkao.mirasalon.data.local
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.set
 import iz.mkao.mirasalon.core.network.client.SalonTokenProvider
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
 data class UserSession(
     val token: String? = null,
@@ -15,7 +17,8 @@ data class UserSession(
     val phone: String? = null,
     val address: String? = null,
     val gender: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val userId: String? = null
 )
 
 class TokenManager(private val settings: Settings) : SalonTokenProvider {
@@ -42,10 +45,13 @@ class TokenManager(private val settings: Settings) : SalonTokenProvider {
             phone = settings.getStringOrNull(USER_PHONE_KEY),
             address = settings.getStringOrNull(USER_ADDRESS_KEY),
             gender = settings.getStringOrNull(USER_GENDER_KEY),
-            avatarUrl = settings.getStringOrNull(USER_AVATAR_KEY)
+            avatarUrl = settings.getStringOrNull(USER_AVATAR_KEY),
+            userId = settings.getStringOrNull(USER_ID_KEY)
         )
     )
     val session: StateFlow<UserSession> = _session.asStateFlow()
+
+    override fun observeUserId(): Flow<String?> = session.map { settings.getStringOrNull(USER_ID_KEY) }
 
     override suspend fun accessToken(): String? = settings.getStringOrNull(ACCESS_TOKEN_KEY)
 
@@ -116,7 +122,8 @@ class TokenManager(private val settings: Settings) : SalonTokenProvider {
             lastName = lastName ?: _session.value.lastName,
             phone = phone ?: _session.value.phone,
             address = address ?: _session.value.address,
-            gender = gender ?: _session.value.gender
+            gender = gender ?: _session.value.gender,
+            userId = userId ?: _session.value.userId
         )
     }
 
