@@ -112,12 +112,24 @@
 <p align="center">
   <table>
     <tr>
-      <td><img src="screenshots/dashboard_overview.png" width="450"><br align="center"><b>Admin Dashboard</b></td>
-      <td><img src="screenshots/business_analytics.png" width="450"><br align="center"><b>Analytics</b></td>
+      <td><img src="screenshots/dashboard.png" width="450"><br align="center"><b>Admin Dashboard</b></td>
+      <td><img src="screenshots/calendar.png" width="450"><br align="center"><b>Salon Calendar</b></td>
     </tr>
     <tr>
-      <td><img src="screenshots/salon_calendar_month.png" width="450"><br align="center"><b>Salon Calendar</b></td>
-      <td><img src="screenshots/staff_management.png" width="450"><br align="center"><b>Staff Management</b></td>
+      <td><img src="screenshots/bookings.png" width="450"><br align="center"><b>Booking Management</b></td>
+      <td><img src="screenshots/services.png" width="450"><br align="center"><b>Service Management</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/staff.png" width="450"><br align="center"><b>Staff Management</b></td>
+      <td><img src="screenshots/products.png" width="450"><br align="center"><b>Product Catalog</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/desk_products.png" width="450"><br align="center"><b>Inventory Details</b></td>
+      <td><img src="screenshots/orders.png" width="450"><br align="center"><b>Order History</b></td>
+    </tr>
+    <tr>
+      <td><img src="screenshots/promotions.png" width="450"><br align="center"><b>Promotions & Offers</b></td>
+      <td><img src="screenshots/customer_feedback_reviews.png" width="450"><br align="center"><b>Customer Reviews</b></td>
     </tr>
   </table>
 </p>
