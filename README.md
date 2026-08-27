@@ -23,7 +23,7 @@
 ## Showcase
 | Platform | Demo |
 | :--- | :--- |
-| **All Platforms** | https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4 |
+| **All-in-One KMP** | <video src="https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4" width="700" controls></video> |
 
 ---
 
@@ -45,8 +45,6 @@
 - **Specialists Module**: Dedicated feature module for staff management, expertise showcasing, and availability scheduling.
 - **Payment Integration**: Secure, unified payment gateway for booking deposits and product sales.
 - **Automated Deployment**: One-click cloud deployment templates and automated CI/CD pipelines for scaling.
-- **AI-Powered Insights**: Smart predictions for peak booking times and revenue forecasting.
-- **AR Hair Stylist**: Virtual try-on for hair styles and colors using augmented reality.
 
 ---
 
