@@ -1,6 +1,3 @@
-<p align="center">
-  <img src="core/designsystem/src/commonMain/composeResources/drawable/logo.png" width="120" alt="MiraSalon Logo">
-</p>
 
 <h1 align="center">💇‍♀️ MiraSalon KMP</h1>
 
@@ -9,20 +6,20 @@
 </p>
 
 <p align="center">
-  <video src="screenshots/mira.mp4" width="800" controls></video>
-</p>
-
-<p align="center">
   <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.4.10-blue?logo=kotlin" alt="Kotlin"></a>
   <a href="https://www.jetbrains.com/lp/compose-multiplatform/"><img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-blue?logo=jetpackcompose" alt="Compose Multiplatform"></a>
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Desktop%20%7C%20Web-orange" alt="Platform">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
 </p>
 
 ---
 
 ## About This Project
 **MiraSalon** is a full-stack Kotlin Multiplatform project designed to revolutionize salon management. By leveraging **Compose Multiplatform** for the UI and a custom **Ktor Server** for the backend, MiraSalon provides a unified experience across Android, iOS, Desktop, and Web. It is built with a focus on shared business logic, reactive state management, and seamless real-time interactions.
+
+## Showcase
+| Platform - All
+<video src="https://private-user-images.githubusercontent.com/61048381/642144592-9b141016-923b-4442-81bb-a4777f43e05d.mp4?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3ODc4MzI0OTEsIm5iZiI6MTc4NzgzMjE5MSwicGF0aCI6Ii82MTA0ODM4MS82NDIxNDQ1OTItOWIxNDEwMTYtOTIzYi00NDQyLTgxYmItYTQ3NzdmNDNlMDVkLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjA4MjclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwODI3VDEyMDMxMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWVhMGQ3Mjk5ODlmNTU2MjU0OTJiZDViMzczNTlhM2M1NGUwMTg5NWI3MDJmOTM5M2YyM2RhZjUyOTk1MzAxNmImWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JnJlc3BvbnNlLWNvbnRlbnQtdHlwZT12aWRlbyUyRm1wNCJ9.yOTq57Ry8uQcdzAvCZGRw-be0S_8T8FpnHE1HpiB6t8" width="700" controls></video>
 
 ---
 
@@ -41,11 +38,9 @@
 
 ## Future Planning Features
 
-- **AI-Powered Insights**: Smart predictions for peak booking times and revenue forecasting.
-- **Multi-language Support**: Localization for international salon chains.
-- **AR Hair Stylist**: Virtual try-on for hair styles and colors.
-- **Payment Gateway Integration**: Direct in-app payments via Stripe or PayPal.
-- **Cloud Deployment**: One-click deployment templates for Google Cloud and AWS.
+- **Specialists Module**: Dedicated feature module for staff management, expertise showcasing, and availability scheduling.
+- **Payment Integration**: Secure, unified payment gateway for booking deposits and product sales.
+- **Automated Deployment**: One-click cloud deployment templates and automated CI/CD pipelines for scaling.
 
 ---
 
@@ -146,7 +141,7 @@
 
 ### Clone Repository
 ```bash
-git clone https://github.com/mkaomwakuni/MiraSalon-KMP.git
+git clone https://github.com/imkao0/MiraSalon-KMP.git
 ```
 
 ### Running Backend
@@ -169,7 +164,9 @@ git clone https://github.com/mkaomwakuni/MiraSalon-KMP.git
 2. Select your target device/simulator and click **Run**.
 
 ---
+---
 
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/mkaomwakuni">mkaomwakuni</a>
-</p>
+### License
+
+MiraSalon-KMP is licensed under the [Apache License 2.0](file:///Users/mac/Downloads/Folders/MiraSalon-KM/LICENSE).
+
