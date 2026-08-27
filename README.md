@@ -9,10 +9,6 @@
 </p>
 
 <p align="center">
-  <video src="screenshots/mira_compressed.mp4" width="800" controls></video>
-</p>
-
-<p align="center">
   <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.4.10-blue?logo=kotlin" alt="Kotlin"></a>
   <a href="https://www.jetbrains.com/lp/compose-multiplatform/"><img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-blue?logo=jetpackcompose" alt="Compose Multiplatform"></a>
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Desktop%20%7C%20Web-orange" alt="Platform">
@@ -23,6 +19,10 @@
 
 ## About This Project
 **MiraSalon** is a full-stack Kotlin Multiplatform project designed to revolutionize salon management. By leveraging **Compose Multiplatform** for the UI and a custom **Ktor Server** for the backend, MiraSalon provides a unified experience across Android, iOS, Desktop, and Web. It is built with a focus on shared business logic, reactive state management, and seamless real-time interactions.
+
+<p align="center">
+  <video src="https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4" width="800" controls autoplay loop muted playsinline></video>
+</p>
 
 ---
 
@@ -41,11 +41,11 @@
 
 ## Future Planning Features
 
+- **Specialists Module**: Dedicated feature module for staff management, expertise showcasing, and availability scheduling.
+- **Payment Integration**: Secure, unified payment gateway for booking deposits and product sales.
+- **Automated Deployment**: One-click cloud deployment templates and automated CI/CD pipelines for scaling.
 - **AI-Powered Insights**: Smart predictions for peak booking times and revenue forecasting.
-- **Multi-language Support**: Localization for international salon chains.
-- **AR Hair Stylist**: Virtual try-on for hair styles and colors.
-- **Payment Gateway Integration**: Direct in-app payments via Stripe or PayPal.
-- **Cloud Deployment**: One-click deployment templates for Google Cloud and AWS.
+- **AR Hair Stylist**: Virtual try-on for hair styles and colors using augmented reality.
 
 ---
 
@@ -146,7 +146,7 @@
 
 ### Clone Repository
 ```bash
-git clone https://github.com/mkaomwakuni/MiraSalon-KMP.git
+git clone https://github.com/imkao0/MiraSalon-KMP.git
 ```
 
 ### Running Backend
@@ -171,5 +171,5 @@ git clone https://github.com/mkaomwakuni/MiraSalon-KMP.git
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/mkaomwakuni">mkaomwakuni</a>
+  Made with ❤️ by <a href="https://github.com/imkao0">imkao0</a>
 </p>
