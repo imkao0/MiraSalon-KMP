@@ -12,7 +12,7 @@
   <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.4.10-blue?logo=kotlin" alt="Kotlin"></a>
   <a href="https://www.jetbrains.com/lp/compose-multiplatform/"><img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-blue?logo=jetpackcompose" alt="Compose Multiplatform"></a>
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Desktop%20%7C%20Web-orange" alt="Platform">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
 </p>
 
 ---
@@ -20,9 +20,10 @@
 ## About This Project
 **MiraSalon** is a full-stack Kotlin Multiplatform project designed to revolutionize salon management. By leveraging **Compose Multiplatform** for the UI and a custom **Ktor Server** for the backend, MiraSalon provides a unified experience across Android, iOS, Desktop, and Web. It is built with a focus on shared business logic, reactive state management, and seamless real-time interactions.
 
-<p align="center">
-  <video src="https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4" width="800" controls autoplay loop muted playsinline></video>
-</p>
+## Showcase
+| Platform | Demo |
+| :--- | :--- |
+| **All Platforms** | https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4 |
 
 ---
 
@@ -169,7 +170,9 @@ git clone https://github.com/imkao0/MiraSalon-KMP.git
 2. Select your target device/simulator and click **Run**.
 
 ---
+---
 
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/imkao0">imkao0</a>
-</p>
+### License
+
+MiraSalon-KMP is licensed under the [Apache License 2.0](file:///Users/mac/Downloads/Folders/MiraSalon-KM/LICENSE).
+

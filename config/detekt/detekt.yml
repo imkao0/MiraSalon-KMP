@@ -2,92 +2,48 @@ build:
   maxIssues: 0
   excludeCorrectable: false
   weights:
+    # complexity: 2
+    # LongParameterList: 1
+    # style: 1
+    # comments: 1
 
 config:
   validation: true
   warningsAsErrors: false
   checkExhaustiveness: false
-
-processors:
-  active: true
-  exclude:
-    - 'DetektProgressListener'
-
-console-reports:
-  active: true
-  exclude:
-    - 'ProjectStatisticsReport'
-    - 'ComplexityReport'
-    - 'NotificationReport'
-    - 'FindingsReport'
-    - 'FileBasedFindingsReport'
-    - 'LiteFindingsReport'
+  # exclude:
+  #   - '**/test/**'
 
 complexity:
   active: true
-  LongMethod:
-    active: true
-    threshold: 600
-  LongParameterList:
-    active: true
-    functionThreshold: 30
-    constructorThreshold: 30
-  LargeClass:
-    active: true
-    threshold: 2000
-  TooManyFunctions:
-    active: true
-    thresholdInFiles: 100
-    thresholdInClasses: 80
-    thresholdInInterfaces: 50
-    thresholdInObjects: 50
-    thresholdInEnums: 50
   CyclomaticComplexMethod:
     active: true
-    threshold: 100
-  NestedBlockDepth:
-    active: true
     threshold: 15
-  ComplexCondition:
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
     active: true
     threshold: 10
+  LargeClass:
+    active: true
+    threshold: 600
 
 style:
   active: true
   MagicNumber:
-    active: false
-  WildcardImport:
-    active: false
-  MaxLineLength:
     active: true
-    maxLineLength: 300
-  UnusedPrivateClass:
-    active: false
+    exclude: ['0', '1', '2']
   UnusedPrivateMember:
-    active: false
-  UnusedPrivateProperty:
-    active: false
-  UseCheckOrError:
-    active: false
+    active: true
 
 naming:
   active: true
-  MatchingDeclarationName:
-    active: false
-
-exceptions:
-  active: true
-  TooGenericExceptionCaught:
-    active: false
-  SwallowedException:
-    active: false
-  TooGenericExceptionThrown:
-    active: false
-
-empty-blocks:
-  active: true
-  EmptyCatchBlock:
+  ClassNaming:
     active: true
-    allowedExceptionNameRegex: 'expected|ignored'
-  EmptyFunctionBlock:
-    active: false
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+
+
