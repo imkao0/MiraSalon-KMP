@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <video src="screenshots/mira.mp4" width="800" controls></video>
+  <video src="screenshots/mira_compressed.mp4" width="800" controls></video>
 </p>
 
 <p align="center">
