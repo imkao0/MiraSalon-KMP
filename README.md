@@ -1,6 +1,3 @@
-<p align="center">
-  <img src="core/designsystem/src/commonMain/composeResources/drawable/logo.png" width="120" alt="MiraSalon Logo">
-</p>
 
 <h1 align="center">💇‍♀️ MiraSalon KMP</h1>
 
@@ -21,9 +18,8 @@
 **MiraSalon** is a full-stack Kotlin Multiplatform project designed to revolutionize salon management. By leveraging **Compose Multiplatform** for the UI and a custom **Ktor Server** for the backend, MiraSalon provides a unified experience across Android, iOS, Desktop, and Web. It is built with a focus on shared business logic, reactive state management, and seamless real-time interactions.
 
 ## Showcase
-| Platform | Demo |
-| :--- | :--- |
-| **All-in-One KMP** | <video src="https://github.com/imkao0/MiraSalon-KMP/raw/updated/assests-images/screenshots/mira_compressed.mp4" width="700" controls></video> |
+| Platform - All
+<video src="https://private-user-images.githubusercontent.com/61048381/642144592-9b141016-923b-4442-81bb-a4777f43e05d.mp4?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3ODc4MzI0OTEsIm5iZiI6MTc4NzgzMjE5MSwicGF0aCI6Ii82MTA0ODM4MS82NDIxNDQ1OTItOWIxNDEwMTYtOTIzYi00NDQyLTgxYmItYTQ3NzdmNDNlMDVkLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjA4MjclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwODI3VDEyMDMxMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWVhMGQ3Mjk5ODlmNTU2MjU0OTJiZDViMzczNTlhM2M1NGUwMTg5NWI3MDJmOTM5M2YyM2RhZjUyOTk1MzAxNmImWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0JnJlc3BvbnNlLWNvbnRlbnQtdHlwZT12aWRlbyUyRm1wNCJ9.yOTq57Ry8uQcdzAvCZGRw-be0S_8T8FpnHE1HpiB6t8" width="700" controls></video>
 
 ---
 
