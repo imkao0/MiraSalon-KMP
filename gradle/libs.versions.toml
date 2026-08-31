@@ -61,7 +61,7 @@ skie = "0.10.14"
 # Circuit (Slack) + Molecule (Cash App) - shared presenter architecture
 circuit = "0.36.1"
 molecule = "2.2.0"
-ksafe = "2.2.1"
+ksafe = "3.1.0"
 
 # Logging / Settings
 napier = "2.7.1"
