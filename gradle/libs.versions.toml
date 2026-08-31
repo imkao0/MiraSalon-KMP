@@ -40,7 +40,7 @@ koin = "4.2.2"
 koinAnnotations = "2.3.1"
 
 # Navigation / Lifecycle
-lifecycleViewmodel = "2.10.0" # androidx.lifecycle multiplatform artifact
+lifecycleViewmodel = "2.11.0" # androidx.lifecycle multiplatform artifact
 navigation3 = "1.1.1"
 adaptive = "1.3.0-beta02"
 lifecycle = "2.11.0"
