@@ -59,7 +59,7 @@ kizitonwoseCalendar = "2.10.0"
 skie = "0.10.14"
 
 # Circuit (Slack) + Molecule (Cash App) - shared presenter architecture
-circuit = "0.36.1"
+circuit = "0.38.0"
 molecule = "2.2.0"
 ksafe = "2.2.1"
 
